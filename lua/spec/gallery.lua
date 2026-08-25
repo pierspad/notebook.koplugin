@@ -803,6 +803,45 @@ test("a folder cannot be moved inside itself", function()
     assertEq(reason, "into_itself", "reason")
 end)
 
+--[[--
+KOReader writes a sidecar directory beside any PDF it has opened, and it holds
+the reading position and the bookmarks.
+
+Deleting a document already took its sidecar with it. Moving and renaming did
+not, which left the sidecar behind in the old folder: invisible, because the
+grid hides sidecars, and orphaned, because nothing would ever look at it again.
+The export it belonged to had quietly forgotten where you had got to in it.
+--]]
+test("moving a document takes its sidecar along", function()
+    local _, rec = newGallery(4)
+    local Library = require("library")
+    rec.fs[ROOT .. "/export.sdr"] = { mode = "directory", modification = 90 }
+
+    assertTrue(Library.moveTo("export.pdf", "Trip") ~= nil, "the move failed")
+    assertTrue(rec.fs[ROOT .. "/Trip/export.sdr"] ~= nil,
+        "the sidecar did not follow the document")
+    assertEq(rec.fs[ROOT .. "/export.sdr"], nil, "the sidecar was left behind")
+end)
+
+test("renaming a notebook takes its sidecar along", function()
+    local _, rec = newGallery(4)
+    local Library = require("library")
+    rec.fs[ROOT .. "/note1.sdr"] = { mode = "directory", modification = 5 }
+
+    assertTrue(Library.rename("note1", "reading list", ""), "the rename failed")
+    assertTrue(rec.fs[ROOT .. "/reading list.sdr"] ~= nil,
+        "the sidecar did not follow the rename")
+    assertEq(rec.fs[ROOT .. "/note1.sdr"], nil, "the sidecar was left behind")
+end)
+
+test("a document with no sidecar moves without inventing one", function()
+    local _, rec = newGallery(4)
+    local Library = require("library")
+
+    assertTrue(Library.moveTo("note2.scribe", "Trip") ~= nil, "the move failed")
+    assertEq(rec.fs[ROOT .. "/Trip/note2.sdr"], nil, "a sidecar appeared from nowhere")
+end)
+
 -- Smoke ------------------------------------------------------------------------------
 
 io.write("new screens load and build\n")

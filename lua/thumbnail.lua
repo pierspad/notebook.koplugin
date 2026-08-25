@@ -120,9 +120,12 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
 
     local bb = Blitbuffer.new(w, h, Blitbuffer.TYPE_BB8)
     bb:fill(Blitbuffer.COLOR_WHITE)
-    -- The background too, so a card looks like the page it stands for.
+    -- The background too, so a card looks like the page it stands for -- and at
+    -- the origin the strokes are in, or the ruling on the card would not line
+    -- up with the writing on it; see Document:contentOrigin.
+    local origin_x, origin_y = doc:contentOrigin()
     Template.draw(bb, doc:templateFor(index),
-        { x = 0, y = 0, w = w, h = h }, scale)
+        { x = origin_x * scale, y = origin_y * scale, w = w, h = h }, scale)
     Renderer.drawPage(bb, page, scale)
 
     local ok = pcall(function() bb:writePNG(cache) end)

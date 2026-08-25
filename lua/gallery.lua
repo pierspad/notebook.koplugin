@@ -26,7 +26,6 @@ local IconWidget = require("ui/widget/iconwidget")
 local ImageWidget = require("ui/widget/imagewidget")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
-local LauncherBar = require("launcherbar")
 local Library = require("library")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
@@ -1512,34 +1511,6 @@ end
 function Gallery:onShow()
     self:_layout()
     return true
-end
-
--- How often we check whether the launcher bar has moved on without us.
-local BAR_WATCH_SECONDS = 1
-
---[[--
-Closes this screen when the launcher bar takes the reader elsewhere.
-
-A poll, because there is nothing to listen to. Simple UI closes the screens it
-knows about before running an action that opens the file manager; ours it does
-not know about, so it stays on the stack, covering the file manager while the
-action runs underneath -- the tab is tapped, something happens, and the
-notebooks are still what you are looking at.
-
-Cheap enough to do this way: it reads one field and repaints nothing. It stops
-when the screen closes, and it does not run at all when there is no bar.
---]]
-function Gallery:_watchBar()
-    if not LauncherBar.available() then return end
-
-    self.bar_watch = function()
-        if self.closed then return end
-        if LauncherBar.navigatedAway() then
-            return UIManager:close(self)
-        end
-        UIManager:scheduleIn(BAR_WATCH_SECONDS, self.bar_watch)
-    end
-    UIManager:scheduleIn(BAR_WATCH_SECONDS, self.bar_watch)
 end
 
 -- Every way the event loop can enter this screen, behind a pcall and a

@@ -94,6 +94,33 @@ local MAX_JUMP_GAP_MS = 120
 -- discontinuity cannot wedge the stroke permanently.
 local OUTLIER_LIMIT = 8
 
+--[[--
+How far the nib must travel, squared, before the shape recogniser accepts that
+it has moved at all.
+
+Hold-to-snap fires when the pen stops, so "stopped" needs a tolerance: a nib
+resting on glass still reports a pixel or two of wander, and taken literally
+that would keep pushing the deadline back and the snap would never come.
+
+This is a tolerance for the *recogniser*, and nothing else. It used to also
+decide which samples were added to the stroke, which made it a sampling
+interval of eight pixels: everything drawn inside it -- an accent, a comma, the
+curve of a small letter -- was discarded rather than merely rounded, and
+ordinary handwriting came out as a chain of eight-pixel chords.
+--]]
+local HOLD_TRAVEL_SQ = 64
+
+--[[--
+Below this distance, squared, from the last point taken, a sample is wobble.
+
+Measured from the last point actually taken, so it can only ever round the path
+-- a slow hand crossing it in two samples instead of one still lays down every
+pixel it went over. Two pixels is a sixth of a millimetre on a 300 dpi panel:
+below anything a hand can mean, and above what the digitizer invents while the
+nib is resting.
+--]]
+local JITTER_FLOOR_SQ = 4
+
 -- How long after the pen lifts before touches are trusted again.
 --
 -- Writing means resting a hand on the panel, and the digitizer reports that
@@ -157,6 +184,13 @@ function Canvas:init()
     self.content = self.content or Geom:new{
         x = 0, y = 0, w = self.dimen.w, h = self.dimen.h,
     }
+
+    -- Points are stored as they arrive, in screen coordinates, so the document
+    -- has to be told where this rectangle is or nothing rendering it elsewhere
+    -- can put the background under the ink; see Document:contentOrigin.
+    if self.document and self.document.setContentOrigin then
+        self.document:setContentOrigin(self.content.x, self.content.y)
+    end
 
     -- Live stroke state.
     self.stroke = nil
@@ -580,22 +614,27 @@ function Canvas:_extendStroke(x, y, p)
 
     if self.shape_snapped then return end
 
-    -- Hold-to-snap: schedule snap if holding still
-    if self.stroke and self.stroke.tool ~= "eraser" and self.stroke.tool ~= "lasso" then
+    -- Hold-to-snap: the anchor only moves once the nib has genuinely travelled,
+    -- and while it has not, the pending snap is left alone to come due.
+    if self.stroke.tool ~= "eraser" and self.stroke.tool ~= "lasso" then
         local hdx = x - (self.hold_start_x or x)
         local hdy = y - (self.hold_start_y or y)
-        if hdx * hdx + hdy * hdy > 64 then
+        if hdx * hdx + hdy * hdy > HOLD_TRAVEL_SQ then
             self.hold_start_x = x
             self.hold_start_y = y
             UIManager:unschedule(self.shape_snap_cb)
             if self.stroke:count() >= 4 then
                 UIManager:scheduleIn(0.35, self.shape_snap_cb)
             end
-        else
-            -- Micro-jitter while holding still: don't accumulate ink smudges
-            return
         end
     end
+
+    -- Wobble under a resting nib is not movement, and stamping it costs a
+    -- refresh for nothing. See JITTER_FLOOR_SQ: this rounds the path, it does
+    -- not sample it.
+    local jdx = x - self.last_x
+    local jdy = y - self.last_y
+    if jdx * jdx + jdy * jdy < JITTER_FLOOR_SQ then return end
 
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
         self.last_x, self.last_y, self.last_p, x, y, p, self.coverage)
@@ -1331,6 +1370,12 @@ that puts the notebook on the panel. Lifecycle that the parent drives should be
 called by the parent, not arrived at through event propagation.
 --]]
 function Canvas:start()
+    -- The patches below are KOReader's, not ours, and they outlive any screen
+    -- of ours that is holding them. A fault closes this plugin without ever
+    -- reaching onCloseWidget, so the undoing is registered here as well rather
+    -- than left to the normal path alone; see Safe.onShutdown.
+    Safe.onShutdown("canvas:input", function() self:stop() end)
+
     if Input and Input.pen_slot then
         self.orig_pen_slot = Input.pen_slot
         -- Move pen_slot out of the capacitive multi-touch panel's slot range (0..9)
@@ -1381,6 +1426,10 @@ function Canvas:start()
 end
 
 function Canvas:stop()
+    -- Whichever path got here first is the one that does it; the other must not
+    -- run again and put the patches back on top of the restored handlers.
+    Safe.clearShutdown("canvas:input")
+
     Input:unregisterStylusCallback()
     if self.orig_handleTouchEv and Input then
         Input.handleTouchEv = self.orig_handleTouchEv

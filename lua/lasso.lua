@@ -27,24 +27,49 @@ function Lasso.pointInPolygon(px, py, poly_pts)
     return inside
 end
 
---- Tests if a stroke is selected by a lasso polygon.
--- A stroke is selected if its center or any of its sample points are inside the polygon.
+--[[--
+How far apart, in pixels, the points of a stroke are tested.
+
+Fixed, rather than a fraction of the stroke's length. A fraction reads as ten
+tests whatever the stroke is, which on a long one means testing it every
+sixtieth of its length: a loop drawn round a word of a line that was written in
+a single stroke tested no point inside the loop and selected nothing. Fixed
+spacing makes the resolution of the test a property of the lasso -- roughly a
+millimetre on a 300 dpi panel -- rather than of what happens to be under it.
+--]]
+local SAMPLE_SPACING = 12
+
+--[[--
+Tests if a stroke is selected by a lasso polygon.
+
+A stroke is selected when part of the stroke itself is inside the loop.
+
+The centre of its bounding box used to count as well, and that is not a point
+of the stroke: it is a point of the rectangle around it, and for anything
+concave -- an L, an arc, a large circle, a long diagonal -- it lies in the empty
+space the stroke encloses rather than on the ink. A small loop drawn in the gap
+inside an L therefore selected the L without ever having touched it.
+--]]
 function Lasso.isStrokeSelected(stroke, poly_pts)
     if not stroke or stroke:count() == 0 then return false end
 
-    local bx, by, bw, bh = stroke:getBounds()
-    local cx = bx + bw / 2
-    local cy = by + bh / 2
-    if Lasso.pointInPolygon(cx, cy, poly_pts) then
-        return true
-    end
-
     local count = stroke:count()
-    local step = math.max(1, math.floor(count / 10))
-    for i = 1, count, step do
+    local px, py = stroke:getPoint(1)
+    if Lasso.pointInPolygon(px, py, poly_pts) then return true end
+
+    -- Walked by distance travelled, so a densely sampled stroke is not tested
+    -- more finely than a sparse one covering the same ground.
+    local since = 0
+    for i = 2, count do
         local x, y = stroke:getPoint(i)
-        if Lasso.pointInPolygon(x, y, poly_pts) then
-            return true
+        local dx, dy = x - px, y - py
+        since = since + math.sqrt(dx * dx + dy * dy)
+        px, py = x, y
+        if since >= SAMPLE_SPACING or i == count then
+            since = 0
+            if Lasso.pointInPolygon(x, y, poly_pts) then
+                return true
+            end
         end
     end
 
@@ -81,6 +106,7 @@ function Lasso.cloneStrokes(strokes)
             tool = stroke.tool,
             width = stroke.width,
             color = stroke.color,
+            tint = stroke.tint,
         }
         for i = 1, stroke:count() do
             local x, y, p = stroke:getPoint(i)

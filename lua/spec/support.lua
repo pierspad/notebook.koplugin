@@ -11,6 +11,34 @@ genuinely needs a screen is out of scope here and gets verified in the emulator.
 
 local support = {}
 
+--[[--
+The gray level a colour carries, however it is carrying it.
+
+Asked the same way the plugin has to ask on a device, where a Color8 is FFI
+cdata: `type()` answers "cdata", not "table" and not "number", so the only
+reliable questions are whether it is a plain number and, failing that, what
+`getColor8()` says. Reading `.a` straight off it is the last resort and works
+on both.
+
+This exists so that a test double cannot be gentler about it than the real
+thing. `support.cdataColor` builds a colour that answers only through
+`getColor8`, which is the shape that caught a highlighter blend reading its own
+threshold as zero.
+--]]
+function support.grayOf(value)
+    if type(value) == "number" then return value end
+    if value == nil then return nil end
+    if value.getColor8 then return value:getColor8().a end
+    return value.a
+end
+
+--- A colour shaped like a device Color8: no readable `a`, only `getColor8()`.
+function support.cdataColor(v)
+    return setmetatable({}, {
+        __index = { getColor8 = function() return { a = v } end },
+    })
+end
+
 -- A blitbuffer stand-in that records pixels in a plain grid, so tests can assert
 -- on what was actually painted rather than on which calls were made.
 local FakeBB = {}
@@ -39,7 +67,7 @@ function FakeBB:get(x, y)
 end
 
 function FakeBB:paintRect(x, y, w, h, value)
-    local v = type(value) == "table" and value.a or value
+    local v = support.grayOf(value)
     for j = y, y + h - 1 do
         for i = x, x + w - 1 do
             self:set(i, j, v)
@@ -48,7 +76,7 @@ function FakeBB:paintRect(x, y, w, h, value)
 end
 
 function FakeBB:paintCircle(cx, cy, r, value)
-    local v = type(value) == "table" and value.a or value
+    local v = support.grayOf(value)
     for j = cy - r, cy + r do
         for i = cx - r, cx + r do
             local dx, dy = i - cx, j - cy
@@ -61,13 +89,13 @@ end
 
 --- Plain write, matching blitbuffer's setPixel.
 function FakeBB:setPixel(x, y, color)
-    local v = type(color) == "table" and color.a or color
+    local v = support.grayOf(color)
     self:set(x, y, v)
 end
 
 --- Multiply blend, matching blitbuffer's setPixelMultiply semantics.
 function FakeBB:setPixelMultiply(x, y, color)
-    local v = type(color) == "table" and color.a or color
+    local v = support.grayOf(color)
     local cur = self:get(x, y)
     if cur then self:set(x, y, math.floor(cur * v / 255)) end
 end
@@ -165,6 +193,32 @@ function support.installStubs(store)
         return store[self.path]
     end
     package.loaded["persist"] = Persist
+
+    --[[
+    Renaming has to reach the fake filesystem as well as the real one.
+
+    A notebook is saved by writing beside itself and moving into place, so the
+    store is not a passive bag of paths any more: something in it gets renamed
+    on every save. Without this the move lands on a path the real filesystem has
+    never heard of, fails, and the save reports failure for a notebook that was
+    written perfectly well.
+
+    Anything the store does not know about is passed through untouched, so the
+    suites that move real files on disk -- the library ones -- are unaffected.
+    --]]
+    support._store = store
+    if not support._real_rename then
+        support._real_rename = os.rename
+        os.rename = function(from, to)
+            local fs = support._store
+            if fs and fs[from] ~= nil then
+                fs[to] = fs[from]
+                fs[from] = nil
+                return true
+            end
+            return support._real_rename(from, to)
+        end
+    end
 
     return store
 end

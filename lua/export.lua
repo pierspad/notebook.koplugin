@@ -182,6 +182,23 @@ function Export.toPDF(doc, out_path, opts)
     local offset_y = content_area and content_area.y or 0
     local dpi = opts.dpi or DEFAULT_DPI
 
+    --[[
+    Where the background goes, in the coordinates the strokes are in.
+
+    The strokes carry the drawing area's offset on screen -- the height of the
+    toolbar -- and the background was being drawn from the top of the buffer
+    regardless, so the ruling and the writing that had sat on it came out of
+    step by whatever that offset was modulo the line spacing. Reading the
+    origin off the document puts them back into the same frame.
+
+    Zero when the caller has asked for an explicit content_area, because it has
+    then already said where the page is and the ink is being moved to match.
+    --]]
+    local origin_x, origin_y = 0, 0
+    if not content_area and type(doc.contentOrigin) == "function" then
+        origin_x, origin_y = doc:contentOrigin()
+    end
+
     local page_w = width * POINTS_PER_INCH / dpi
     local page_h = height * POINTS_PER_INCH / dpi
 
@@ -273,7 +290,8 @@ function Export.toPDF(doc, out_path, opts)
                 -- coordinates, unscaled, so the background is drawn at the same
                 -- scale to stay registered with them.
                 if doc.templateFor then
-                    Template.draw(bb, doc:templateFor(i), { x = 0, y = 0, w = width, h = height }, 1)
+                    Template.draw(bb, doc:templateFor(i),
+                        { x = origin_x, y = origin_y, w = width, h = height }, 1)
                 end
                 Renderer.drawPage(bb, page, 1, -offset_x, -offset_y)
             end

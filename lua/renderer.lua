@@ -62,10 +62,48 @@ local function stampHighlight(bb, x, y, r, color)
     local y0 = math.floor(y - r + 0.5)
     local s = math.floor(r * 2 + 0.5)
     if s < 1 then s = 1 end
-    local tint = type(color) == "table" and (color.a or 0) or (type(color) == "number" and color or 0)
+    local x1, y1 = x0 + s - 1, y0 + s - 1
 
-    for j = y0, y0 + s - 1 do
-        for i = x0, x0 + s - 1 do
+    --[[
+    A Color8 is FFI cdata on a device, and a plain number only in the tests.
+
+    `type()` on cdata answers neither "table" nor "number", so asking it those
+    two questions and defaulting to zero meant the threshold was zero
+    everywhere it mattered: the blend stopped being "darken towards the tint"
+    and became "repaint everything that is not already pure black". Pen ink
+    survived that, being black, and the dots of dot grid paper did not -- they
+    are darker than the tint, they are meant to be left alone, and highlighting
+    over them washed them out.
+    --]]
+    local tint
+    if type(color) == "number" then
+        tint = color
+    else
+        tint = color.getColor8 and color:getColor8().a or color.a or 0
+    end
+
+    --[[
+    Clipped to the buffer, because getPixel and setPixel are not.
+
+    Every other primitive here goes through blitbuffer's own painting calls,
+    which clip. These two index straight into the row pointer with the
+    coordinate they are given, so a stamp that overhangs the edge reads and
+    writes past the end of the allocation. Nothing on the drawing path can
+    reach that -- the canvas keeps the nib a full stroke width inside the page
+    -- but an export renders into a buffer of its own chosen size, and a page
+    written on a wider panel would hang over the side of it.
+    --]]
+    local w = bb.getWidth and bb:getWidth() or bb.w
+    local h = bb.getHeight and bb:getHeight() or bb.h
+    if w and h then
+        if x0 < 0 then x0 = 0 end
+        if y0 < 0 then y0 = 0 end
+        if x1 > w - 1 then x1 = w - 1 end
+        if y1 > h - 1 then y1 = h - 1 end
+    end
+
+    for j = y0, y1 do
+        for i = x0, x1 do
             local px = bb:getPixel(i, j)
             if px then
                 local gray = px.getColor8 and px:getColor8().a or px.a

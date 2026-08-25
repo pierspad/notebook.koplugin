@@ -374,6 +374,72 @@ test("samples spread over time still repaint as they come", function()
     assertEq(repaints(), 4, "repaints for four samples a tenth of a second apart")
 end)
 
+io.write("what a slow hand puts down\n")
+
+--[[--
+The stroke keeps what was written, whatever speed it was written at.
+
+Hold-to-snap needs to know when the nib has stopped moving, and its tolerance
+for that was eight pixels. That tolerance was also, by accident, the test for
+whether a sample joined the stroke at all: anything inside it was discarded, so
+eight pixels stopped being a tolerance and became a sampling interval.
+Handwriting came back as a chain of eight-pixel chords, and anything smaller
+than that -- an accent, a comma, the bowl of a small letter -- came back as the
+single dot the stroke had started with.
+--]]
+local function draw(canvas, points)
+    canvas:_beginStroke("pen", points[1][1], points[1][2], 1)
+    for i = 2, #points do
+        after(8)
+        canvas:_extendStroke(points[i][1], points[i][2], 1)
+    end
+    return canvas.stroke:count()
+end
+
+test("a slow, deliberate drag keeps every sample of itself", function()
+    local canvas = newCanvas()
+    local pts = {}
+    for i = 0, 40 do table.insert(pts, { 100 + i * 2, 100 }) end
+    assertEq(draw(canvas, pts), 41, "points kept from a 2px-per-sample drag")
+end)
+
+test("a mark smaller than the hold tolerance is still a mark", function()
+    local canvas = newCanvas()
+    -- A comma: six samples, none of them more than five pixels from where the
+    -- nib landed.
+    local n = draw(canvas, { {100,100}, {101,101}, {102,102}, {103,103},
+                             {103,104}, {102,105}, {101,105} })
+    assertTrue(n >= 4, "a comma collapsed to " .. n .. " point(s)")
+end)
+
+test("a small letter keeps its shape", function()
+    local canvas = newCanvas()
+    local pts = {}
+    for i = 0, 24 do
+        local a = i / 24 * 2 * math.pi
+        table.insert(pts, { 200 + math.floor(7 * math.cos(a)),
+                            200 + math.floor(7 * math.sin(a)) })
+    end
+    local n = draw(canvas, pts)
+    assertTrue(n >= 12, "a 7px 'o' came back as " .. n .. " point(s)")
+
+    -- And it is a loop, not a dot: it has to have some extent in both axes.
+    local _, _, bw, bh = canvas.stroke:getBounds()
+    assertTrue(bw >= 10 and bh >= 10, "the loop has no extent left")
+end)
+
+test("wobble under a resting nib is still not drawn", function()
+    local canvas = newCanvas()
+    canvas:_beginStroke("pen", 300, 300, 1)
+    local before = canvas.stroke:count()
+    -- The digitizer inventing a pixel either way while the pen rests.
+    for i = 1, 20 do
+        after(8)
+        canvas:_extendStroke(300 + (i % 2), 300 + ((i + 1) % 2), 1)
+    end
+    assertEq(canvas.stroke:count(), before, "wobble was accumulated as ink")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)
 

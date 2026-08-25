@@ -214,5 +214,67 @@ test("the screens are all protected", function()
     end
 end)
 
+io.write("giving back what was borrowed from KOReader\n")
+
+--[[--
+The canvas patches KOReader's own input handlers while it is up, and puts them
+back in Canvas:stop, which the notebook calls from onCloseWidget.
+
+After a fault that handler never runs. Safe.report raises Safe.failed before it
+closes anything, and every handleEvent that Safe.widget wrapped returns
+immediately from then on -- so the one moment the patches most need undoing is
+the one moment the code that undoes them is switched off. Left in place they are
+a reader whose pen has stopped working until it is restarted.
+--]]
+test("tear-down registered with onShutdown runs even after a fault", function()
+    local restored = false
+    Safe.onShutdown("probe", function() restored = true end)
+
+    Safe.report("probe", "simulated fault")
+    assertTrue(restored, "the input handlers were left patched")
+end)
+
+test("a registration taken back does not run", function()
+    local ran = false
+    Safe.onShutdown("probe", function() ran = true end)
+    Safe.clearShutdown("probe")
+
+    Safe.report("probe", "simulated fault")
+    assertEq(ran, false, "a closed canvas re-ran its tear-down")
+end)
+
+test("one failing tear-down does not strand the others", function()
+    local second = false
+    Safe.onShutdown("first", function() error("this one is broken") end)
+    Safe.onShutdown("second", function() second = true end)
+
+    Safe.report("probe", "simulated fault")
+    assertTrue(second, "the second registration was stranded by the first")
+end)
+
+test("the canvas restores the input handlers when it faults", function()
+    package.loaded["canvas"] = nil
+    local Canvas = require("canvas")
+    local Document = require("document")
+
+    local Device = package.loaded["device"]
+    local original_touch = function() end
+    Device.input.pen_slot = 4
+    Device.input.handleTouchEv = original_touch
+    Device.input.handleKeyBoardEv = function() end
+    Device.input.registerStylusCallback = function() end
+    Device.input.unregisterStylusCallback = function() end
+
+    local canvas = Canvas:new{ document = Document:new("/tmp/safe-canvas.scribe") }
+    canvas:start()
+    assertTrue(Device.input.handleTouchEv ~= original_touch, "start did not patch")
+    assertEq(Device.input.pen_slot, 15, "start did not move the pen slot")
+
+    Safe.report("canvas:stylus", "simulated fault while drawing")
+
+    assertEq(Device.input.handleTouchEv, original_touch, "the touch handler stayed patched")
+    assertEq(Device.input.pen_slot, 4, "the pen slot stayed moved")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

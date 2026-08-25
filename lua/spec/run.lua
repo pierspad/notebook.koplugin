@@ -438,6 +438,59 @@ test("highlighter tints without obliterating what is underneath", function()
     assertTrue(beside < 255 and beside > 0, "blank paper becomes gray, not black")
 end)
 
+test("highlighter leaves alone anything already darker than the tint", function()
+    --[[
+    The blend darkens a pixel *to* the tint and never past it, which is what
+    makes it idempotent -- and what keeps the dots of dot grid paper, drawn
+    darker than the tint on purpose, from being washed out by a highlight
+    passing over them.
+
+    The threshold it compares against is read off the colour, and a colour is
+    FFI cdata on a device: type() answers "cdata" there, so asking it whether it
+    is a table or a number and defaulting to zero made the threshold zero. Pen
+    ink survived that, being pure black; everything between black and the tint
+    did not. support.cdataColor is that shape, so this cannot pass by being
+    handed a friendlier colour than a device would hand it.
+    --]]
+    local Blitbuffer = package.loaded["ffi/blitbuffer"]
+    local plain = Blitbuffer.Color8
+    Blitbuffer.Color8 = support.cdataColor
+
+    local ok, err = pcall(function()
+        local bb = support.FakeBB.new(60, 60)
+        bb:paintRect(20, 20, 8, 8, 85)    -- a dot grid dot: darker than the tint
+        bb:paintRect(20, 40, 20, 2, 170)  -- a ruled line: lighter than the tint
+        bb:paintRect(20, 50, 8, 4, 0)     -- pen ink
+
+        local hl = Stroke:new{ tool = "highlighter", width = 60 }
+        hl:addPoint(30, 35, 1)
+        Renderer.drawStroke(bb, hl)
+
+        assertEq(bb:get(22, 22), 85, "the dot grid dot was washed out")
+        assertEq(bb:get(22, 51), 0, "pen ink was lightened")
+        assertTrue(bb:get(25, 40) < 170, "the ruled line was not darkened")
+        assertTrue(bb:get(45, 35) < 255, "blank paper was not tinted at all")
+    end)
+
+    Blitbuffer.Color8 = plain
+    if not ok then error(err, 0) end
+end)
+
+test("a highlighter stamp overhanging the buffer does not write past it", function()
+    -- getPixel and setPixel are the two primitives here that do not clip, so a
+    -- stamp reaching over the edge would read and write outside the buffer. The
+    -- canvas keeps the nib well inside the page, but an export renders into a
+    -- buffer of its own size and a page written on a wider panel hangs over it.
+    local bb = support.FakeBB.new(40, 40)
+    local hl = Stroke:new{ tool = "highlighter", width = 30 }
+    hl:addPoint(39, 39, 1)
+    hl:addPoint(-4, -4, 1)
+    Renderer.drawStroke(bb, hl)
+
+    assertTrue(bb:get(39, 39) < 255, "the corner inside the buffer was painted")
+    assertEq(bb:get(45, 45), nil, "nothing exists outside the buffer")
+end)
+
 test("overlapping highlighter stamps tint each pixel only once", function()
     -- The failure this guards against: stamps overlap heavily along a stroke,
     -- so a per-stamp multiply compounds and drives the whole stroke to black.
@@ -834,6 +887,88 @@ test("PDF export validates inputs and error handling", function()
     local ok3, err3 = Export.toPDF(d, "/nonexistent_dir_12345/out.pdf")
     assertTrue(not ok3, "unwritable path rejected")
     assertTrue(err3 ~= nil, "error message provided")
+end)
+
+--[[--
+Renders a document through the exporter and hands back the page buffer.
+
+The exporter allocates its own buffer and does not give it out, so this catches
+it on the way past. Everything the export drew is still in it when toPDF
+returns.
+--]]
+local function exportedPage(doc, opts)
+    local Blitbuffer = package.loaded["ffi/blitbuffer"]
+    local plain_new = Blitbuffer.new
+    local captured
+    Blitbuffer.new = function(w, h, t)
+        captured = plain_new(w, h, t)
+        return captured
+    end
+
+    local ok, err = pcall(Export.toPDF, doc, "/tmp/notebook-align.pdf", opts)
+    Blitbuffer.new = plain_new
+    if not ok then error(err, 0) end
+    return captured
+end
+
+test("the background is drawn where the ink is, not at the top of the page", function()
+    --[[
+    Strokes are stored in screen coordinates, so every point carries the height
+    of the toolbar above the drawing area in its y. The export drew the ruling
+    from the top of its own buffer regardless, which put the lines and the
+    writing that had been sitting on them out of step by that height modulo the
+    line spacing: on paper the words floated between the rules.
+    --]]
+    local d = Document:new("/tmp/align.scribe")
+    d.template = "lined"
+    d:setContentOrigin(0, 90)
+    local s = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    s:addPoint(20, 120, 1)
+    s:addPoint(200, 120, 1)
+    d:addStroke(s)
+
+    local bb = exportedPage(d, { width = 300, height = 400 })
+    assertTrue(bb ~= nil, "no page buffer was captured")
+
+    -- The first rule belongs at the origin, and the strip above it -- where the
+    -- toolbar was, and where no stroke can ever be -- stays blank.
+    assertTrue(bb:get(150, 90) < 255, "no rule at the content origin")
+    assertEq(bb:get(150, 0), 255, "a rule was drawn above the drawing area")
+    assertEq(bb:get(150, 40), 255, "the toolbar strip was ruled")
+end)
+
+test("a notebook with no origin recorded exports the way it always did", function()
+    -- Written before the origin existed, so there is nothing to read: the page
+    -- must still come out, ruled from its top left.
+    local d = Document:new("/tmp/align-legacy.scribe")
+    d.template = "lined"
+    local s = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    s:addPoint(20, 120, 1)
+    s:addPoint(200, 120, 1)
+    d:addStroke(s)
+
+    local bb = exportedPage(d, { width = 300, height = 400 })
+    assertTrue(bb:get(150, 0) < 255, "no rule at the top of a legacy page")
+end)
+
+test("the content origin survives a save and a load", function()
+    local d = Document:new("/tmp/origin.scribe")
+    d:setContentOrigin(0, 90)
+    assertTrue(d.dirty, "recording the origin left the notebook clean")
+    assertTrue(d:save(), "save succeeded")
+
+    local back = Document:new("/tmp/origin.scribe")
+    assertTrue(back:load(), "load succeeded")
+    local ox, oy = back:contentOrigin()
+    assertEq(ox, 0, "origin x")
+    assertEq(oy, 90, "origin y")
+
+    -- And a notebook that has never been told reads back as the top left, which
+    -- is what everything written before this did.
+    local fresh = Document:new("/tmp/origin-fresh.scribe")
+    local fx, fy = fresh:contentOrigin()
+    assertEq(fx, 0, "default origin x")
+    assertEq(fy, 0, "default origin y")
 end)
 
 -- Summary ----------------------------------------------------------------------

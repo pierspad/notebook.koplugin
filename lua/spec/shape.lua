@@ -116,7 +116,18 @@ test("detects horizontal and rotated rectangles", function()
     assertEq(clean_rot:count(), 5, "rotated rectangle closed points")
 end)
 
-test("detects and snaps regular triangle from 3-sided loop", function()
+--- The corner of `clean` nearest (x, y), and how far off it is.
+local function nearestVertex(clean, x, y)
+    local best = math.huge
+    for i = 1, clean:count() do
+        local vx, vy = clean:getPoint(i)
+        local d = math.sqrt((vx - x)^2 + (vy - y)^2)
+        if d < best then best = d end
+    end
+    return best
+end
+
+test("snaps a 3-sided loop to a triangle with the corners that were drawn", function()
     local s = Stroke:new{ tool = "pen", width = 3 }
     -- Bottom
     for x = 100, 300, 20 do s:addPoint(x, 300, 1) end
@@ -130,17 +141,42 @@ test("detects and snaps regular triangle from 3-sided loop", function()
     assertEq(kind, "triangle", "shape kind")
     assertEq(clean:count(), 4, "triangle closed points")
 
-    -- Verify the 3 sides are geometrically regular (equal distance from centroid)
-    local x1, y1 = clean:getPoint(1)
-    local x2, y2 = clean:getPoint(2)
-    local x3, y3 = clean:getPoint(3)
-    local cx = (x1 + x2 + x3) / 3
-    local cy = (y1 + y2 + y3) / 3
-    local r1 = math.sqrt((x1 - cx)^2 + (y1 - cy)^2)
-    local r2 = math.sqrt((x2 - cx)^2 + (y2 - cy)^2)
-    local r3 = math.sqrt((x3 - cx)^2 + (y3 - cy)^2)
-    assertTrue(math.abs(r1 - r2) < 2, "r1 == r2 in regular triangle")
-    assertTrue(math.abs(r2 - r3) < 2, "r2 == r3 in regular triangle")
+    -- This one is isoceles and must stay isoceles. Forcing it onto a regular
+    -- triangle -- every vertex at the mean distance from the centroid, angles
+    -- 120 degrees apart -- moved all three corners off what was drawn.
+    for _, corner in ipairs{ {100, 300}, {300, 300}, {200, 100} } do
+        assertTrue(nearestVertex(clean, corner[1], corner[2]) < 20,
+            string.format("corner (%d,%d) survived the snap", corner[1], corner[2]))
+    end
+end)
+
+test("keeps a trapezium a trapezium rather than squaring it off", function()
+    local s = Stroke:new{ tool = "pen", width = 3 }
+    -- A trapezium: wide base, narrow top, sloping sides.
+    for x = 100, 400, 20 do s:addPoint(x, 300, 1) end
+    for t = 0, 1, 0.1 do s:addPoint(400 - t * 80, 300 - t * 150, 1) end
+    for x = 320, 180, -20 do s:addPoint(x, 150, 1) end
+    for t = 0, 1, 0.1 do s:addPoint(180 - t * 80, 150 + t * 150, 1) end
+
+    local clean, kind = Shape.recognize(s)
+    assertTrue(clean ~= nil, "should recognize a four-sided shape")
+    assertEq(kind, "quadrilateral", "a sloping-sided quad is not a rectangle")
+    assertEq(clean:count(), 5, "quadrilateral closed points")
+
+    -- The narrow top must still be narrower than the base.
+    local top_w, base_w = math.huge, 0
+    local xs = {}
+    for i = 1, 4 do local x, y = clean:getPoint(i); table.insert(xs, { x = x, y = y }) end
+    for i = 1, 4 do
+        for j = i + 1, 4 do
+            if math.abs(xs[i].y - xs[j].y) < 30 then
+                local w = math.abs(xs[i].x - xs[j].x)
+                if xs[i].y < 220 then top_w = math.min(top_w, w)
+                else base_w = math.max(base_w, w) end
+            end
+        end
+    end
+    assertTrue(top_w < base_w, "the top stayed narrower than the base")
 end)
 
 test("filters micro-jitter clusters when pen is held stationary at end of stroke", function()

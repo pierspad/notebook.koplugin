@@ -33,6 +33,8 @@ What this module does about them:
   * `Safe.later` schedules follow-up work in a way that always yields to input.
   * `Safe.watched` bounds a call in VM instructions, so a runaway loop becomes a
     traceback naming the loop instead of a dead device.
+  * `Safe.onShutdown` registers tear-down that has to run even when the fault
+    has already switched the ordinary handlers off.
 
 And when something does go wrong, `Safe.report` shuts the plugin down: it takes
 the stylus callback back, closes our screens, writes a log the reader can send
@@ -70,6 +72,41 @@ local WATCHDOG_BUDGET = 5
 -- Set once we have shut down, so a fault that repeats on every event reports
 -- once rather than putting a dialog up forever.
 Safe.failed = false
+
+--[[--
+Work that has to happen on the way out, whether we are closing normally or
+falling over.
+
+Ordinary tear-down lives in `onCloseWidget`, and after a fault that handler
+never runs: `Safe.report` raises `Safe.failed` before it closes anything, and
+every wrapped `handleEvent` returns immediately from then on. That is deliberate
+-- a fault that repeats on every event must not put a dialog up forever -- but it
+means the one moment tear-down matters most is the one moment it is skipped.
+
+Anything registered here is run by `Safe.report` directly, outside that gate.
+Reserved for state that outlives the plugin: the canvas patches KOReader's own
+input handlers while it is up, and leaving those in place is a reader whose pen
+has stopped working until it is restarted.
+--]]
+local teardowns = {}
+
+--- Registers `fn` to run if the plugin shuts down after a fault.
+function Safe.onShutdown(key, fn)
+    teardowns[key] = fn
+end
+
+--- Takes a registration back, once its owner has cleaned up by itself.
+function Safe.clearShutdown(key)
+    teardowns[key] = nil
+end
+
+--- Runs every registration once, in isolation: one failure must not strand the rest.
+local function runTeardowns()
+    for key, fn in pairs(teardowns) do
+        teardowns[key] = nil
+        pcall(fn)
+    end
+end
 
 --- Where the crash log goes. Beside the notebooks, so it is easy to find over USB.
 local function logPath()
@@ -125,6 +162,11 @@ function Safe.report(where, err)
             Device.input:unregisterStylusCallback()
         end
     end)
+
+    -- Before the screens go, and not through them: closing a screen dispatches
+    -- CloseWidget, and CloseWidget arrives through the handleEvent that
+    -- Safe.failed has just switched off. See the note on Safe.onShutdown.
+    runTeardowns()
 
     local path = writeLog(where, err)
     pcall(closeScreens)

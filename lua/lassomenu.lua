@@ -182,8 +182,23 @@ function LassoMenu:init()
 
     self.dimen = Geom:new{ x = mx, y = my, w = menu_sz.w, h = menu_sz.h }
     self[1] = self.content_frame
+
+    --[[
+    The range is the placed rectangle, not a fresh one of the same size.
+
+    A gesture range is matched against the touch's position on the screen, so a
+    Geom left at the origin is a live tap zone in the top left corner of the
+    panel -- which is where the tool buttons are. Landing there matched this
+    menu, and a Tap that this class does not handle is passed down to its
+    children, where the first thing with an onTap is Cut. Selecting something
+    and then reaching for the pen button cut the selection instead.
+
+    self.dimen and nothing else, because paintTo places the frame by it: one
+    rectangle, so where the menu is drawn and where it answers cannot drift
+    apart.
+    --]]
     self.ges_events = {
-        Tap = { GestureRange:new{ ges = "tap", range = Geom:new{ x = 0, y = 0, w = menu_sz.w, h = menu_sz.h } } },
+        Tap = { GestureRange:new{ ges = "tap", range = self.dimen } },
     }
 end
 

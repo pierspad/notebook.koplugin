@@ -44,6 +44,7 @@ function Document:new(path)
         current_page = 1,
         -- The notebook's background. Pages with none of their own follow it.
         template = Template.DEFAULT,
+        content_origin = { x = 0, y = 0 },
         -- Operation log. undo_stack holds applied operations, redo_stack holds
         -- operations that have been rolled back.
         undo_stack = {},
@@ -55,6 +56,38 @@ end
 
 function Document:getPage()
     return self.pages[self.current_page]
+end
+
+--[[--
+Where the top left of the page sits in the coordinates the strokes are in.
+
+Strokes are stored exactly as the canvas received them, which is in screen
+coordinates -- so every point carries the height of the toolbar above the
+drawing area baked into its y. On the panel that is invisible, because the
+background is drawn into the same rectangle the ink is in and the two line up.
+
+Anywhere else it is not. An export and a thumbnail draw the background into a
+buffer of their own, starting at its top left, and the ink then lands a
+toolbar's height further down: writing that sat on the ruled lines while it was
+being written came out floating between them.
+
+Recording the origin is what lets those two put the background where the ink
+actually is. A notebook written before this existed has no origin recorded and
+reads back as zero, which is the behaviour it was exported with; opening it once
+is enough to give it one.
+--]]
+function Document:contentOrigin()
+    local o = self.content_origin
+    return (o and o.x or 0), (o and o.y or 0)
+end
+
+--- Records where the drawing area is. Called by the canvas as it takes the page.
+function Document:setContentOrigin(x, y)
+    x, y = x or 0, y or 0
+    local ox, oy = self:contentOrigin()
+    if ox == x and oy == y then return end
+    self.content_origin = { x = x, y = y }
+    self.dirty = true
 end
 
 function Document:pageCount()
@@ -493,12 +526,39 @@ function Document:save()
         pages[i] = { strokes = strokes, template = page.template }
     end
 
-    local ok, err = Persist:new{ path = self.path, codec = CODEC }:save{
+    --[[
+    Written beside the notebook and moved into place, never over it.
+
+    Persist opens the destination for writing, which truncates it, and only then
+    starts putting bytes in. Everything between those two moments is a notebook
+    that is neither the old one nor the new one, and this runs every couple of
+    seconds while someone is writing -- so the window is small but it is open
+    most of the time a notebook is being used. Losing power in it, or being
+    killed for memory, took the whole notebook rather than the last few strokes.
+
+    A rename within a directory is atomic, so the file at the notebook's path is
+    always one complete save or the other.
+    --]]
+    local tmp = self.path .. ".saving"
+    local ok, err = Persist:new{ path = tmp, codec = CODEC }:save{
         version = FORMAT_VERSION,
         pages = pages,
         current_page = self.current_page,
         template = self.template,
+        content_origin = self.content_origin,
     }
+
+    if ok then
+        ok, err = os.rename(tmp, self.path)
+        if not ok then
+            -- The old notebook is still there and still whole; the half-written
+            -- one is what goes.
+            os.remove(tmp)
+        end
+    else
+        os.remove(tmp)
+    end
+
     if ok then
         self.dirty = false
     else
@@ -530,6 +590,13 @@ function Document:load()
     if #self.pages == 0 then self.pages = { newPage() } end
 
     self.template = Template.isKnown(data.template) and data.template or Template.DEFAULT
+    -- Absent in notebooks written before the origin was recorded; see
+    -- Document:contentOrigin.
+    local origin = data.content_origin
+    self.content_origin = {
+        x = (type(origin) == "table" and tonumber(origin.x)) or 0,
+        y = (type(origin) == "table" and tonumber(origin.y)) or 0,
+    }
     self.current_page = math.min(data.current_page or 1, #self.pages)
     self.undo_stack, self.redo_stack = {}, {}
     self.dirty = false

@@ -169,5 +169,71 @@ test("LassoMenu builds with Cut, Copy, Delete and Paste actions", function()
     assertTrue(menu.content_frame ~= nil, "menu content frame")
 end)
 
+test("the menu answers taps where it is drawn, not at the top left of the screen", function()
+    uistubs.install()
+    local LassoMenu = require("lassomenu")
+    local menu = LassoMenu:new{
+        bbox = { x = 300, y = 700, w = 200, h = 120 },
+        has_clipboard = true,
+    }
+
+    local range = menu.ges_events.Tap[1].range
+    assertTrue(range ~= nil, "the menu has a tap range")
+    -- A gesture range is matched against the touch's position on the screen, so
+    -- a range left at the origin is a live tap zone over the tool buttons --
+    -- and a Tap this class does not handle reaches the first child that does,
+    -- which is Cut.
+    assertEq(range.x, menu.dimen.x, "tap range x follows the menu")
+    assertEq(range.y, menu.dimen.y, "tap range y follows the menu")
+    assertTrue(menu.dimen.x > 0 or menu.dimen.y > 0, "the menu is not at the origin")
+end)
+
+io.write("what a lasso loop does and does not catch\n")
+
+--- An L: down the left side, then along the bottom. Nothing near the centre.
+local function elbowStroke()
+    local s = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    for i = 0, 100 do s:addPoint(100, 100 + i * 2, 1) end
+    for i = 1, 100 do s:addPoint(100 + i * 2, 300, 1) end
+    return s
+end
+
+local function boxLoop(x, y, w, h)
+    return { { x = x, y = y }, { x = x + w, y = y },
+             { x = x + w, y = y + h }, { x = x, y = y + h } }
+end
+
+test("a loop in the empty middle of a concave stroke catches nothing", function()
+    -- The centre of the bounding box is not a point of the stroke: for anything
+    -- concave it is in the space the stroke encloses, and counting it selected
+    -- an L from a loop drawn in the gap inside it.
+    assertEq(Lasso.isStrokeSelected(elbowStroke(), boxLoop(180, 170, 60, 60)), false,
+        "the L was caught without being touched")
+end)
+
+test("a loop around either arm of it does catch it", function()
+    assertEq(Lasso.isStrokeSelected(elbowStroke(), boxLoop(80, 150, 40, 40)), true,
+        "the upright was missed")
+    assertEq(Lasso.isStrokeSelected(elbowStroke(), boxLoop(200, 280, 40, 40)), true,
+        "the foot was missed")
+end)
+
+test("a short loop over a long stroke catches it", function()
+    -- Tested every so many points, the resolution of the test was a fraction of
+    -- the stroke: on a line of writing put down in one stroke, a loop around a
+    -- word fell between two tested points and selected nothing.
+    local long = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    for i = 0, 600 do long:addPoint(100 + i, 500, 1) end
+    assertEq(Lasso.isStrokeSelected(long, boxLoop(300, 480, 40, 40)), true,
+        "a 40px loop over a 600px stroke missed it")
+end)
+
+test("cloning carries the tint across", function()
+    local s = Stroke:new{ tool = "highlighter", width = 24, color = 0, tint = 100 }
+    s:addPoint(10, 10, 1)
+    s:addPoint(40, 10, 1)
+    assertEq(Lasso.cloneStrokes({ s })[1].tint, 100, "clone tint")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

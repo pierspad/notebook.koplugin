@@ -298,15 +298,34 @@ function Library.parentOf(rel)
     return rel:match("^(.*)/[^/]+$") or ""
 end
 
+-- Copied a block at a time rather than in one read, because what goes through
+-- here is as often an exported PDF as a notebook, and reading one of those
+-- whole means a Lua string the size of the file on a device that does not have
+-- the memory to spare for it.
+local COPY_CHUNK = 64 * 1024
+
 local function copyFile(from, to)
     local src = io.open(from, "rb")
     if not src then return false end
-    local data = src:read("*a")
-    src:close()
 
     local dst = io.open(to, "wb")
-    if not dst then return false end
-    dst:write(data)
+    if not dst then
+        src:close()
+        return false
+    end
+
+    while true do
+        local chunk = src:read(COPY_CHUNK)
+        if not chunk or chunk == "" then break end
+        if not dst:write(chunk) then
+            src:close()
+            dst:close()
+            os.remove(to)
+            return false
+        end
+    end
+
+    src:close()
     dst:close()
     return true
 end
@@ -324,15 +343,44 @@ function Library.createFolder(name, parent)
     return true
 end
 
+--- The sidecar directory that belongs beside a document, by absolute path.
+local function sidecarOf(path)
+    return (path:gsub("%.[^./]+$", "")) .. ".sdr"
+end
+
+--[[--
+Moves a document's sidecar directory along with the document.
+
+KOReader writes one beside any PDF it has opened, and it holds the reading
+position and any bookmarks. Left behind by a rename or a move it is both
+invisible -- the grid hides sidecars -- and permanently orphaned, and the export
+it belonged to has quietly forgotten where you had got to in it.
+
+Best effort on purpose. The document itself has already been moved by the time
+this runs, and a sidecar that cannot follow is worth losing a reading position
+over, not worth undoing the move the reader asked for.
+--]]
+local function moveSidecar(from, to)
+    local src = sidecarOf(from)
+    if src == from then return end
+    if lfs.attributes(src, "mode") ~= "directory" then return end
+    os.rename(src, sidecarOf(to))
+end
+
+Library.moveSidecar = moveSidecar
+
 function Library.rename(old_name, new_name, folder)
     local ok, reason = Library.validateName(new_name)
     if not ok then return false, reason end
     if new_name == old_name then return true end
     if Library.exists(new_name, folder) then return false, "exists" end
-    if not os.rename(Library.pathFor(old_name, folder),
-                     Library.pathFor(new_name, folder)) then
+
+    local from = Library.pathFor(old_name, folder)
+    local to = Library.pathFor(new_name, folder)
+    if not os.rename(from, to) then
         return false, "failed"
     end
+    moveSidecar(from, to)
     return true
 end
 
@@ -375,7 +423,7 @@ cannot see it, it is because there is nothing left for it to belong to.
 function Library.deletePath(path)
     local gone = os.remove(path) and true or false
     if gone then
-        local sidecar = path:gsub("%.[^./]+$", "") .. ".sdr"
+        local sidecar = sidecarOf(path)
         if lfs.attributes(sidecar, "mode") == "directory" then
             Library.deleteTree(sidecar)
         end
@@ -489,8 +537,14 @@ function Library.moveTo(item_rel, target_rel)
         if n > 999 then return nil, "exists" end
     end
 
-    if not os.rename(source, Library.abs(dest_rel)) then
+    local dest = Library.abs(dest_rel)
+    if not os.rename(source, dest) then
         return nil, "failed"
+    end
+    -- A folder carries its sidecars inside it; a file's sits beside it and has
+    -- to be taken along by hand.
+    if mode ~= "directory" then
+        moveSidecar(source, dest)
     end
     return dest_rel
 end

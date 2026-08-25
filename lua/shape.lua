@@ -5,8 +5,15 @@ Analyzes raw stroke point streams and classifies them into:
 - "line": straight line between endpoints
 - "circle": circle centered on stroke centroid
 - "ellipse": axis-aligned or rotated ellipse
-- "triangle": closed 3-vertex polygon
-- "rectangle": closed 4-vertex quadrilateral (or square)
+- "triangle": closed 3-vertex polygon, with the corners that were drawn
+- "rectangle": closed 4-vertex quadrilateral whose corners are square (or square)
+- "quadrilateral": any other closed 4-vertex polygon, corners as drawn
+
+Straightening, not substituting: a shape comes back with the edges tidied and
+the vertices where the reader put them. Only the circle, the ellipse and the
+rectangle are regularised, because for those the reader's intent *is* the
+regular figure -- and even the rectangle only when the corners are already
+square.
 
 @module notebook.shape
 --]]--
@@ -221,6 +228,40 @@ local function detectCircleOrEllipse(points, total_len)
     return nil
 end
 
+--[[--
+How far a corner may be from square, in degrees, and still count as one.
+
+Generous, because this is applied to corners a hand drew freehand and then
+simplified: a rectangle sketched quickly is several degrees out at every
+corner. Tight enough that a rhombus or a trapezium -- both tens of degrees out
+-- does not pass.
+--]]
+local RECT_ANGLE_TOLERANCE = 18
+
+--- True if the four vertices of `simp` have corners near enough to square.
+local function isRectangular(simp)
+    for i = 1, 4 do
+        local prev = simp[(i - 2) % 4 + 1]
+        local cur = simp[i]
+        local next_pt = simp[i % 4 + 1]
+
+        local ax, ay = prev.x - cur.x, prev.y - cur.y
+        local bx, by = next_pt.x - cur.x, next_pt.y - cur.y
+        local la = math.sqrt(ax * ax + ay * ay)
+        local lb = math.sqrt(bx * bx + by * by)
+        -- A vertex on top of its neighbour has no angle to measure, and a
+        -- quadrilateral with one is not a rectangle.
+        if la == 0 or lb == 0 then return false end
+
+        local cos_a = (ax * bx + ay * by) / (la * lb)
+        if cos_a < -1 then cos_a = -1 elseif cos_a > 1 then cos_a = 1 end
+        if math.abs(math.deg(math.acos(cos_a)) - 90) > RECT_ANGLE_TOLERANCE then
+            return false
+        end
+    end
+    return true
+end
+
 --- Tests if a stroke forms a polygon (triangle, rectangle, square).
 local function detectPolygon(points, total_len)
     if #points < 6 then return nil end
@@ -245,46 +286,51 @@ local function detectPolygon(points, total_len)
 
     local n_verts = #simp - 1
     if n_verts == 3 then
-        local p1, p2, p3 = simp[1], simp[2], simp[3]
-        -- Centroid
-        local cx = (p1.x + p2.x + p3.x) / 3
-        local cy = (p1.y + p2.y + p3.y) / 3
+        --[[
+        The three corners that were drawn, joined by straight edges.
 
-        -- Distances of vertices from centroid
-        local r1 = math.sqrt((p1.x - cx)^2 + (p1.y - cy)^2)
-        local r2 = math.sqrt((p2.x - cx)^2 + (p2.y - cy)^2)
-        local r3 = math.sqrt((p3.x - cx)^2 + (p3.y - cy)^2)
-        local r_avg = (r1 + r2 + r3) / 3
+        They used to be thrown away and replaced by an equilateral triangle on
+        the same centroid: every vertex put at the mean distance and the angles
+        forced to 120 degrees apart. That is not tidying a drawing, it is
+        substituting a different one -- a right triangle, an isoceles, anything
+        sketched for a diagram came back equilateral, and the thing the reader
+        was trying to draw was the part that got discarded.
 
-        -- Find the vertex furthest from centroid (or apex) as primary orientation
-        local apex, max_r = p1, r1
-        if r2 > max_r then apex, max_r = p2, r2 end
-        if r3 > max_r then apex = p3 end
-
-        local theta0 = math.atan2(apex.y - cy, apex.x - cx)
-        -- Snap theta to nearest vertical / horizontal if within 12 degrees
-        local deg = math.deg(theta0) % 360
-        local cardinals = { -90, 0, 90, 180, 270 }
-        for _, c in ipairs(cardinals) do
-            if math.abs(deg - (c % 360)) < 12 or math.abs(deg - (c % 360) - 360) < 12 then
-                theta0 = math.rad(c)
-                break
-            end
-        end
-
-        local tri_pts = {}
-        for i = 0, 2 do
-            local angle = theta0 + i * (2 * math.pi / 3)
-            table.insert(tri_pts, {
-                x = math.floor(cx + r_avg * math.cos(angle) + 0.5),
-                y = math.floor(cy + r_avg * math.sin(angle) + 0.5),
-                p = 1
-            })
-        end
+        Simplification has already removed the shake, so the corners are where
+        the reader put them and the edges between them are straight, which is
+        the whole of what the snap is for.
+        --]]
+        local tri_pts = {
+            { x = math.floor(simp[1].x + 0.5), y = math.floor(simp[1].y + 0.5), p = 1 },
+            { x = math.floor(simp[2].x + 0.5), y = math.floor(simp[2].y + 0.5), p = 1 },
+            { x = math.floor(simp[3].x + 0.5), y = math.floor(simp[3].y + 0.5), p = 1 },
+        }
         table.insert(tri_pts, { x = tri_pts[1].x, y = tri_pts[1].y, p = 1 })
         return "triangle", tri_pts
 
     elseif n_verts == 4 then
+        --[[
+        Only a quadrilateral that is already a rectangle is snapped to one.
+
+        The snap below works by projecting onto the first edge and taking the
+        extent, which returns a rectangle whatever it is given: a trapezium, a
+        rhombus, a parallelogram, the perspective face of a box all came back
+        as plain boxes. So the corners are measured first, and anything that is
+        not square-cornered is kept as the quadrilateral it is.
+        --]]
+        if not isRectangular(simp) then
+            local quad_pts = {}
+            for i = 1, 4 do
+                table.insert(quad_pts, {
+                    x = math.floor(simp[i].x + 0.5),
+                    y = math.floor(simp[i].y + 0.5),
+                    p = 1,
+                })
+            end
+            table.insert(quad_pts, { x = quad_pts[1].x, y = quad_pts[1].y, p = 1 })
+            return "quadrilateral", quad_pts
+        end
+
         local p1, p2 = simp[1], simp[2]
         -- Calculate rotation angle along first edge
         local theta = math.atan2(p2.y - p1.y, p2.x - p1.x)
@@ -379,6 +425,9 @@ function Shape.recognize(raw_stroke)
             tool = raw_stroke.tool,
             width = raw_stroke.width,
             color = raw_stroke.color,
+            -- Carried, so a shape snapped mid-stroke keeps being drawn in the
+            -- shade the stroke was being drawn in rather than jumping tone.
+            tint = raw_stroke.tint,
         }
         for _, pt in ipairs(pts) do
             clean_stroke:addPoint(pt.x, pt.y, pt.p or 1)
