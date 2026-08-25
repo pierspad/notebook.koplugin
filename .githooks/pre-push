@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#
+# The last check before anything leaves the machine.
+#
+# The bench is seconds, not minutes -- it runs headless under luajit with the
+# widget layer stubbed -- so there is no reason to let a push go out untested
+# and find out from CI.
+#
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] verifying"
+make verify
+echo "[pre-push] ok"

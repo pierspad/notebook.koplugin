@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # The bench runs under LuaJIT with the widget layer stubbed, so there is
+      # nothing to build and no KOReader checkout to fetch.
+      - name: Install LuaJIT and luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit lua5.1 luarocks
+          sudo luarocks install luacheck
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+      - name: Package
+        run: make package
+
+      # Kept so that a release can be cut from something that has been tested,
+      # rather than rebuilt from a checkout nothing has run against.
+      - name: Preserve the tested package
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: koplugin-package
+          path: build/*.zip
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# Fast checks for the commit loop. The full bench runs before push and in CI.
+#
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+echo "[pre-commit] linting"
+make lint
+echo "[pre-commit] ok"

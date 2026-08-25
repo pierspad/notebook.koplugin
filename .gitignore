@@ -1,0 +1,15 @@
+# Built packages.
+build/
+*.zip
+
+# Device configuration for tools/deploy.sh: an address and a user name, which
+# belong to whoever is holding the device rather than in the repository.
+kindle.env
+.kindle.env
+
+# Rendered by spec/render.lua and spec/export_real.lua when they are run by hand.
+*.png
+*.pdf
+
+.DS_Store
+.idea/

@@ -1,0 +1,272 @@
+# Italian translations for the Scribe notebook plugin.
+#
+# One entry per string the plugin shows. Copy this file to <language>.po and
+# translate the msgstr lines to add a language; nothing else needs changing.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: it\n"
+
+msgid "%1 selected"
+msgstr "%1 selezionati"
+
+msgid "1 selected"
+msgstr "1 selezionato"
+
+msgid "Add"
+msgstr "Aggiungi"
+
+msgid "All"
+msgstr "Tutti"
+
+msgid "Background for every page"
+msgstr "Sfondo per ogni pagina"
+
+msgid "Background of page %1"
+msgstr "Sfondo della pagina %1"
+
+msgid "Background of this page"
+msgstr "Sfondo di questa pagina"
+
+msgid "Blank"
+msgstr "Bianco"
+
+msgid "Cancel"
+msgstr "Annulla"
+
+msgid "Checklist"
+msgstr "Elenco"
+
+msgid "Close"
+msgstr "Chiudi"
+
+msgid "Copy"
+msgstr "Copia"
+
+msgid "Could not create the notebook folder."
+msgstr "Impossibile creare la cartella dei blocchi note."
+
+msgid "Create"
+msgstr "Crea"
+
+msgid "Cut"
+msgstr "Taglia"
+
+msgid "Delete"
+msgstr "Elimina"
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "Eliminare %1 elementi?\n\nLe cartelle vengono eliminate con tutto il loro contenuto. L'operazione non è annullabile."
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "Eliminare «%1»?\n\nL'operazione non è annullabile."
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Eliminare la pagina %1 e tutto ciò che contiene?"
+
+msgid "Done"
+msgstr "Fatto"
+
+msgid "Dot grid"
+msgstr "Puntini"
+
+msgid "Draws"
+msgstr "Disegna"
+
+msgid "Duplicate"
+msgstr "Duplica"
+
+msgid "Eraser removes"
+msgstr "La gomma cancella"
+
+msgid "Eraser size"
+msgstr "Dimensione gomma"
+
+msgid "Export PDF"
+msgstr "Esporta PDF"
+
+msgid "Exported %1 notebooks."
+msgstr "Esportati %1 blocchi note."
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "Esportati %1 di %2; %3 non sono leggibili."
+
+msgid "Exported to:\n%1"
+msgstr "Esportato in:\n%1"
+
+msgid "Exporting %1 notebooks…"
+msgstr "Esportazione di %1 blocchi note…"
+
+msgid "Exporting '%1'…"
+msgstr "Esportazione di «%1»…"
+
+msgid "Finger"
+msgstr "Dito"
+
+msgid "Follow the notebook again"
+msgstr "Torna a seguire il blocco note"
+
+msgid "Go to this page"
+msgstr "Vai a questa pagina"
+
+msgid "Grid"
+msgstr "Quadretti"
+
+msgid "Insert a page after this one"
+msgstr "Inserisci una pagina dopo questa"
+
+msgid "Last edited"
+msgstr "Ultima modifica"
+
+msgid "Least recently edited"
+msgstr "Modificati meno di recente"
+
+msgid "Lined"
+msgstr "Righe"
+
+msgid "Marker size"
+msgstr "Dimensione evidenziatore"
+
+msgid "Move"
+msgstr "Sposta"
+
+msgid "Move to"
+msgstr "Sposta in"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "Spostati %1; %2 non potevano andare lì."
+
+msgid "Name (A to Z)"
+msgstr "Nome (dalla A alla Z)"
+
+msgid "Name (Z to A)"
+msgstr "Nome (dalla Z alla A)"
+
+msgid "Narrow lined"
+msgstr "Righe strette"
+
+msgid "New folder"
+msgstr "Nuova cartella"
+
+msgid "New notebook"
+msgstr "Nuovo blocco note"
+
+msgid "New page"
+msgstr "Nuova pagina"
+
+msgid "Nothing could be prepared for sending."
+msgstr "Non è stato possibile preparare nulla per l'invio."
+
+msgid "None"
+msgstr "Nessuno"
+
+msgid "Notebook"
+msgstr "Blocco note"
+
+msgid "Notebook background"
+msgstr "Sfondo del blocco note"
+
+msgid "Notebook name"
+msgstr "Nome del blocco note"
+
+msgid "Notebooks"
+msgstr "Blocchi note"
+
+msgid "Notebooks (top level)"
+msgstr "Blocchi note (livello principale)"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "Ancora niente — usa Nuovo blocco note per cominciare"
+
+msgid "Open"
+msgstr "Apri"
+
+msgid "Open notebook"
+msgstr "Apri blocco note"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Page %1"
+msgstr "Pagina %1"
+
+msgid "Page %1 of %2"
+msgstr "Pagina %1 di %2"
+
+msgid "Pages (%1)"
+msgstr "Pagine (%1)"
+
+msgid "Part of a stroke"
+msgstr "Parte di un tratto"
+
+msgid "Paste"
+msgstr "Incolla"
+
+msgid "Pen size"
+msgstr "Dimensione penna"
+
+msgid "Preparing %1 items…"
+msgstr "Preparazione di %1 elementi…"
+
+msgid "Preparing '%1'…"
+msgstr "Preparazione di «%1»…"
+
+msgid "Rename"
+msgstr "Rinomina"
+
+msgid "Rename folder"
+msgstr "Rinomina cartella"
+
+msgid "Rename notebook"
+msgstr "Rinomina blocco note"
+
+msgid "Save"
+msgstr "Salva"
+
+msgid "Select"
+msgstr "Seleziona"
+
+msgid "Send"
+msgstr "Invia"
+
+msgid "Sending %1; %2 could not be read."
+msgstr "Invio di %1; %2 non sono leggibili."
+
+msgid "Some pages have their own — change those too"
+msgstr "Alcune pagine hanno il proprio — cambia anche quelle"
+
+msgid "Something with that name is already here."
+msgstr "Qui c'è già qualcosa con questo nome."
+
+msgid "Sort by"
+msgstr "Ordina per"
+
+msgid "That name cannot be used."
+msgstr "Questo nome non si può usare."
+
+msgid "That name is too long."
+msgstr "Questo nome è troppo lungo."
+
+msgid "The name cannot be empty."
+msgstr "Il nome non può essere vuoto."
+
+msgid "The name cannot contain slashes."
+msgstr "Il nome non può contenere barre."
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "Il plugin dei blocchi note ha avuto un problema e si è chiuso.\n\nKOReader sta bene."
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "Il plugin dei blocchi note ha avuto un problema e si è chiuso.\n\nKOReader sta bene.\n\nI dettagli sono stati scritti in:\n%1"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "Non c'è spazio dove preparare i file per l'invio."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "Impossibile aprire questo blocco note; potrebbe venire da una versione più recente."
+
+msgid "Turns pages"
+msgstr "Gira pagina"
+
+msgid "Whole strokes"
+msgstr "Tratti interi"
