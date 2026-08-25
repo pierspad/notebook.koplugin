@@ -374,7 +374,7 @@ function Canvas:_triggerShapeSnap()
     if not self.stroke or self.shape_snapped or self.stroke:count() < 4 or self.erasing or self.dragging_selection then
         return
     end
-    local clean, kind = Shape.recognize(self.stroke)
+    local clean = Shape.recognize(self.stroke)
     if clean then
         self.shape_snapped = true
         local bx, by, bw, bh = self.stroke:getBounds()
@@ -440,7 +440,6 @@ function Canvas:_beginStroke(tool, x, y, p)
     end
 
     -- Put down the initial dot so a tap leaves a mark rather than nothing.
-    local r = Renderer.radiusFor(self.stroke, p)
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
         x, y, p, x, y, p, self.coverage)
     self:_accumulate(rx, ry, rw, rh)
@@ -1011,7 +1010,11 @@ function Canvas:onStylusEvent(slot)
     end
 
     -- Touchscreen panel slots (0..9) with no explicit stylus tool are palm contacts
-    if slot.slot and slot.slot < 10 and slot.tool ~= Input.TOOL_TYPE_PEN and slot.tool ~= Input.TOOL_TYPE_ERASER and slot.tool ~= Input.TOOL_TYPE_HIGHLIGHTER then
+    local from_panel = slot.slot and slot.slot < 10
+    local is_pen = slot.tool == Input.TOOL_TYPE_PEN
+        or slot.tool == Input.TOOL_TYPE_ERASER
+        or slot.tool == Input.TOOL_TYPE_HIGHLIGHTER
+    if from_panel and not is_pen then
         return false
     end
 

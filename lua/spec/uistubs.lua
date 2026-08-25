@@ -423,6 +423,36 @@ function stubs.install(fs)
         end,
     }
 
+    --[[--
+    A rename that moves a directory and everything under it.
+
+    Modelled because the plugin moves its own folder on first run, and without
+    this the rename went to the real `os.rename`, failed against a path that
+    exists only in this table, and the test passed by taking the failure branch
+    -- that is, by testing the opposite of what it said.
+
+    `recorder.rename_fails` makes it fail on purpose, which is the branch a
+    device with a read-only filesystem or an unexpected leftover folder takes.
+    --]]
+    local real_rename = os.rename
+    recorder.restoreRename = function() os.rename = real_rename end
+
+    os.rename = function(from, to)
+        if recorder.rename_fails then return nil, "refused by the test" end
+        from, to = normalize(from), normalize(to)
+        if not fs[from] then return real_rename(from, to) end
+
+        local moved = {}
+        for path, entry in pairs(fs) do
+            if path == from or path:sub(1, #from + 1) == from .. "/" then
+                moved[to .. path:sub(#from + 1)] = entry
+                fs[path] = nil
+            end
+        end
+        for path, entry in pairs(moved) do fs[path] = entry end
+        return true
+    end
+
     --- Records generation instead of rasterising: the cost is what matters here.
     package.loaded["thumbnail"] = {
         stamp = function(path)

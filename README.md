@@ -49,12 +49,18 @@ on the glass is usually somebody's hand.
 ### Development
 
 ```bash
-make verify     # lint and run the test bench
-make package    # build build/notebook.koplugin-<version>.zip
+make ci         # lint, test, package, and check the package: what CI runs
+make verify     # lint and test only
 make install-hooks
 ```
 
-The bench is 190-odd tests across ten suites and runs in about a second: it
+`make ci` is deliberately the single definition of "does this pass": the CI
+workflow, the release workflow and the `pre-push` hook all call that one target,
+so a push cannot fail on GitHub for something the machine could have said first.
+It needs `luacheck` — `make lint` refuses to run without it rather than skipping
+itself and reporting success, which is how seventeen warnings once reached CI.
+
+The bench is 200-odd tests across ten suites and runs in about a second: it
 drives the plugin headless under LuaJIT with the KOReader widget layer stubbed,
 at the real geometry and density of a Scribe. The stubs are deliberately
 faithful on the points that have actually caused bugs — see the comments in
@@ -76,11 +82,15 @@ ports, and installing LocalSend alongside.
 
 This plugin used to live inside a KOReader fork as `scribe.koplugin`. KOReader
 takes a plugin's name from its directory, so the rename changes the name too,
-and two things follow:
+and everything keyed on that name comes with it:
 
-- **Your notebooks are safe and are not moved.** A device with an existing
-  `koreader/scribe/` folder keeps using it; only fresh installs get
-  `koreader/notebook/`.
+- **An existing `koreader/scribe/` folder is renamed to `koreader/notebook/`**
+  the first time the notebooks are opened. It is one `os.rename` of the
+  directory, which within a filesystem is a single atomic operation: the folder
+  is either at the new name or at the old one, never half at each. If the rename
+  cannot be made at all, the old folder keeps being used where it is.
+- **Settings written under the old name are moved onto the new keys** once, and
+  the old ones are deleted.
 - **A Simple UI tab pointing at the old plugin still works** — both names are
   recognised. A tab created from scratch will record the new one.
 

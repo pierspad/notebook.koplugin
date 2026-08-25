@@ -18,12 +18,9 @@ local Font = require("ui/font")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
-local HorizontalGroup = require("ui/widget/horizontalgroup")
-local HorizontalSpan = require("ui/widget/horizontalspan")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local Size = require("ui/size")
 local PaperSample = require("papersample")
-local Template = require("template")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
@@ -33,7 +30,6 @@ local Safe = require("safe")
 
 local Screen = Device.screen
 
-local COLUMNS = 3
 
 -- The picker ---------------------------------------------------------------------
 
@@ -53,8 +49,6 @@ function TemplatePicker:init()
 
     local width = math.floor(Screen:getWidth() * 0.86)
     local gap = Size.padding.large
-    local cell_w = math.floor((width - 2 * gap - (COLUMNS - 1) * gap) / COLUMNS)
-    local cell_h = math.floor(cell_w * 1.15)
 
     local content = VerticalGroup:new{ align = "center" }
 

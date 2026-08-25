@@ -71,10 +71,6 @@ local WATCHDOG_BUDGET = 5
 -- once rather than putting a dialog up forever.
 Safe.failed = false
 
--- Every widget class that has been through Safe.widget, so the screens can be
--- found and closed without keeping a live registry of instances.
-local screens = {}
-
 --- Where the crash log goes. Beside the notebooks, so it is easy to find over USB.
 local function logPath()
     local ok, Library = pcall(require, "library")
@@ -264,8 +260,11 @@ compiled traces there would cost more than it could ever save.
   class whose events are on the drawing path
 --]]
 function Safe.widget(class, name, watch)
+    -- The marker is how a screen of ours is recognised on the window stack when
+    -- there is a fault to clean up after; see closeScreens. Recognising them
+    -- there rather than keeping a registry means there is no list that can
+    -- disagree with what is actually on screen.
     class.notebook_screen = name
-    screens[name] = class
 
     local handle_event = class.handleEvent
     if handle_event then

@@ -47,16 +47,20 @@ packaged.
 - The watchdog turns the JIT off for the duration of a protected call, because a
   count hook is not checked inside a compiled trace — which is to say that
   without it an infinite loop in a handler is a dead device, silently.
-- 190 tests across ten suites, run before every push and before every deploy.
+- 203 tests across ten suites, run before every push and before every deploy.
 
 ### Upgrading from `scribe.koplugin`
 
 KOReader takes a plugin's name from its directory, so this is a rename of the
 plugin itself. Handled, and tested in `lua/spec/migration.lua`:
 
-- An existing `koreader/scribe/` folder is adopted where it stands. Notebooks
-  are never moved; only fresh installs get `koreader/notebook/`.
-- Settings written under the old name are still read.
+- An existing `koreader/scribe/` folder is renamed to `koreader/notebook/` on
+  first use: one atomic `os.rename` of the directory, falling back to using the
+  old folder where it is if that cannot be done.
+- Settings written under the old name are moved onto the new keys and the old
+  ones removed.
+- Thumbnails are keyed below the root, so the pictures already drawn survive the
+  move.
 - A Simple UI tab pointing at either name still opens the notebooks.
 
 Delete the old `scribe.koplugin` directory after installing, or you will have

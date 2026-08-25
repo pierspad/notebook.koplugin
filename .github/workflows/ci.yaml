@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  verify:
-    name: Lint and test
+  ci:
+    name: Lint, test and package
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -31,14 +31,10 @@ jobs:
           sudo apt-get install -y luajit lua5.1 luarocks
           sudo luarocks install luacheck
 
-      - name: Lint
-        run: make lint
-
-      - name: Test
-        run: make test
-
-      - name: Package
-        run: make package
+      # One target, so that this and the pre-push hook cannot mean different
+      # things by "it passes". Everything it does is in the Makefile.
+      - name: make ci
+        run: make ci
 
       # Kept so that a release can be cut from something that has been tested,
       # rather than rebuilt from a checkout nothing has run against.

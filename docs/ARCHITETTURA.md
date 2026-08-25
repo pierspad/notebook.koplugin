@@ -213,10 +213,15 @@ lo installa senza sapere che Scribe esiste.
 make test
 ```
 
-190 test sulla logica indipendente dal dispositivo, in un secondo e senza
+203 test sulla logica indipendente dal dispositivo, in un secondo e senza
 emulatore. `make deploy` li esegue da solo e si rifiuta di installare se
-falliscono; il gancio `pre-push` li esegue prima che qualcosa esca dalla
-macchina.
+falliscono; il gancio `pre-push` esegue `make ci` — cioè esattamente quello che
+esegue la CI — prima che qualcosa esca dalla macchina.
+
+`make lint` **si rifiuta di girare** se luacheck non c'è, invece di saltare e
+riportare successo. Non è pedanteria: la prima volta ha saltato, gli hook sono
+passati, e la CI è caduta su diciassette warning che erano nell'albero da
+sempre.
 
 | suite | cosa copre |
 |---|---|
@@ -229,7 +234,7 @@ macchina.
 | `safe` | un errore non esce dal ciclo, un loop infinito viene interrotto |
 | `shape` | riconoscimento delle forme tenendo premuto, e lo snap agli assi |
 | `lasso` | selezione, spostamento e trasformazioni di ciò che è stato preso |
-| `migration` | un'installazione che viene da `scribe.koplugin`: dove sono i taccuini, come si chiamano le impostazioni, quale tab della barra è il nostro |
+| `migration` | un'installazione che viene da `scribe.koplugin`: lo spostamento della cartella dei taccuini, il passaggio delle impostazioni alle nuove chiavi, quale tab della barra è il nostro |
 
 Gli stub del layer widget (`spec/uistubs.lua`) hanno la dimensione **e la
 densità vere dello Scribe**. Non è un dettaglio: KOReader scala ogni padding,

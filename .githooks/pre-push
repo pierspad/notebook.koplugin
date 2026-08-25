@@ -11,6 +11,9 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-echo "[pre-push] verifying"
-make verify
+# `make ci` and not `make verify`: this hook exists so that a push cannot fail
+# on GitHub for something the machine could have said first, and that only holds
+# if the two run the same thing. The workflows call this same target.
+echo "[pre-push] running everything CI runs"
+make ci
 echo "[pre-push] ok"

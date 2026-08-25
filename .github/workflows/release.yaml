@@ -22,43 +22,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install LuaJIT
+      - name: Install LuaJIT and luacheck
         run: |
           sudo apt-get update
-          sudo apt-get install -y luajit
+          sudo apt-get install -y luajit lua5.1 luarocks
+          sudo luarocks install luacheck
 
       # Built from the tag rather than downloaded from a CI run: the package is
       # a zip of Lua source with nothing compiled in it, so building it again
       # costs seconds and removes a whole class of "which artifact was that"
-      # questions.
-      - name: Test
-        run: make test
+      # questions. `make ci` is the same target CI and the pre-push hook use,
+      # and it is where the checks on the package itself live.
+      - name: make ci
+        run: make ci
 
-      - name: Package
-        run: make package
-
-      - name: Check the package is what it claims to be
+      - name: The tag and the version must agree
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
           version="$(make version)"
-          archive="build/notebook.koplugin-${version}.zip"
-          test -f "$archive"
-          unzip -tq "$archive"
-
-          # A tagged release must carry the version the tag names, or the
-          # download and the tag disagree and nobody can tell which is right.
-          if [[ "${{ github.event_name }}" == release ]]; then
-            tag="${{ github.event.release.tag_name }}"
-            if [[ "$tag" != "$version" ]]; then
-              echo "tag $tag does not match lua/_meta.lua version $version" >&2
-              exit 1
-            fi
-          fi
-
-          # The tests must not be in it, and main.lua must be.
-          unzip -l "$archive" | grep -q 'notebook.koplugin/main.lua'
-          if unzip -l "$archive" | grep -q 'notebook.koplugin/spec/'; then
-            echo "the package carries the test bench" >&2
+          if [[ "$TAG" != "$version" ]]; then
+            echo "tag $TAG does not match lua/_meta.lua version $version" >&2
             exit 1
           fi
 

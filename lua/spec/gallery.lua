@@ -84,7 +84,11 @@ end
 
 -- Fixture ------------------------------------------------------------------------
 
-local ROOT = "/data/scribe"
+-- Where Library.root() puts the notebooks. A fixture built at the old name
+-- would be moved out from under itself the moment the library resolved its
+-- root, which is what spec/migration.lua is for and not what these tests are
+-- about.
+local ROOT = "/data/notebook"
 
 --- A filesystem holding `n` notebooks at the root, plus one subfolder.
 local function fixture(n)
@@ -783,18 +787,11 @@ test("a notebook moved into a folder is there and not here", function()
     end
     assertTrue(item ~= nil, "no notebook in the fixture")
 
-    -- os.rename is what Library uses; the stub filesystem needs it honoured.
-    local real_rename = os.rename
-    os.rename = function(from, to)
-        rec.fs[to] = rec.fs[from]
-        rec.fs[from] = nil
-        return true
-    end
+    -- The stub filesystem honours os.rename, which is what Library uses.
     gallery:_moveInto({ item }, "Trip")
-    os.rename = real_rename
 
     assertEq(#gallery.items, before - 1, "items left in this folder")
-    assertTrue(rec.fs["/data/scribe/Trip/" .. item.name .. ".scribe"] ~= nil,
+    assertTrue(rec.fs[ROOT .. "/Trip/" .. item.name .. ".scribe"] ~= nil,
         "the notebook did not land in the folder")
 end)
 

@@ -29,7 +29,6 @@ local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local _ = require("i18n")
 local Safe = require("safe")
-local T = require("ffi/util").template
 
 local Screen = Device.screen
 
@@ -361,7 +360,6 @@ end
 -- Settings ---------------------------------------------------------------------
 
 local SETTING_PREFIX = "notebook_"
-local LEGACY_SETTING_PREFIX = "scribe_"
 
 --- Persists a canvas setting and applies it immediately.
 function Notebook:_setSetting(key, value)
@@ -378,15 +376,10 @@ end
 
 --- Reads the stored settings onto a freshly built canvas.
 function Notebook:_loadSettings()
+    -- No fallback to the keys written under the old name: they are moved onto
+    -- these once, when the plugin loads. See Library.migrateSettings.
     local function get(key, default)
         local value = G_reader_settings:readSetting(SETTING_PREFIX .. key)
-        -- Written by a version of this plugin that went by another name. Read
-        -- rather than migrated: a setting that is read from the old key and
-        -- saved to the new one moves across the first time it is changed, and
-        -- one that is never changed costs a second lookup and nothing else.
-        if value == nil then
-            value = G_reader_settings:readSetting(LEGACY_SETTING_PREFIX .. key)
-        end
         if value == nil then return default end
         return value
     end

@@ -24,27 +24,94 @@ local EXT = ".scribe"
 local Library = {}
 
 --[[--
-Where the notebooks live.
+Where the notebooks live, and the one-time move that gets them there.
 
-`koreader/notebook`, except on a device that already has `koreader/scribe` --
-what this plugin was called before it had a repository of its own. That folder
-is adopted where it stands rather than moved: renaming a directory full of
-somebody's handwriting to tidy up a name is not a trade worth making, and a
-half-finished move is a great deal worse than an oddly named folder.
+`koreader/notebook`. A device that still has `koreader/scribe` -- what this
+plugin was called before it had a repository of its own -- is moved across the
+first time the notebooks are asked for, so that there is one name for this
+after the update and not two forever.
 
-New installs never see the old name, so it disappears on its own.
+The move is a single `os.rename` of the directory, which within a filesystem is
+one atomic operation: either the folder is at the new name or it is at the old
+one, never half at each. That is the whole reason it is done this way rather
+than by copying the notebooks across one at a time, which is the version that
+can be interrupted with somebody's handwriting in two places.
+
+If the rename fails anyway -- the destination existing already, a permission
+that is not there, the two paths somehow on different filesystems -- the old
+folder is used exactly where it is. A plugin that cannot tidy up its own naming
+still has to open the notebooks.
+
+Worked out once and remembered, because this is asked on every listing and the
+answer cannot change while the plugin is running.
 --]]
 local ROOT_NAME = "notebook"
 local LEGACY_ROOT_NAME = "scribe"
 
+local root_path = nil
+
 function Library.root()
+    if root_path then return root_path end
+
     local data = DataStorage:getDataDir()
     local root = data .. "/" .. ROOT_NAME
-    if lfs.attributes(root, "mode") ~= "directory" then
-        local legacy = data .. "/" .. LEGACY_ROOT_NAME
-        if lfs.attributes(legacy, "mode") == "directory" then return legacy end
+    local legacy = data .. "/" .. LEGACY_ROOT_NAME
+
+    if lfs.attributes(root, "mode") ~= "directory"
+        and lfs.attributes(legacy, "mode") == "directory" then
+        if os.rename(legacy, root) then
+            logger.info("Notebook: moved", legacy, "to", root)
+        else
+            logger.warn("Notebook: could not move", legacy, "to", root,
+                "-- continuing to use", legacy)
+            root = legacy
+        end
     end
-    return root
+
+    root_path = root
+    return root_path
+end
+
+--- Forgets the resolved root. For tests, which build several filesystems.
+function Library.resetRoot()
+    root_path = nil
+end
+
+--[[--
+Moves the stored settings onto the keys this plugin now uses.
+
+Everything KOReader keeps for a plugin is keyed by a prefix, and the prefix was
+the old name. Read-with-a-fallback would have worked and would have left the old
+keys in the settings file forever, which is the kind of thing that is still
+there in three years and that nobody dares delete because nobody remembers what
+reads it.
+
+So they are moved once and the old ones deleted. Idempotent: a key that is not
+there is not moved, and a key already at the new name is not overwritten by a
+stale one left beside it.
+--]]
+local SETTING_PREFIX = "notebook_"
+local LEGACY_SETTING_PREFIX = "scribe_"
+
+local SETTINGS = {
+    "pen_width", "highlighter_width", "eraser_size", "eraser_mode",
+    "draw_with_finger", "order",
+}
+
+function Library.migrateSettings(store)
+    store = store or G_reader_settings
+    if not store then return end
+
+    for _, key in ipairs(SETTINGS) do
+        local old = LEGACY_SETTING_PREFIX .. key
+        local value = store:readSetting(old)
+        if value ~= nil then
+            if store:readSetting(SETTING_PREFIX .. key) == nil then
+                store:saveSetting(SETTING_PREFIX .. key, value)
+            end
+            store:delSetting(old)
+        end
+    end
 end
 
 --- Absolute path for a location relative to the notebook root.

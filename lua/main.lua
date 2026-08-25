@@ -21,7 +21,6 @@ local LauncherBar = require("launcherbar")
 local Library = require("library")
 local Notebook = require("notebook")
 local Share = require("share")
-local Template = require("template")
 local UIManager = require("ui/uimanager")
 local lfs = require("libs/libkoreader-lfs")
 local logger = require("logger")
@@ -30,6 +29,7 @@ local _ = require("i18n")
 -- Required here so that everything is resolved while the plugin directory is
 -- still on package.path; see the note at the top of this file.
 require("newnotebook")
+require("template")
 require("pagepanel")
 require("papersample")
 require("templatepicker")
@@ -119,6 +119,11 @@ function Scribe:onDispatcherRegisterActions()
 end
 
 function Scribe:init()
+    -- Once per session rather than once per instance: this plugin is built for
+    -- the file manager and again for the reader, and the second run finds
+    -- nothing left to move.
+    Library.migrateSettings()
+
     self:onDispatcherRegisterActions()
     self.ui.menu:registerToMainMenu(self)
     installIcons()

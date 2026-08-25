@@ -106,17 +106,6 @@ local function detectLine(points, total_len)
     return nil
 end
 
---- Computes polygon area using Shoelace formula.
-local function polygonArea(points)
-    local area = 0
-    local n = #points
-    for i = 1, n do
-        local j = (i % n) + 1
-        area = area + (points[i].x * points[j].y - points[j].x * points[i].y)
-    end
-    return math.abs(area) / 2
-end
-
 --- Filters out redundant points and tail clusters from holding still.
 local function filterClusters(points)
     if #points <= 2 then return points end
@@ -268,10 +257,9 @@ local function detectPolygon(points, total_len)
         local r_avg = (r1 + r2 + r3) / 3
 
         -- Find the vertex furthest from centroid (or apex) as primary orientation
-        local apex = p1
-        local max_r = r1
-        if r2 > max_r then apex = p2; max_r = r2 end
-        if r3 > max_r then apex = p3; max_r = r3 end
+        local apex, max_r = p1, r1
+        if r2 > max_r then apex, max_r = p2, r2 end
+        if r3 > max_r then apex = p3 end
 
         local theta0 = math.atan2(apex.y - cy, apex.x - cx)
         -- Snap theta to nearest vertical / horizontal if within 12 degrees
