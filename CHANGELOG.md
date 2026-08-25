@@ -2,9 +2,7 @@
 
 ## v1.0.0
 
-First release as a plugin of its own. Everything below was built inside a
-KOReader fork as `scribe.koplugin`; this is that work, extracted, renamed and
-packaged.
+First release.
 
 ### Writing
 
@@ -49,19 +47,7 @@ packaged.
   without it an infinite loop in a handler is a dead device, silently.
 - 203 tests across ten suites, run before every push and before every deploy.
 
-### Upgrading from `scribe.koplugin`
+### Installing
 
-KOReader takes a plugin's name from its directory, so this is a rename of the
-plugin itself. Handled, and tested in `lua/spec/migration.lua`:
-
-- An existing `koreader/scribe/` folder is renamed to `koreader/notebook/` on
-  first use: one atomic `os.rename` of the directory, falling back to using the
-  old folder where it is if that cannot be done.
-- Settings written under the old name are moved onto the new keys and the old
-  ones removed.
-- Thumbnails are keyed below the root, so the pictures already drawn survive the
-  move.
-- A Simple UI tab pointing at either name still opens the notebooks.
-
-Delete the old `scribe.koplugin` directory after installing, or you will have
-both.
+Extract `notebook.koplugin-v1.0.0.zip` into your KOReader plugins directory and
+restart. On a Kindle that is `/mnt/us/koreader/plugins/`.

@@ -30,15 +30,15 @@ local registered = false
 The names a quick action pointing at us can have recorded.
 
 Simple UI stores the plugin a tab launches by the name KOReader knows it by,
-which is the plugin directory's -- so a tab created while this was installed as
-scribe.koplugin names it that, and one created since names it notebook. Both are
-recognised, because a tab that quietly stops working after an update is worse
-than carrying an extra string.
+which is the plugin directory's -- so a tab made against an earlier build of
+this plugin names it whatever that directory was called. Both are recognised,
+because a tab that quietly stops working after an update is worse than carrying
+an extra string.
 --]]
 local PLUGIN_KEYS = { "notebook", "scribe" }
 
 -- Our own dispatcher actions, for a tab configured that way instead. The second
--- is what the action was called before the rename.
+-- is what the action was called in earlier builds.
 local DISPATCHER_ACTIONS = { "notebook_open", "scribe_open" }
 
 --- Simple UI's bottom bar, or nil.

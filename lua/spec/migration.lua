@@ -1,14 +1,13 @@
 #!/usr/bin/env luajit
 --[[--
-Tests for what happens to an install that predates the plugin's own name.
+Tests for an install carrying state from an earlier build.
 
-This plugin was `scribe.koplugin` before it had a repository, and KOReader takes
-a plugin's name from its directory: renaming the directory renames the plugin,
-and everything keyed on that name -- where the notebooks are kept, what the
-settings are called, which plugin a launcher tab says it opens -- points at a
-name nothing answers to any more.
+KOReader takes a plugin's name from its directory, and everything keyed on that
+name follows it: where the notebooks are kept, what the settings are called,
+which plugin a launcher tab says it opens. A device that has been through a
+rename has all of that recorded under a name nothing answers to any more.
 
-None of that can be checked by opening the plugin and looking, because it only
+None of it can be checked by opening the plugin and looking, because it only
 goes wrong on a device that has the old state on it. So it is checked here,
 where both worlds can be built on demand.
 
@@ -66,12 +65,12 @@ end
 
 io.write("where the notebooks are kept\n")
 
-test("a fresh install keeps them under the plugin's own name", function()
+test("a fresh install keeps them under the current name", function()
     local Library = libraryWith{}
     assertEq(Library.root(), "/data/notebook", "root of a fresh install")
 end)
 
-test("an install that predates the rename has its folder moved across", function()
+test("a folder left by an earlier build is moved across", function()
     local Library, fs = libraryWith{ "scribe" }
     assertEq(Library.root(), "/data/notebook", "root after the move")
     assertTrue(fs["/data/notebook"] ~= nil, "the folder is not at the new name")

@@ -26,10 +26,10 @@ local Library = {}
 --[[--
 Where the notebooks live, and the one-time move that gets them there.
 
-`koreader/notebook`. A device that still has `koreader/scribe` -- what this
-plugin was called before it had a repository of its own -- is moved across the
-first time the notebooks are asked for, so that there is one name for this
-after the update and not two forever.
+`koreader/notebook`. Early builds of this plugin kept them under another name;
+where that folder is found and the current one is not, it is moved across the
+first time the notebooks are asked for, so that there is one place for this and
+not two forever.
 
 The move is a single `os.rename` of the directory, which within a filesystem is
 one atomic operation: either the folder is at the new name or it is at the old
@@ -39,8 +39,8 @@ can be interrupted with somebody's handwriting in two places.
 
 If the rename fails anyway -- the destination existing already, a permission
 that is not there, the two paths somehow on different filesystems -- the old
-folder is used exactly where it is. A plugin that cannot tidy up its own naming
-still has to open the notebooks.
+folder is used exactly where it is. Tidying up a name is not worth failing to
+open on.
 
 Worked out once and remembered, because this is asked on every listing and the
 answer cannot change while the plugin is running.
@@ -80,11 +80,11 @@ end
 --[[--
 Moves the stored settings onto the keys this plugin now uses.
 
-Everything KOReader keeps for a plugin is keyed by a prefix, and the prefix was
-the old name. Read-with-a-fallback would have worked and would have left the old
-keys in the settings file forever, which is the kind of thing that is still
-there in three years and that nobody dares delete because nobody remembers what
-reads it.
+Everything KOReader keeps for a plugin is keyed by a prefix, and early builds
+used a different one. Read-with-a-fallback would have worked and would have left
+the old keys in the settings file forever, which is the kind of thing that is
+still there in three years and that nobody dares delete because nobody remembers
+what reads it.
 
 So they are moved once and the old ones deleted. Idempotent: a key that is not
 there is not moved, and a key already at the new name is not overwritten by a

@@ -78,24 +78,12 @@ make deploy TARGET=root@192.168.1.42 FLAGS=--restart
 failing its own tests. See `tools/deploy.sh --help` for mounted devices, SSH
 ports, and installing LocalSend alongside.
 
-### Upgrading from `scribe.koplugin`
+### Releasing
 
-This plugin used to live inside a KOReader fork as `scribe.koplugin`. KOReader
-takes a plugin's name from its directory, so the rename changes the name too,
-and everything keyed on that name comes with it:
-
-- **An existing `koreader/scribe/` folder is renamed to `koreader/notebook/`**
-  the first time the notebooks are opened. It is one `os.rename` of the
-  directory, which within a filesystem is a single atomic operation: the folder
-  is either at the new name or at the old one, never half at each. If the rename
-  cannot be made at all, the old folder keeps being used where it is.
-- **Settings written under the old name are moved onto the new keys** once, and
-  the old ones are deleted.
-- **A Simple UI tab pointing at the old plugin still works** — both names are
-  recognised. A tab created from scratch will record the new one.
-
-Delete the old `scribe.koplugin` directory after installing this one, or you
-will have both.
+Tag the version that is in `lua/_meta.lua` and publish a release for it. The
+workflow builds the package from the tag, checks it is what it claims to be, and
+attaches it. The tag and the version must agree, or the release fails rather
+than shipping a zip that disagrees with its own name.
 
 ### License
 

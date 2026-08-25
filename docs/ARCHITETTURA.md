@@ -30,8 +30,9 @@ Il nome della cartella **è** il nome del plugin: KOReader ricava l'identità di
 un plugin da come si chiama la directory (`pluginloader.lua`), e sovrascrive con
 quello il campo `name` dichiarato in `main.lua`. Per questo il pacchetto si
 chiama `notebook.koplugin` e non altrimenti, e per questo rinominare la cartella
-è un cambio che si porta dietro impostazioni, cartella dei dati e tab di Simple
-UI — vedi `lua/spec/migration.lua`, che è dove quella compatibilità è fissata.
+non è mai un cambio cosmetico: si porta dietro le chiavi delle impostazioni, la
+cartella dei dati e il tab di Simple UI. `lua/spec/migration.lua` è dove quella
+compatibilità è fissata.
 
 Serve anche l'emulatore di KOReader, ma **solo** per il render headless in fondo
 a questo file; i test non ne hanno bisogno. Se ce l'hai, sta fuori da questo
@@ -234,7 +235,7 @@ sempre.
 | `safe` | un errore non esce dal ciclo, un loop infinito viene interrotto |
 | `shape` | riconoscimento delle forme tenendo premuto, e lo snap agli assi |
 | `lasso` | selezione, spostamento e trasformazioni di ciò che è stato preso |
-| `migration` | un'installazione che viene da `scribe.koplugin`: lo spostamento della cartella dei taccuini, il passaggio delle impostazioni alle nuove chiavi, quale tab della barra è il nostro |
+| `migration` | un'installazione che porta stato di una build precedente: spostamento della cartella dei taccuini, passaggio delle impostazioni alle nuove chiavi, quale tab della barra è il nostro |
 
 Gli stub del layer widget (`spec/uistubs.lua`) hanno la dimensione **e la
 densità vere dello Scribe**. Non è un dettaglio: KOReader scala ogni padding,
