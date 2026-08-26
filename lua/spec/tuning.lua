@@ -176,5 +176,42 @@ test("dump with nothing changed says so instead of returning nothing", function(
     assertTrue(#Tuning.dump() > 0, "empty dump")
 end)
 
+io.write("equivalence with the constants that were replaced\n")
+
+test("the defaults are the numbers the modules used to hold", function()
+    -- The whole risk of moving these out of the modules is changing one of
+    -- them by accident on the way, and the symptom would be the pen feeling
+    -- different for a reason nobody could name. This is the guard: the values
+    -- transcribed here are read off the commit that removed the constants.
+    local was = {
+        refresh_interval_ms  = 20,
+        idle_flush_ms        = 35,
+        reconcile_delay_ms   = 2000,
+        jitter_floor_sq      = 4,
+        live_highlight_tint  = 100,
+        eraser_radius        = 12,
+        erase_repaint_ms     = 70,
+        drag_repaint_ms      = 60,
+        lasso_sample_spacing = 12,
+        frame_margin         = 10,
+        hold_travel_sq       = 64,
+        hold_delay_ms        = 350,
+        rect_angle_tolerance = 18,
+        palm_grace_ms        = 600,
+        max_pen_speed        = 6,
+        jump_base            = 48,
+        max_jump_gap_ms      = 120,
+        outlier_limit        = 8,
+    }
+    for key, value in pairs(was) do
+        assertTrue(Tuning.spec[key], key .. " is gone from the spec")
+        assertEq(Tuning.spec[key].default, value, key)
+    end
+    -- And nothing was added to the spec without being accounted for here.
+    for key in pairs(Tuning.spec) do
+        assertTrue(was[key] ~= nil, key .. " is in the spec but not in this list")
+    end
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

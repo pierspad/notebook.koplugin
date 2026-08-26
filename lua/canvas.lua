@@ -39,121 +39,17 @@ local Safe = require("safe")
 local Shape = require("shape")
 local Stroke = require("stroke")
 local Template = require("template")
+local Tuning = require("tuning")
 local UIManager = require("ui/uimanager")
 local time = require("ui/time")
 
 local Screen = Device.screen
 local Input = Device.input
 
--- Minimum gap between partial refreshes while drawing. Roughly matches what an
--- A2 update costs on this panel; going lower queues work faster than the
--- hardware retires it.
-local REFRESH_INTERVAL_MS = 20
-
--- If the pen stops moving mid-stroke, the last fragment would otherwise sit
--- unrefreshed until lift-off. This is how long we wait before flushing it.
-local IDLE_FLUSH_MS = 35
-
--- How long after the pen leaves the page before the grayscale clean-up pass runs.
--- Set to a generous 2000ms pause so handwriting never triggers a refresh mid-sentence.
-local RECONCILE_DELAY_MS = 2000
-
---[[--
-The gray the highlighter paints with while the stroke is still being drawn.
-
-Darker than the tint it settles to. Highlighting is idempotent -- passing over a
-band twice leaves it exactly as it was -- which is right for the result and
-useless while you are working: going back over a highlighted line to catch a word
-at its edge showed nothing at all under the tip, so there was no way to see where
-the marker was or where it still had to go.
-
-Laying the live stroke down darker makes the pass visible over blank paper and
-over existing highlight alike. When the pen lifts, the area is repainted from the
-model at the real tint, so what is left is the same flat band as before -- the
-darker gray only ever exists while the marker is moving.
---]]
-local LIVE_HIGHLIGHT_TINT = 100
-
--- How close the eraser has to come to a stroke to remove it.
-local ERASER_RADIUS = 12
-
--- Fastest the nib is believed to travel, in pixels per millisecond.
--- 6 px/ms is about 1800 px in a third of a second: a flick right across the
--- panel, faster than anyone writes.
-local MAX_PEN_SPEED = 6
-
--- Distance any one sample may jump regardless of how little time passed, which
--- covers the coarse timestamps and the occasional late-delivered event.
-local JUMP_BASE = 48
-
--- Longest gap the speed allowance is computed over. Without a cap, one late
--- event would license a jump to anywhere.
-local MAX_JUMP_GAP_MS = 120
-
--- Consecutive refusals before the position is believed after all, so a genuine
--- discontinuity cannot wedge the stroke permanently.
-local OUTLIER_LIMIT = 8
-
---[[--
-How far the nib must travel, squared, before the shape recogniser accepts that
-it has moved at all.
-
-Hold-to-snap fires when the pen stops, so "stopped" needs a tolerance: a nib
-resting on glass still reports a pixel or two of wander, and taken literally
-that would keep pushing the deadline back and the snap would never come.
-
-This is a tolerance for the *recogniser*, and nothing else. It used to also
-decide which samples were added to the stroke, which made it a sampling
-interval of eight pixels: everything drawn inside it -- an accent, a comma, the
-curve of a small letter -- was discarded rather than merely rounded, and
-ordinary handwriting came out as a chain of eight-pixel chords.
---]]
-local HOLD_TRAVEL_SQ = 64
-
---[[--
-Below this distance, squared, from the last point taken, a sample is wobble.
-
-Measured from the last point actually taken, so it can only ever round the path
--- a slow hand crossing it in two samples instead of one still lays down every
-pixel it went over. Two pixels is a sixth of a millimetre on a 300 dpi panel:
-below anything a hand can mean, and above what the digitizer invents while the
-nib is resting.
---]]
-local JITTER_FLOOR_SQ = 4
-
--- How long after the pen lifts before touches are trusted again.
---
--- Writing means resting a hand on the panel, and the digitizer reports that
--- contact just like a deliberate tap. Ignoring touches while the pen is down is
--- most of the fix, but the hand usually leaves the glass slightly *after* the
--- nib does, so the block has to outlast the stroke by a moment.
-local PALM_GRACE_MS = 600
-
--- Minimum gap between repaints while the eraser is sweeping.
---
--- Every application of the eraser repaints its area from the vector model, which
--- means re-rasterising every stroke that overlaps it. At the sampling rate of a
--- moving hand that is far more repainting than the panel can show, so the work
--- piles up and the eraser drags. Coalescing to a few a second looks identical
--- and costs a fraction.
-local ERASE_REPAINT_MS = 70
-
---[[--
-Minimum gap between repaints while a selection is being dragged.
-
-The same problem as the eraser, and worse. Moving a selection repaints the
-region it left together with the region it now covers, which means re-rasterising
-every stroke that overlaps either -- and a dragged selection is usually the
-busiest part of the page, since it is the part worth moving. Doing that on every
-pen sample asks for fifty of those a second from a panel that can show perhaps
-ten, so the queue grows, and what you see is the selection trailing further and
-further behind the nib.
-
-Movement is accumulated and applied on this interval instead. The arithmetic is
-unchanged -- the same total translation, in fewer steps -- and the last one
-always lands, so where it ends up does not depend on the timing.
---]]
-local DRAG_REPAINT_MS = 60
+-- The numbers that decide how the pen feels live in `tuning.lua`, one place,
+-- each with the range it may take and the reason it is what it is. They are
+-- read as `Tuning.<name>` at the point of use: one hash lookup per pen sample,
+-- against a blit and an ioctl.
 
 local Canvas = InputContainer:extend{
     document = nil,
@@ -163,7 +59,7 @@ local Canvas = InputContainer:extend{
     barrel_button_tool = "highlighter",
     pen_width = 3,
     highlighter_width = 24,
-    eraser_size = ERASER_RADIUS,
+    eraser_size = Tuning.spec.eraser_radius.default,
     -- "stroke" removes whole strokes; "area" rubs out only what is under the tip.
     eraser_mode = "stroke",
     -- Off by default: on a device with a pen, a finger on the glass is usually
@@ -229,7 +125,7 @@ function Canvas:init()
     self.pen_left_at = nil
 
     -- Palm rejection, second line: see _isOutlier.
-    self.jump_base = Screen:scaleBySize(JUMP_BASE)
+    self.jump_base = Screen:scaleBySize(Tuning.jump_base)
     self.last_point_at = nil
     self.outliers = 0
 
@@ -342,14 +238,14 @@ end
 function Canvas:_maybeFlush()
     local now = time.now()
     if not self.last_refresh
-        or time.to_ms(now - self.last_refresh) >= REFRESH_INTERVAL_MS then
+        or time.to_ms(now - self.last_refresh) >= Tuning.refresh_interval_ms then
         self:_flush()
         return
     end
 
     if not self.idle_flush_scheduled then
         self.idle_flush_scheduled = true
-        UIManager:scheduleIn(IDLE_FLUSH_MS / 1000, self.idle_flush_cb)
+        UIManager:scheduleIn(Tuning.idle_flush_ms / 1000, self.idle_flush_cb)
     end
 end
 
@@ -381,8 +277,8 @@ function Canvas:_isOutlier(x, y, px, py)
     local limit = self.jump_base
     if self.last_point_at then
         local ms = time.to_ms(time.now() - self.last_point_at)
-        if ms > MAX_JUMP_GAP_MS then ms = MAX_JUMP_GAP_MS end
-        if ms > 0 then limit = limit + ms * MAX_PEN_SPEED end
+        if ms > Tuning.max_jump_gap_ms then ms = Tuning.max_jump_gap_ms end
+        if ms > 0 then limit = limit + ms * Tuning.max_pen_speed end
     end
 
     local dx, dy = x - px, y - py
@@ -396,7 +292,7 @@ function Canvas:_isOutlier(x, y, px, py)
     -- hand's contamination is interleaved with the pen's own samples and never
     -- gets a run this long.
     self.outliers = self.outliers + 1
-    if self.outliers >= OUTLIER_LIMIT then
+    if self.outliers >= Tuning.outlier_limit then
         self.outliers = 0
         return false, true
     end
@@ -467,8 +363,8 @@ function Canvas:_beginStroke(tool, x, y, p)
     self.coverage = tool == "highlighter" and {} or nil
     self.refresh_mode = tool == "highlighter" and "ui" or "fast"
     -- While it is being drawn the highlighter lays down a darker tint than the
-    -- one it settles to when the pen lifts; see LIVE_HIGHLIGHT_TINT.
-    self.stroke.tint = tool == "highlighter" and LIVE_HIGHLIGHT_TINT or nil
+    -- one it settles to when the pen lifts; see Tuning.live_highlight_tint.
+    self.stroke.tint = tool == "highlighter" and Tuning.live_highlight_tint or nil
     self.stroke:addPoint(x, y, p)
     self.last_x, self.last_y, self.last_p = x, y, p
     self.last_point_at = time.now()
@@ -479,7 +375,7 @@ function Canvas:_beginStroke(tool, x, y, p)
     self.hold_start_y = y
     self.shape_snapped = false
     if tool ~= "eraser" and tool ~= "lasso" then
-        UIManager:scheduleIn(0.35, self.shape_snap_cb)
+        UIManager:scheduleIn(Tuning.hold_delay_ms / 1000, self.shape_snap_cb)
     end
 
     -- Put down the initial dot so a tap leaves a mark rather than nothing.
@@ -509,9 +405,6 @@ because the next step painted over it; at a step of a whole interval the leftove
 frames stand apart, and a drag across the page leaves a trail of dozens of them.
 --]]
 
--- How far outside the selection its dashed frame is drawn, plus enough to cover
--- the dashes themselves.
-local FRAME_MARGIN = 10
 function Canvas:_dragStep()
     local dx, dy = self.drag_dx or 0, self.drag_dy or 0
     self.drag_dx, self.drag_dy = 0, 0
@@ -532,7 +425,7 @@ function Canvas:_dragStep()
     self.selection_bbox = new_b
     self.last_drag_step = time.now()
 
-    local m = FRAME_MARGIN
+    local m = Tuning.frame_margin
     local box = Rect.grow(
         { x = old_b.x - m, y = old_b.y - m, w = old_b.w + 2 * m, h = old_b.h + 2 * m },
         new_b.x - m, new_b.y - m, new_b.w + 2 * m, new_b.h + 2 * m)
@@ -586,13 +479,13 @@ put down.
 function Canvas:_maybeDragStep()
     local now = time.now()
     if not self.last_drag_step
-        or time.to_ms(now - self.last_drag_step) >= DRAG_REPAINT_MS then
+        or time.to_ms(now - self.last_drag_step) >= Tuning.drag_repaint_ms then
         return self:_dragStep()
     end
 
     if not self.drag_step_scheduled then
         self.drag_step_scheduled = true
-        UIManager:scheduleIn(DRAG_REPAINT_MS / 1000, function()
+        UIManager:scheduleIn(Tuning.drag_repaint_ms / 1000, function()
             self.drag_step_scheduled = false
             self:_dragStep()
         end)
@@ -634,22 +527,22 @@ function Canvas:_extendStroke(x, y, p)
     if self.stroke.tool ~= "eraser" and self.stroke.tool ~= "lasso" then
         local hdx = x - (self.hold_start_x or x)
         local hdy = y - (self.hold_start_y or y)
-        if hdx * hdx + hdy * hdy > HOLD_TRAVEL_SQ then
+        if hdx * hdx + hdy * hdy > Tuning.hold_travel_sq then
             self.hold_start_x = x
             self.hold_start_y = y
             UIManager:unschedule(self.shape_snap_cb)
             if self.stroke:count() >= 4 then
-                UIManager:scheduleIn(0.35, self.shape_snap_cb)
+                UIManager:scheduleIn(Tuning.hold_delay_ms / 1000, self.shape_snap_cb)
             end
         end
     end
 
     -- Wobble under a resting nib is not movement, and stamping it costs a
-    -- refresh for nothing. See JITTER_FLOOR_SQ: this rounds the path, it does
+    -- refresh for nothing. See Tuning.jitter_floor_sq: this rounds the path, it does
     -- not sample it.
     local jdx = x - self.last_x
     local jdy = y - self.last_y
-    if jdx * jdx + jdy * jdy < JITTER_FLOOR_SQ then return end
+    if jdx * jdx + jdy * jdy < Tuning.jitter_floor_sq then return end
 
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
         self.last_x, self.last_y, self.last_p, x, y, p, self.coverage)
@@ -864,7 +757,7 @@ function Canvas:_scheduleReconcile(x, y, w, h)
     self.reconcile = Rect.grow(self.reconcile, x, y, w, h)
 
     UIManager:unschedule(self.reconcile_cb)
-    UIManager:scheduleIn(RECONCILE_DELAY_MS / 1000, self.reconcile_cb)
+    UIManager:scheduleIn(Tuning.reconcile_delay_ms / 1000, self.reconcile_cb)
 end
 
 function Canvas:_runReconcile()
@@ -965,14 +858,14 @@ function Canvas:_queueEraseRepaint(x, y, w, h)
 
     local now = time.now()
     if not self.last_erase_repaint
-        or time.to_ms(now - self.last_erase_repaint) >= ERASE_REPAINT_MS then
+        or time.to_ms(now - self.last_erase_repaint) >= Tuning.erase_repaint_ms then
         self:_flushEraseRepaint()
     elseif not self.erase_flush_scheduled then
         -- Too soon to repaint again, so make sure something comes back for it.
         -- Without this the last sweep of a slow, short rub sat in the buffer
         -- until the pen was lifted, and the ink looked like it had survived.
         self.erase_flush_scheduled = true
-        UIManager:scheduleIn(ERASE_REPAINT_MS / 1000, function()
+        UIManager:scheduleIn(Tuning.erase_repaint_ms / 1000, function()
             self.erase_flush_scheduled = false
             self:_flushEraseRepaint()
         end)
@@ -1178,7 +1071,7 @@ becomes a swipe, and the page turns underneath the writing.
 function Canvas:_touchIsPalm()
     if self.pen_down then return true end
     if self.pen_left_at
-        and time.to_ms(time.now() - self.pen_left_at) < PALM_GRACE_MS then
+        and time.to_ms(time.now() - self.pen_left_at) < Tuning.palm_grace_ms then
         return true
     end
     return false

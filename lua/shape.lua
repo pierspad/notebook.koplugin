@@ -20,6 +20,7 @@ square.
 --]]--
 
 local Stroke = require("stroke")
+local Tuning = require("tuning")
 
 local Shape = {}
 
@@ -229,16 +230,6 @@ local function detectCircleOrEllipse(points, total_len)
     return nil
 end
 
---[[--
-How far a corner may be from square, in degrees, and still count as one.
-
-Generous, because this is applied to corners a hand drew freehand and then
-simplified: a rectangle sketched quickly is several degrees out at every
-corner. Tight enough that a rhombus or a trapezium -- both tens of degrees out
--- does not pass.
---]]
-local RECT_ANGLE_TOLERANCE = 18
-
 --- True if the four vertices of `simp` have corners near enough to square.
 local function isRectangular(simp)
     for i = 1, 4 do
@@ -256,7 +247,7 @@ local function isRectangular(simp)
 
         local cos_a = (ax * bx + ay * by) / (la * lb)
         if cos_a < -1 then cos_a = -1 elseif cos_a > 1 then cos_a = 1 end
-        if math.abs(math.deg(math.acos(cos_a)) - 90) > RECT_ANGLE_TOLERANCE then
+        if math.abs(math.deg(math.acos(cos_a)) - 90) > Tuning.rect_angle_tolerance then
             return false
         end
     end

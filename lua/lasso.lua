@@ -5,6 +5,7 @@ Lasso selection and geometric containment helpers for strokes.
 --]]--
 
 local Rect = require("rect")
+local Tuning = require("tuning")
 
 local Lasso = {}
 
@@ -26,18 +27,6 @@ function Lasso.pointInPolygon(px, py, poly_pts)
     end
     return inside
 end
-
---[[--
-How far apart, in pixels, the points of a stroke are tested.
-
-Fixed, rather than a fraction of the stroke's length. A fraction reads as ten
-tests whatever the stroke is, which on a long one means testing it every
-sixtieth of its length: a loop drawn round a word of a line that was written in
-a single stroke tested no point inside the loop and selected nothing. Fixed
-spacing makes the resolution of the test a property of the lasso -- roughly a
-millimetre on a 300 dpi panel -- rather than of what happens to be under it.
---]]
-local SAMPLE_SPACING = 12
 
 --[[--
 Tests if a stroke is selected by a lasso polygon.
@@ -65,7 +54,7 @@ function Lasso.isStrokeSelected(stroke, poly_pts)
         local dx, dy = x - px, y - py
         since = since + math.sqrt(dx * dx + dy * dy)
         px, py = x, y
-        if since >= SAMPLE_SPACING or i == count then
+        if since >= Tuning.lasso_sample_spacing or i == count then
             since = 0
             if Lasso.pointInPolygon(x, y, poly_pts) then
                 return true
