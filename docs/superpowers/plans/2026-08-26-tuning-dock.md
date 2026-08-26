@@ -17,7 +17,8 @@
 - Ogni schermata passa da `Safe.widget(Klass, "nome")` come ultima riga del modulo.
 - Il prefisso delle chiavi salvate è esattamente `notebook_tuning_`.
 - Il titolo che apre il cancello è esattamente `_tuning_`.
-- Messaggi di commit in italiano, come il resto della history. **Non firmare i commit come co-autore.**
+- **Messaggi di commit in inglese**, come tutta la history del repo, e nello stesso registro: una riga di soggetto che dice cosa cambia, e un corpo che dice perché — che problema c'era, non quali file sono stati toccati. **Non firmare i commit come co-autore.**
+- Committa **solo i file elencati nel task**. Mai `git add -A` né `git add .`.
 - Non toccare `build/`: è una copia generata.
 
 ---
@@ -550,11 +551,16 @@ Atteso: `0 warnings / 0 errors`. Se luacheck si lamenta di `G_reader_settings` c
 
 ```bash
 git add lua/tuning.lua lua/spec/tuning.lua Makefile
-git commit -m "tuning: i parametri come valori invece che come costanti
+git commit -m "feat: the numbers that decide how the pen feels, as values
 
-Un modulo che tiene i numeri che decidono la sensazione della penna, con
-range, passo e la spiegazione di ognuno, persistiti sotto notebook_tuning_.
-Nessuno li usa ancora: i default sono le costanti di oggi."
+A constant is the right shape for a number right up until you need to try a
+different one, and trying a different one meant an edit, a deploy and a
+restart -- so none of these was ever compared against an alternative on the
+device, which is the only place the question can be asked.
+
+Here they are values with a range, a step and the reason each is what it
+is, kept where a plugin update does not overwrite them. Nothing reads them
+yet, and the defaults are the constants they will replace."
 ```
 
 ---
@@ -723,13 +729,18 @@ Atteso: nessun output.
 
 ```bash
 git add lua/canvas.lua lua/lasso.lua lua/shape.lua lua/spec/tuning.lua
-git commit -m "tuning: canvas, lasso e shape leggono i parametri dal modulo
+git commit -m "refactor: the tuning numbers are read from one place
 
-Le costanti locali spariscono e i loro commenti si spostano su tuning.lua,
-che diventa il posto unico dove sta scritto cosa fa ogni numero. Il ritardo
-dello snap, che era uno 0.35 in mezzo a _onPenMove, prende finalmente un
-nome. Comportamento invariato: i default sono gli stessi numeri, e un test
-li confronta uno a uno."
+The local constants go, and their comments go with them: what was worth
+keeping about each of those numbers was the paragraph explaining why it is
+what it is, and tuning.lua is now the one file where all of that is written
+down.
+
+The shape snap delay, which was a bare 0.35 in the middle of _onPenMove
+with neither a name nor a reason, finally has both.
+
+Behaviour is unchanged -- the defaults are the same numbers -- and a test
+compares them one by one, so no default can drift without saying so."
 ```
 
 ---
@@ -1273,11 +1284,15 @@ Atteso: lint pulito, tutte le suite verdi.
 
 ```bash
 git add lua/tuningdock.lua lua/spec/tuningdock.lua Makefile
-git commit -m "tuning: il pannello, costruito da solo dalla dichiarazione dei tab
+git commit -m "feat: the tuning panel, built from the tab declaration
 
-Steppers e non slider: trascinare uno slider su e-ink genera la raffica di
-refresh che e' esattamente il fenomeno da misurare, e restituisce un 'circa
-47' quando serve il numero da scrivere nel sorgente."
+Steppers rather than sliders, deliberately. Dragging a slider on E-Ink
+fires the burst of partial refreshes that is exactly the phenomenon being
+measured, so the instrument would contaminate the reading -- and it answers
+'about 47' when what is needed is the number to type into the source.
+
+It builds itself from Tuning.tabs, so a knob added later is a line there
+and nothing here."
 ```
 
 ---
@@ -1582,13 +1597,15 @@ Cerca fra i `require` in cima a `lua/spec/screens.lua` come le altre schermate v
 
 ```bash
 git add lua/notebook.lua lua/tuningdock.lua lua/spec/tuninggate.lua Makefile
-git commit -m "tuning: il dock si apre in un taccuino chiamato _tuning_
+git commit -m "feat: the tuning dock opens in a notebook called _tuning_
 
-Prende una fascia in fondo restringendo canvas.content, con lo stesso
-meccanismo che la toolbar usa in cima. Ogni altro taccuino ha la geometria
-di sempre, e un test lo fissa: l'inchiostro sta in coordinate schermo, e
-una pagina disegnata contro il rettangolo sbagliato ha l'inchiostro nel
-posto sbagliato."
+It takes a band off the bottom by shortening canvas.content, which is the
+same mechanism the toolbar has always used to take one off the top.
+
+Every other notebook keeps the geometry it had, and a test pins that down
+rather than trusting it: ink is stored in screen coordinates, so a page
+laid out against the wrong rectangle is a page whose ink is in the wrong
+place, and it would go unnoticed until someone opened an old notebook."
 ```
 
 ---
