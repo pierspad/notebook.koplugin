@@ -202,6 +202,27 @@ function Canvas:_accumulate(x, y, w, h)
     self.pending = Rect.grow(self.pending, x, y, w, h)
 end
 
+--[[--
+Shows a rectangle now, clipped to the drawing area.
+
+Every rectangle that reaches the panel goes through here or through `_flush`,
+and for the same two reasons. The framebuffer drops a region that hangs over
+the edge of the screen, so a selection dragged against the left margin -- whose
+frame is drawn a few pixels outside it -- asked for a refresh at a negative x
+and got nothing back. And the toolbar sits directly above the drawing area, so
+a rectangle that overhangs it upwards refreshes the buttons under a fast
+waveform and makes them flash for no reason.
+--]]
+function Canvas:_refreshNow(x, y, w, h, mode)
+    x, y, w, h = Rect.clamp(x, y, w, h, self.content)
+    if not x then return end
+    if mode == "ui" then
+        Screen:refreshUI(x, y, w, h)
+    else
+        Screen:refreshFast(x, y, w, h)
+    end
+end
+
 --- Issues the pending partial refresh, if any.
 function Canvas:_flush()
     local p = self.pending
@@ -337,6 +358,20 @@ function Canvas:_beginStroke(tool, x, y, p)
     UIManager:unschedule(self.reconcile_cb)
     UIManager:unschedule(self.shape_snap_cb)
 
+    --[[
+    Putting any other tool on the page ends the selection.
+
+    Only the lasso itself used to look at whether there was one, so writing
+    with the pen while something was selected left the dashed frame and the
+    floating menu standing over the new ink, with no way to reach either: the
+    menu's buttons still worked, and they acted on strokes the reader had
+    stopped thinking about. Choosing a different tool is as clear a statement
+    that the selection is finished as tapping outside it.
+    --]]
+    if tool ~= "lasso" and self.selected_strokes then
+        self:_deselectLasso()
+    end
+
     -- If lasso selection is active, check if touching inside selection to drag/move
     if tool == "lasso" and self.selected_strokes and self.selection_bbox then
         local b = self.selection_bbox
@@ -431,7 +466,7 @@ function Canvas:_dragStep()
         new_b.x - m, new_b.y - m, new_b.w + 2 * m, new_b.h + 2 * m)
     self:_repaintRegion(box.x, box.y, box.w, box.h, true)
     Renderer.drawDashedRect(Screen.bb, new_b.x - 6, new_b.y - 6, new_b.w + 12, new_b.h + 12)
-    Screen:refreshFast(box.x, box.y, box.w, box.h)
+    self:_refreshNow(box.x, box.y, box.w, box.h)
 
     -- Everywhere the selection has been during this drag, for the one clean
     -- refresh that ends it; see _settleDrag.
@@ -464,7 +499,7 @@ function Canvas:_settleDrag()
     if b then
         Renderer.drawDashedRect(Screen.bb, b.x - 6, b.y - 6, b.w + 12, b.h + 12)
     end
-    Screen:refreshUI(touched.x, touched.y, touched.w, touched.h)
+    self:_refreshNow(touched.x, touched.y, touched.w, touched.h, "ui")
 end
 
 --[[--
@@ -662,7 +697,7 @@ function Canvas:_showLassoMenu(selected)
     -- Draw dashed selection outline
     if bbox then
         Renderer.drawDashedRect(Screen.bb, bbox.x - 6, bbox.y - 6, bbox.w + 12, bbox.h + 12)
-        Screen:refreshFast(bbox.x - 8, bbox.y - 8, bbox.w + 16, bbox.h + 16)
+        self:_refreshNow(bbox.x - 8, bbox.y - 8, bbox.w + 16, bbox.h + 16)
     end
 
     self.lasso_menu = LassoMenu:new{
