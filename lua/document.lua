@@ -37,6 +37,22 @@ local function snapshot(pages)
     return copy
 end
 
+--[[--
+A shallow copy of a stroke list.
+
+One rule holds everywhere below: no table the history is holding is ever also a
+page's live stroke list. The batched area eraser splices the live list in place
+rather than rebuilding it, so a list shared between the two is a record of the
+page as it was that goes on changing with the page -- and undo then restores a
+state that never existed. Copying at every crossing is an array of pointers per
+operation, which is nothing beside being right.
+--]]
+local function copyList(strokes)
+    local copy = {}
+    for i, stroke in ipairs(strokes) do copy[i] = stroke end
+    return copy
+end
+
 function Document:new(path)
     local o = {
         path = path,
@@ -109,9 +125,8 @@ Nesting is not supported; beginning a batch while one is open keeps the outer on
 function Document:beginBatch()
     if self._batch then return end
     local page = self:getPage()
-    local before = {}
-    for i, stroke in ipairs(page.strokes) do before[i] = stroke end
-    self._batch = { page = self.current_page, before = before, changed = false }
+    self._batch = { page = self.current_page,
+        before = copyList(page.strokes), changed = false }
 end
 
 --- Closes the batch, recording one operation if anything actually changed.
@@ -120,11 +135,23 @@ function Document:commitBatch(x, y, w, h)
     self._batch = nil
     if not batch or not batch.changed then return end
 
+    --[[
+    `after` is a copy, not the page's own list.
+
+    The batched area eraser splices the page's list in place rather than
+    rebuilding it, so recording the list itself left every operation of a
+    session pointing at the same table. Two sweeps of the rubber then shared an
+    `after`: undoing both and redoing the first brought back the second sweep's
+    erasing along with the first, because the table the first one was holding
+    had been rewritten under it by the second.
+    ]]
+    local after = copyList(self.pages[batch.page].strokes)
+
     self:_record{
         type = "list",
         page = batch.page,
         before = batch.before,
-        after = self.pages[batch.page].strokes,
+        after = after,
         bounds = x and { x = x, y = y, w = w, h = h } or nil,
     }
 end
@@ -147,11 +174,76 @@ function Document:_record(op)
     self.dirty = true
 end
 
---- Adds a finished stroke to the current page.
+--[[--
+Adds a finished stroke to the current page.
+
+Inside a batch it only marks the batch changed: a paste of fifteen strokes is
+one thing the hand did and should be one thing undo takes back, not fifteen.
+--]]
 function Document:addStroke(stroke)
     local page = self:getPage()
     table.insert(page.strokes, stroke)
+    if self:_inBatch() then
+        self._batch.changed = true
+        return
+    end
     self:_record{ type = "add", page = self.current_page, stroke = stroke }
+end
+
+--[[--
+Removes the given strokes from the current page, as one operation.
+
+This is what the lasso's cut and delete go through. Doing it by reaching into
+page.strokes directly -- which is what they used to do -- left the history with
+no idea the page had changed: undo then took back whatever stroke came before,
+and a notebook closed straight after a delete was never written at all, because
+nothing had marked it dirty.
+--]]
+function Document:removeStrokes(strokes)
+    if not strokes or #strokes == 0 then return end
+    local page = self:getPage()
+
+    -- Indices are recorded so undo can put each one back where it was rather
+    -- than on top of the pile, in descending order -- which is what revert
+    -- walks backwards to reinsert them smallest index first. Building the list
+    -- the other way up, which is what this did, meant a gap in the middle of a
+    -- multiple deletion was refilled from the wrong end: deleting the second
+    -- and fourth of five strokes and taking it back put the fourth after the
+    -- fifth, and the order the page is drawn in was quietly wrong from then on.
+    local removed = {}
+    for i = #page.strokes, 1, -1 do
+        for _, victim in ipairs(strokes) do
+            if page.strokes[i] == victim then
+                table.insert(removed, { index = i, stroke = victim })
+                table.remove(page.strokes, i)
+                break
+            end
+        end
+    end
+    if #removed == 0 then return end
+
+    if self:_inBatch() then
+        self._batch.changed = true
+        return
+    end
+    self:_record{ type = "erase", page = self.current_page, removed = removed }
+end
+
+--[[--
+Records a translation that has already been applied to the strokes.
+
+The drag moves the selection as the hand moves it, a step at a time, so by the
+time there is anything to record the strokes are already where they were put.
+What the history needs is not the move but the way back from it, which is the
+total offset.
+--]]
+function Document:recordTranslation(strokes, dx, dy)
+    if not strokes or #strokes == 0 then return end
+    if dx == 0 and dy == 0 then return end
+    local moved = {}
+    for i, stroke in ipairs(strokes) do moved[i] = stroke end
+    self:_record{ type = "move", page = self.current_page,
+        strokes = moved, dx = dx, dy = dy }
 end
 
 --[[--
@@ -259,8 +351,7 @@ function Document:eraseAreaAlongPath(path, r)
         self._batch.changed = true
         self.dirty = true
     else
-        local before, after = {}, {}
-        for i = 1, #strokes do before[i] = strokes[i] end
+        local before, after = copyList(strokes), {}
         local k = 1
         for i = 1, #strokes do
             if hits[k] == i then
@@ -272,7 +363,7 @@ function Document:eraseAreaAlongPath(path, r)
                 after[#after + 1] = strokes[i]
             end
         end
-        page.strokes = after
+        page.strokes = copyList(after)
         self:_record{
             type = "list",
             page = self.current_page,
@@ -300,15 +391,19 @@ local function revert(doc, op)
             end
         end
     elseif op.type == "erase" then
-        -- Reinsert in ascending index order so each stroke lands where it was.
+        -- `removed` is in descending index order, so walking it backwards
+        -- reinserts smallest index first: each stroke then lands where it was,
+        -- because the ones before it are already back in front of it.
         for i = #op.removed, 1, -1 do
             local entry = op.removed[i]
             table.insert(page.strokes, math.min(entry.index, #page.strokes + 1), entry.stroke)
         end
+    elseif op.type == "move" then
+        for _, stroke in ipairs(op.strokes) do stroke:translate(-op.dx, -op.dy) end
     elseif op.type == "list" then
-        page.strokes = op.before
+        page.strokes = copyList(op.before)
     elseif op.type == "pages" then
-        doc.pages = op.before
+        doc.pages = snapshot(op.before)
     end
 end
 
@@ -327,10 +422,12 @@ local function reapply(doc, op)
                 end
             end
         end
+    elseif op.type == "move" then
+        for _, stroke in ipairs(op.strokes) do stroke:translate(op.dx, op.dy) end
     elseif op.type == "list" then
-        page.strokes = op.after
+        page.strokes = copyList(op.after)
     elseif op.type == "pages" then
-        doc.pages = op.after
+        doc.pages = snapshot(op.after)
     end
 end
 
@@ -354,6 +451,15 @@ local function opBounds(op)
         add(op.stroke)
     elseif op.type == "erase" then
         for _, entry in ipairs(op.removed) do add(entry.stroke) end
+    elseif op.type == "move" then
+        -- Called after the strokes have been shifted, so where they are now is
+        -- only half of what has to be repainted; the other half is where they
+        -- were, which is that box offset by the move either way.
+        for _, stroke in ipairs(op.strokes) do add(stroke) end
+        if bx0 ~= math.huge then
+            local dx, dy = math.abs(op.dx), math.abs(op.dy)
+            bx0, by0, bx1, by1 = bx0 - dx, by0 - dy, bx1 + dx, by1 + dy
+        end
     end
     if bx0 == math.huge then return nil end
     return bx0, by0, bx1 - bx0, by1 - by0
@@ -441,8 +547,17 @@ function Document:duplicatePage(index)
     local source = self.pages[index]
     if not source then return nil end
 
+    --[[
+    The strokes are copied, not shared.
+
+    A stroke is moved by writing into its own point list, so a stroke on two
+    pages at once is one stroke: dragging a word on the copy dragged it on the
+    page it was copied from as well, and the original was left with a hole in
+    it that nothing on screen explained. Duplicating a page is not expensive
+    enough for sharing them to have been worth it.
+    ]]
     local copy = { template = source.template, strokes = {} }
-    for i, stroke in ipairs(source.strokes) do copy.strokes[i] = stroke end
+    for i, stroke in ipairs(source.strokes) do copy.strokes[i] = stroke:clone() end
 
     local before = snapshot(self.pages)
     table.insert(self.pages, index + 1, copy)

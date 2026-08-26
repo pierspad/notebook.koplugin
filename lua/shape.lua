@@ -4,7 +4,8 @@ Geometric shape recognizer for handwriting strokes.
 Analyzes raw stroke point streams and classifies them into:
 - "line": straight line between endpoints
 - "circle": circle centered on stroke centroid
-- "ellipse": axis-aligned or rotated ellipse
+- "ellipse": axis-aligned ellipse (a tilted one is measured against the box
+  around it, fails that test, and is left as it was drawn)
 - "triangle": closed 3-vertex polygon, with the corners that were drawn
 - "rectangle": closed 4-vertex quadrilateral whose corners are square (or square)
 - "quadrilateral": any other closed 4-vertex polygon, corners as drawn

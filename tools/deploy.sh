@@ -107,8 +107,12 @@ EOF
         ;;
 esac
 
-if [ ! -d "$PLUGIN_DIR" ]; then
-    echo "error: cannot find $PLUGIN_DIR" >&2
+# The sources, not the staging copy: the staging copy is built a few lines below
+# and `make package` clears it away again once it has zipped it, so a tree that
+# has only ever been packaged does not have one. Checking for it here meant the
+# script refused to do the very thing that would have created it.
+if [ ! -f "$SCRIPT_DIR/lua/main.lua" ]; then
+    echo "error: cannot find the plugin sources at $SCRIPT_DIR/lua" >&2
     exit 1
 fi
 

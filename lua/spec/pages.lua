@@ -371,6 +371,39 @@ test("a duplicate carries the strokes and does not share them", function()
         "writing on the original also changed the copy")
 end)
 
+test("moving a stroke on a duplicate leaves the page it came from alone", function()
+    -- The list not being shared is not enough: what the lasso moves is the
+    -- stroke, by writing into its own points, so a stroke on two pages at once
+    -- is one stroke and dragging it on either drags it on both.
+    local doc = newDoc()
+    local original = inkedPage(doc, 1)
+    local copy = doc:duplicatePage(1)
+
+    doc.pages[copy].strokes[1]:translate(100, 50)
+
+    local x, y = original:getPoint(1)
+    assertEq(x, 10, "x of the stroke on the page that was copied")
+    assertEq(y, 10, "y of the stroke on the page that was copied")
+
+    local cx, cy = doc.pages[copy].strokes[1]:getPoint(1)
+    assertEq(cx, 110, "x of the stroke on the copy")
+    assertEq(cy, 60, "y of the stroke on the copy")
+end)
+
+test("a duplicate's strokes carry the ink of the ones they copy", function()
+    local doc = newDoc()
+    local original = inkedPage(doc, 1)
+    original.tool, original.width, original.color = "highlighter", 40, 128
+    original.tint = 160
+    local copy = doc.pages[doc:duplicatePage(1)].strokes[1]
+
+    assertEq(copy.tool, "highlighter", "tool")
+    assertEq(copy.width, 40, "width")
+    assertEq(copy.color, 128, "color")
+    assertEq(copy.tint, 160, "tint")
+    assertEq(copy:count(), original:count(), "points")
+end)
+
 test("the current page stays inside the notebook after an undo", function()
     local doc = newDoc()
     doc:insertPage(1)

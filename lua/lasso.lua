@@ -99,20 +99,9 @@ end
 
 --- Creates independent deep copies of a list of strokes.
 function Lasso.cloneStrokes(strokes)
-    local Stroke = require("stroke")
     local clones = {}
-    for _, stroke in ipairs(strokes) do
-        local copy = Stroke:new{
-            tool = stroke.tool,
-            width = stroke.width,
-            color = stroke.color,
-            tint = stroke.tint,
-        }
-        for i = 1, stroke:count() do
-            local x, y, p = stroke:getPoint(i)
-            copy:addPoint(x, y, p)
-        end
-        table.insert(clones, copy)
+    for i, stroke in ipairs(strokes) do
+        clones[i] = stroke:clone()
     end
     return clones
 end

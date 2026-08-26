@@ -413,13 +413,22 @@ function Canvas:_triggerShapeSnap()
         self.shape_snapped = true
         local bx, by, bw, bh = self.stroke:getBounds()
         self.stroke = clean
-        if bx then self:_repaintRegion(bx, by, bw, bh, true) end
+        if bx then
+            self:_repaintRegion(bx, by, bw, bh, true)
+            -- The refresh has to cover what the raw stroke occupied as well as
+            -- what the tidied one does, and the tidied one is often the smaller
+            -- of the two: a wide scrawl becomes a compact circle. Refreshing
+            -- only the shape left the parts of the scrawl outside it corrected
+            -- in the buffer and still on the panel, as a ghost that stayed
+            -- until something else happened to repaint over it.
+            self:_accumulate(bx, by, bw, bh)
+        end
         local nbx, nby, nbw, nbh = clean:getBounds()
         if nbx then
             Renderer.drawStroke(Screen.bb, clean)
             self:_accumulate(nbx, nby, nbw, nbh)
-            self:_flush()
         end
+        self:_flush()
     end
 end
 
@@ -513,6 +522,12 @@ function Canvas:_dragStep()
     if not old_b then return end
 
     Lasso.translateStrokes(self.selected_strokes, dx, dy)
+    -- The whole distance the selection has travelled since it was picked up:
+    -- the drag arrives as dozens of steps, and one entry in the history that
+    -- undoes all of them is what the hand did. Cleared when the drag ends, so
+    -- a fresh one starts from nothing without either caller having to say so.
+    self.drag_moved_dx = (self.drag_moved_dx or 0) + dx
+    self.drag_moved_dy = (self.drag_moved_dy or 0) + dy
     local new_b = { x = old_b.x + dx, y = old_b.y + dy, w = old_b.w, h = old_b.h }
     self.selection_bbox = new_b
     self.last_drag_step = time.now()
@@ -653,6 +668,9 @@ function Canvas:_endStroke()
         -- shown or it would be pinned to where the selection nearly was.
         self:_dragStep()
         self:_settleDrag()
+        self.document:recordTranslation(self.selected_strokes,
+            self.drag_moved_dx or 0, self.drag_moved_dy or 0)
+        self.drag_moved_dx, self.drag_moved_dy = nil, nil
         self:_showLassoMenu(self.selected_strokes)
         if self.on_change then self:on_change() end
         return
@@ -682,6 +700,7 @@ function Canvas:_endStroke()
                 local dy = tap_y - cy
 
                 local pasted = {}
+                self.document:beginBatch()
                 for _, s in ipairs(Canvas.clipboard) do
                     local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint }
                     for i = 1, s:count() do
@@ -691,6 +710,7 @@ function Canvas:_endStroke()
                     table.insert(pasted, copy)
                     self.document:addStroke(copy)
                 end
+                self.document:commitBatch()
                 self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
                 if self.on_change then self:on_change() end
                 self:_showLassoMenu(pasted)
@@ -758,16 +778,10 @@ function Canvas:_showLassoMenu(selected)
         on_cut = function()
             self.lasso_menu = nil
             Canvas.clipboard = {}
-            local page_strokes = self.document:getPage().strokes
             for _, s in ipairs(selected) do
                 table.insert(Canvas.clipboard, s)
-                for i = #page_strokes, 1, -1 do
-                    if page_strokes[i] == s then
-                        table.remove(page_strokes, i)
-                        break
-                    end
-                end
             end
+            self.document:removeStrokes(selected)
             self.selected_strokes = nil
             self.selection_bbox = nil
             self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
@@ -790,6 +804,7 @@ function Canvas:_showLassoMenu(selected)
             self.lasso_menu = nil
             if not Canvas.clipboard or #Canvas.clipboard == 0 then return end
             local pasted = {}
+            self.document:beginBatch()
             for _, s in ipairs(Canvas.clipboard) do
                 local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint }
                 for i = 1, s:count() do
@@ -799,21 +814,14 @@ function Canvas:_showLassoMenu(selected)
                 table.insert(pasted, copy)
                 self.document:addStroke(copy)
             end
+            self.document:commitBatch()
             self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
             if self.on_change then self:on_change() end
             self:_showLassoMenu(pasted)
         end,
         on_delete = function()
             self.lasso_menu = nil
-            local page_strokes = self.document:getPage().strokes
-            for _, sel in ipairs(selected) do
-                for i = #page_strokes, 1, -1 do
-                    if page_strokes[i] == sel then
-                        table.remove(page_strokes, i)
-                        break
-                    end
-                end
-            end
+            self.document:removeStrokes(selected)
             self.selected_strokes = nil
             self.selection_bbox = nil
             self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)

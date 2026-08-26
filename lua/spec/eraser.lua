@@ -266,6 +266,85 @@ test("a fragment knows its own extent, not the one it was cut from", function()
     assertTrue(x < 10, "the piece does not start where the line did")
 end)
 
+-- Taking it back -------------------------------------------------------------------
+
+io.write("undoing an erase\n")
+
+--- The order the strokes of page 1 are in, as the y each was drawn at.
+local function order(doc)
+    local ys = {}
+    for i, stroke in ipairs(doc.pages[1].strokes) do
+        local _, y = stroke:getPoint(1)
+        ys[i] = y
+    end
+    return table.concat(ys, ",")
+end
+
+test("undoing a delete of two strokes puts both back where they were", function()
+    -- The order strokes are held in is the order they are drawn in, so getting
+    -- it wrong is not bookkeeping: it decides what covers what on the page.
+    local doc = docWith(lineStroke(100, 0, 40), lineStroke(200, 0, 40),
+                        lineStroke(300, 0, 40), lineStroke(400, 0, 40),
+                        lineStroke(500, 0, 40))
+    local before = order(doc)
+
+    -- The second and the fourth: a gap in the middle is what the naive
+    -- reinsertion refilled from the wrong end.
+    doc:removeStrokes({ doc.pages[1].strokes[2], doc.pages[1].strokes[4] })
+    assertEq(order(doc), "100,300,500", "what is left after the delete")
+
+    doc:undo()
+    assertEq(order(doc), before, "the order the strokes came back in")
+end)
+
+test("undoing a delete of three strokes puts all of them back in order", function()
+    local doc = docWith(lineStroke(100, 0, 40), lineStroke(200, 0, 40),
+                        lineStroke(300, 0, 40), lineStroke(400, 0, 40),
+                        lineStroke(500, 0, 40), lineStroke(600, 0, 40))
+    local before = order(doc)
+    local page = doc.pages[1].strokes
+    doc:removeStrokes({ page[2], page[3], page[5] })
+    doc:undo()
+    assertEq(order(doc), before, "the order the strokes came back in")
+end)
+
+test("a sweep of the rubber comes back in the order it went", function()
+    local doc = docWith(lineStroke(100, 0, 400), lineStroke(200, 0, 400),
+                        lineStroke(300, 0, 400))
+    local before = order(doc)
+    -- Straight down the middle of all three.
+    doc:eraseAlongPath({ 200, 50, 200, 550 }, R)
+    assertEq(order(doc), "", "the sweep left something behind")
+    doc:undo()
+    assertEq(order(doc), before, "the order the strokes came back in")
+end)
+
+test("redoing one sweep does not redo the one after it", function()
+    --[[
+    Two batched sweeps in a row. The batched area eraser splices the page's own
+    stroke list rather than rebuilding it, so an operation that recorded that
+    list rather than a copy of it went on changing after it was recorded: the
+    first sweep's "after" quietly became the second sweep's, and redoing the
+    first brought back both.
+    ]]
+    local doc = docWith(lineStroke(100, 0, 400), lineStroke(300, 0, 400))
+
+    doc:beginBatch()
+    doc:eraseAreaAlongPath({ 200, 60, 200, 140 }, R)
+    doc:commitBatch()
+    local after_first = order(doc)
+
+    doc:beginBatch()
+    doc:eraseAreaAlongPath({ 200, 260, 200, 340 }, R)
+    doc:commitBatch()
+    assertTrue(order(doc) ~= after_first, "the fixture is wrong: the second sweep did nothing")
+
+    doc:undo()
+    doc:undo()
+    doc:redo()
+    assertEq(order(doc), after_first, "the page after redoing only the first sweep")
+end)
+
 -- Rectangles ------------------------------------------------------------------------
 
 io.write("rectangles\n")

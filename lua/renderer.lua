@@ -184,24 +184,43 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1)
     return rx, ry, rw, rh
 end
 
---- Draws a dashed rectangle for selection outlines.
+--[[--
+Draws a dashed rectangle for selection outlines.
+
+Clipped by hand, because setPixel is not: it indexes the row without checking,
+so a pixel past the edge is not dropped but written into whatever lies next in
+memory. A selection made against the edge of the page has its frame drawn a few
+pixels outside it, which is exactly that case.
+--]]
 function Renderer.drawDashedRect(bb, x, y, w, h, color)
     color = color or COLOR_BLACK
     local dash = 8
     local cycle = 14
 
-    for i = 0, w do
-        if (i % cycle) < dash then
-            bb:setPixel(x + i, y, color)
-            bb:setPixel(x + i, y + h, color)
+    local max_x = bb:getWidth() - 1
+    local max_y = bb:getHeight() - 1
+
+    -- The dash pattern is a function of the distance along each edge, so the
+    -- clipping is done on the loop bounds and never on the counter: a frame
+    -- half off the screen keeps the dashes the rest of it has.
+    local function hline(py)
+        if py < 0 or py > max_y then return end
+        for i = math.max(0, -x), math.min(w, max_x - x) do
+            if (i % cycle) < dash then bb:setPixel(x + i, py, color) end
         end
     end
-    for j = 0, h do
-        if (j % cycle) < dash then
-            bb:setPixel(x, y + j, color)
-            bb:setPixel(x + w, y + j, color)
+
+    local function vline(px)
+        if px < 0 or px > max_x then return end
+        for j = math.max(0, -y), math.min(h, max_y - y) do
+            if (j % cycle) < dash then bb:setPixel(px, y + j, color) end
         end
     end
+
+    hline(y)
+    hline(y + h)
+    vline(x)
+    vline(x + w)
 end
 
 --[[--

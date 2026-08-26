@@ -245,11 +245,25 @@ function Safe.watched(where, fn, ...)
                 .. "answering\n%s", where, debug.traceback("", 2)), 0)
         end
     end, "", WATCHDOG_INSTRUCTIONS)
+    --[[
+    Put back the state that was found, rather than switching the compiler on.
+
+    The hook counts bytecode instructions, which a compiled trace does not
+    execute, so the JIT has to be off for the watchdog to be able to see
+    anything at all. Turning it back *on* afterwards is a different statement
+    from putting it back, and it was wrong in both the cases where the two
+    differ: a reader started with the JIT disabled -- which is how an
+    unexplained crash on a device gets narrowed down -- had it silently
+    switched on again by the first watched call, and a watched call reached
+    from inside another one switched it on while the outer one still needed it
+    off, leaving the rest of that call uncounted.
+    ]]
+    local was_on = jit and select(1, jit.status())
     if jit then pcall(jit.off) end
 
     local results = { pcall(fn, ...) }
 
-    if jit then pcall(jit.on) end
+    if was_on then pcall(jit.on) end
     debug.sethook()
 
     if results[1] then

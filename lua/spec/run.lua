@@ -131,6 +131,15 @@ test("survives a serialize/deserialize round trip", function()
     assertEq(by, 2 - 7, "recomputed bounds y")
 end)
 
+test("carries a highlighter tint across a round trip", function()
+    -- Copy and paste keep the tint, so a saved page that lost it came back a
+    -- different colour from the one that was put down.
+    local s = Stroke:new{ tool = "highlighter", width = 24, color = 0, tint = 100 }
+    s:addPoint(10, 10, 1)
+    s:addPoint(40, 10, 1)
+    assertEq(Stroke:deserialize(deepcopy(s:serialize())).tint, 100, "tint")
+end)
+
 -- Document --------------------------------------------------------------------
 
 io.write("document\n")

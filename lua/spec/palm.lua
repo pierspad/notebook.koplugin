@@ -440,6 +440,73 @@ test("wobble under a resting nib is still not drawn", function()
     assertEq(canvas.stroke:count(), before, "wobble was accumulated as ink")
 end)
 
+io.write("snapping a shape under the nib\n")
+
+--[[--
+The snap replaces the stroke in the buffer, so the panel has to be told about
+everywhere the old one was.
+
+A tidied shape is regularly smaller than the scrawl it came from -- that is much
+of the point of it -- and the refresh used to cover only the shape. The parts of
+the scrawl outside it were rubbed out of the buffer and left standing on the
+panel, as a ghost that stayed until something else happened to repaint over it.
+--]]
+local function snappingCanvas()
+    local canvas = newCanvas()
+    local refreshed = nil
+    Device.screen.refreshFast = function(_, x, y, w, h)
+        refreshed = { x = x, y = y, w = w, h = h }
+    end
+    Device.screen.refreshUI = function(_, x, y, w, h)
+        refreshed = { x = x, y = y, w = w, h = h }
+    end
+    return canvas, function() return refreshed end
+end
+
+--- True if the rectangle `outer` covers `inner` entirely.
+local function covers(outer, x, y, w, h)
+    return outer
+        and outer.x <= x and outer.y <= y
+        and outer.x + outer.w >= x + w
+        and outer.y + outer.h >= y + h
+end
+
+test("the refresh after a snap covers where the raw stroke was", function()
+    local canvas, refreshed = snappingCanvas()
+
+    -- A line drawn with a belly in it: recognised as a line, and a line is
+    -- straightened to its two ends, so the belly ends up outside the tidied
+    -- shape entirely.
+    canvas:_beginStroke("pen", 100, 300, 1)
+    for i = 1, 40 do
+        after(8)
+        local t = i / 40
+        canvas:_extendStroke(math.floor(100 + 400 * t),
+                             math.floor(300 - 15 * math.sin(t * math.pi)), 1)
+    end
+
+    local rx, ry, rw, rh = canvas.stroke:getBounds()
+    canvas:_triggerShapeSnap()
+    assertTrue(canvas.shape_snapped, "the fixture is wrong: nothing was recognised")
+
+    local sx, sy, sw, sh = canvas.stroke:getBounds()
+    assertTrue(sw < rw or sh < rh,
+        "the fixture is wrong: the tidied shape is not the smaller of the two")
+
+    local box = refreshed()
+    assertTrue(box ~= nil, "the snap sent no refresh at all")
+    -- Clamped to the drawing area, so the comparison is too.
+    local c = canvas.content
+    local cx = math.max(rx, c.x)
+    local cy = math.max(ry, c.y)
+    local cw = math.min(rx + rw, c.x + c.w) - cx
+    local ch = math.min(ry + rh, c.y + c.h) - cy
+    assertTrue(covers(box, cx, cy, cw, ch),
+        "the refresh left part of the raw stroke on the panel")
+    assertTrue(covers(box, sx, sy, sw, sh),
+        "the refresh does not cover the shape it drew")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)
 

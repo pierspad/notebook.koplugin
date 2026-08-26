@@ -180,6 +180,29 @@ function Stroke:translate(dx, dy)
     self.chunks = nil
 end
 
+--[[--
+An independent copy: same ink, same points, nothing shared with the original.
+
+Needed anywhere a stroke ends up reachable from two places at once, because
+`translate` and `setPoint` write into the point list rather than returning a new
+one -- so a stroke reached from two pages is one stroke, and moving it on either
+of them moves it on both.
+--]]
+function Stroke:clone()
+    local copy = Stroke:new{
+        tool = self.tool,
+        width = self.width,
+        color = self.color,
+        tint = self.tint,
+    }
+    local pts, spts = copy.pts, self.pts
+    for i = 1, self.n * STRIDE do pts[i] = spts[i] end
+    copy.n = self.n
+    copy.x_min, copy.y_min = self.x_min, self.y_min
+    copy.x_max, copy.y_max = self.x_max, self.y_max
+    return copy
+end
+
 --- Returns the number of points.
 function Stroke:count()
     return self.n
@@ -502,6 +525,7 @@ function Stroke:serialize()
         tool = self.tool,
         width = self.width,
         color = self.color,
+        tint = self.tint,
         n = self.n,
         pts = self.pts,
     }
@@ -509,7 +533,8 @@ end
 
 --- Rebuilds a stroke from serialized data.
 function Stroke:deserialize(data)
-    local o = Stroke:new{ tool = data.tool, width = data.width, color = data.color }
+    local o = Stroke:new{ tool = data.tool, width = data.width, color = data.color,
+        tint = data.tint }
     o.pts = data.pts
     o.n = data.n
     -- Recompute bounds rather than trusting the file.

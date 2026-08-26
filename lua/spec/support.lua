@@ -55,6 +55,9 @@ function FakeBB.new(w, h)
     return o
 end
 
+function FakeBB:getWidth() return self.w end
+function FakeBB:getHeight() return self.h end
+
 function FakeBB:set(x, y, v)
     x, y = math.floor(x), math.floor(y)
     if x < 0 or y < 0 or x >= self.w or y >= self.h then return end
