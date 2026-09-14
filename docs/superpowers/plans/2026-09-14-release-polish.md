@@ -12,3 +12,7 @@ Architecture: retain vector storage and KOReader plugin API. Keep hot input work
 - [ ] Integrate: focused tests and full make ci before each independent commit/push; Kindle native tests and install; promote dev to main and verify uploaded release artifact.
 
 Constraints: retain existing uncommitted tuning plan edit; no notebook format migration; preserve undo and final drag position; no physical-input claims without physical measurements. Agents edit only assigned files, never commit or push; coordinator handles all Git operations.
+
+## Scope checkpoint
+
+The user asked to ship the completed, important functions before exhausting usage. Completed work and explicitly deferred items are recorded in `docs/audits/2026-09-14-release-polish.md`. Eraser preview, curve smoothing and waveform changes are deferred; do not treat the original checklist as release blockers. Physical fountain pressure remains an explicit verification item.
