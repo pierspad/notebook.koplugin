@@ -440,6 +440,50 @@ test("wobble under a resting nib is still not drawn", function()
     assertEq(canvas.stroke:count(), before, "wobble was accumulated as ink")
 end)
 
+io.write("putting another tool on the page while something is selected\n")
+
+test("drawing with the pen ends the selection", function()
+    local canvas, doc = newCanvas()
+    local stroke = Stroke:new{ tool = "pen", width = 3 }
+    stroke:addPoint(100, 100, 1)
+    stroke:addPoint(140, 160, 1)
+    doc:getPage().strokes = { stroke }
+
+    -- What a closed lasso leaves behind: the strokes it caught, the frame
+    -- around them, and the menu floating beside it.
+    canvas.selected_strokes = { stroke }
+    canvas.selection_bbox = { x = 100, y = 100, w = 40, h = 60 }
+    canvas.lasso_menu = {}
+    local UIManager = require("ui/uimanager")
+    local was_close = UIManager.close
+    local closed = {}
+    UIManager.close = function(_, widget) table.insert(closed, widget) end
+
+    canvas:_beginStroke("pen", 300, 400, 1)
+    UIManager.close = was_close
+
+    assertTrue(canvas.selected_strokes == nil, "the selection outlived the tool that made it")
+    assertTrue(canvas.selection_bbox == nil, "the dashed frame is still claimed")
+    assertTrue(canvas.lasso_menu == nil, "the lasso menu was left on screen")
+    assertEq(#closed, 1, "widgets closed")
+    assertTrue(canvas.stroke ~= nil, "the pen stroke was not started")
+end)
+
+test("the lasso itself still gets to pick the selection up", function()
+    local canvas, doc = newCanvas()
+    local stroke = Stroke:new{ tool = "pen", width = 3 }
+    stroke:addPoint(100, 100, 1)
+    doc:getPage().strokes = { stroke }
+    canvas.selected_strokes = { stroke }
+    canvas.selection_bbox = { x = 100, y = 100, w = 40, h = 60 }
+
+    -- Inside the selection: this is a drag, and it must not be read as the
+    -- selection being abandoned.
+    canvas:_beginStroke("lasso", 110, 110, 1)
+    assertTrue(canvas.dragging_selection, "the drag never started")
+    assertTrue(canvas.selected_strokes ~= nil, "the selection was dropped instead of picked up")
+end)
+
 io.write("snapping a shape under the nib\n")
 
 --[[--

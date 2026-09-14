@@ -366,6 +366,41 @@ test("a notebook that failed once is tried again after it is written to", functi
     assertTrue(retried, "the notebook stayed blank even after being written to")
 end)
 
+io.write("work that outlives the screen that started it\n")
+
+--[[
+Exporting and sharing walk their list one tick at a time, and the reader is
+free to leave the gallery while that is running. The files are still worth
+writing -- they were asked for -- but the screen they were asked from is gone,
+and rebuilding it means relisting the folder, building cards nobody will see,
+and marking the whole stack dirty over whatever is being read instead.
+--]]
+test("a rebuild after the gallery has closed does nothing", function()
+    local gallery, rec = newGallery(12)
+    gallery:paintTo(RectBB.new(), 0, 0)
+
+    gallery:onCloseWidget()
+    local dirty_before = #rec.dirty
+    local items_before = gallery.items
+
+    gallery:_rebuild()
+
+    assertEq(#rec.dirty, dirty_before,
+        "a closed gallery repainted the screen from underneath whatever replaced it")
+    assertTrue(gallery.items == items_before,
+        "a closed gallery relisted the folder it is no longer showing")
+end)
+
+test("a rebuild while the gallery is open still repaints", function()
+    local gallery, rec = newGallery(12)
+    gallery:paintTo(RectBB.new(), 0, 0)
+    local dirty_before = #rec.dirty
+
+    gallery:_rebuild()
+
+    assertTrue(#rec.dirty > dirty_before, "an open gallery did not repaint")
+end)
+
 -- Choosing several things --------------------------------------------------------
 
 io.write("gallery selection\n")
@@ -915,6 +950,189 @@ test("the page overview builds and covers the screen", function()
     end
     find(panel)
     assertEq(#tiles, 3, "page tiles shown")
+end)
+
+test("a tile rules its paper where the writing on it actually is", function()
+    --[[
+    Strokes are stored in the coordinates the canvas received them in, so every
+    point carries the height of the toolbar above the drawing area in its y.
+    A tile that rules its paper from its own top left therefore puts the lines
+    a scaled toolbar's height above the writing that was done on them, and the
+    overview shows handwriting floating between the lines it was sitting on
+    while it was written. The gallery's cards already offset the ruling by the
+    recorded origin; this is the same page drawn smaller, and it has to move
+    with it too. See Document:contentOrigin and Thumbnail.get.
+    --]]
+    newGallery(4)
+    local PagePanel = require("pagepanel")
+    local Document = require("document")
+    local Template = require("template")
+
+    local ORIGIN_Y = 120
+
+    local doc = Document:new("/data/scribe/ruled.scribe")
+    doc:setTemplate("lined")
+    doc:setContentOrigin(0, ORIGIN_Y)
+    local panel = PagePanel:new{ document = doc }
+
+    local tile
+    local function find(w)
+        if type(w) ~= "table" or tile then return end
+        if w.index and w.on_open then tile = w return end
+        for _, child in ipairs(w) do find(child) end
+    end
+    find(panel)
+    assertTrue(tile ~= nil, "the overview built no page tiles")
+
+    -- Where the ruling was asked for, and at what scale. Standing in for
+    -- Template.draw is what keeps this about the arithmetic: the tile draws a
+    -- border and a page number too, and picking the ruling back out of the
+    -- pixels means telling it apart from those.
+    local drawn = Template.draw
+    local asked
+    Template.draw = function(_, _, area, scale)
+        asked = { x = area.x, y = area.y, scale = scale }
+    end
+    local ok, err = pcall(function() tile:paintTo(RectBB.new(), 0, 0) end)
+    Template.draw = drawn
+    assertTrue(ok, tostring(err))
+    assertTrue(asked ~= nil, "the tile drew no background at all")
+
+    -- The paper starts an inset in from the tile, and the ruling starts a
+    -- scaled origin below that.
+    local inset = asked.x
+    local want = ORIGIN_Y * asked.scale
+    assertTrue(math.abs((asked.y - inset) - want) < 1, string.format(
+        "the ruling starts %.1f below the paper, for an origin worth %.1f",
+        asked.y - inset, want))
+end)
+
+test("a tile with no recorded origin rules from its own corner", function()
+    -- A notebook written before the origin was recorded reads back as zero,
+    -- and has to keep being drawn the way it always was.
+    newGallery(4)
+    local PagePanel = require("pagepanel")
+    local Document = require("document")
+    local doc = Document:new("/data/scribe/old.scribe")
+    doc:setTemplate("lined")
+    local panel = PagePanel:new{ document = doc }
+    local ox, oy = doc:contentOrigin()
+    assertEq(ox, 0, "origin x") assertEq(oy, 0, "origin y")
+    local bb = RectBB.new()
+    panel:paintTo(bb, 0, 0)
+end)
+
+test("a send can be staged even if the cache directory has been cleaned out", function()
+    --[[
+    KOReader makes its cache directory at startup, so it is normally there --
+    but it is the one directory on the device anything is entitled to empty,
+    and mkdir does not create parents. A send attempted after something had
+    cleared it failed with "there is nowhere to prepare the files for sending",
+    which tells the reader nothing they can act on.
+    --]]
+    local _, rec = newGallery(4)
+    package.loaded["share"] = nil
+    local Share = require("share")
+
+    local DataStorage = package.loaded["datastorage"]
+    local cache = DataStorage:getDataDir() .. "/cache"
+    rec.fs[cache] = nil
+    assertTrue(rec.fs[cache] == nil, "the fixture still has a cache directory")
+
+    local staging = Share.stagingDir()
+    assertTrue(staging ~= nil, "nowhere to stage a send")
+    assertTrue(rec.fs[staging] ~= nil, "the staging directory was never made")
+end)
+
+test("two sends in the same second do not share a staging directory", function()
+    local _, rec = newGallery(4)
+    package.loaded["share"] = nil
+    local Share = require("share")
+
+    local first = Share.stagingDir()
+    local second = Share.stagingDir()
+    assertTrue(first ~= nil and second ~= nil, "a send could not be staged")
+    assertTrue(first ~= second, "both sends staged into the same directory")
+    assertTrue(rec.fs[first] ~= nil and rec.fs[second] ~= nil,
+        "a staging directory was never made")
+end)
+
+test("the overview keeps its way out on a narrower screen", function()
+    --[[
+    A HorizontalGroup that does not fit is not wrapped and not scrolled: it is
+    cut off at the right, and the button on the right of this row is Done. The
+    header was built at one fixed size, which fits across a Scribe in English
+    and across nothing narrower -- an Elipsa is four hundred pixels short of it,
+    and a translation of "Notebook background" longer than the English pushes
+    even a Scribe over.
+    --]]
+    for _, width in ipairs{ 1860, 1440, 1404, 1072 } do
+        newGallery(4)
+        -- Re-read after the stubs are reinstalled: newGallery builds a fresh
+        -- screen each time, and the override has to land on that one.
+        local Device = package.loaded["device"]
+        Device.screen.getWidth = function() return width end
+        Device.screen.getHeight = function() return math.floor(width * 1.33) end
+        package.loaded["pagepanel"] = nil
+        local PagePanel = require("pagepanel")
+        local Document = require("document")
+
+        local doc = Document:new("/data/scribe/wide.scribe")
+        local panel = PagePanel:new{ document = doc }
+        local header = panel:_buildHeader()
+        assertTrue(header:getSize().w <= width, string.format(
+            "the header is %d wide on a screen of %d: Done is off the edge",
+            header:getSize().w, width))
+    end
+
+    package.loaded["pagepanel"] = nil
+end)
+
+test("adding a page from the overview shows the page it added", function()
+    --[[
+    Adding from the last tile of a full screen puts the new page on the next
+    screen. The grid used to place itself once, when it opened, and stay there:
+    the button did nothing anyone could see, and what it had made was off to
+    the right.
+    --]]
+    newGallery(4)
+    local PagePanel = require("pagepanel")
+    local Document = require("document")
+
+    local doc = Document:new("/data/scribe/many.scribe")
+    local panel = PagePanel:new{ document = doc }
+    local per_page = panel.per_page
+    assertTrue(per_page and per_page >= 1, "the grid holds no tiles")
+
+    -- Fill the first screen exactly, and stand on its last page.
+    while doc:pageCount() < per_page do doc:insertPage(doc:pageCount()) end
+    panel.reveal = doc:pageCount()
+    panel:_layout()
+    assertEq(panel.page, 1, "the fixture does not start on the first screen")
+
+    panel:_insertAfter(doc:pageCount())
+    assertEq(panel.page, 2, "the grid stayed on the screen the new page is not on")
+end)
+
+test("turning the grid by hand is not undone by the page being read", function()
+    -- The reveal is cleared once used, because paging through goes back
+    -- through the same layout.
+    newGallery(4)
+    local PagePanel = require("pagepanel")
+    local Document = require("document")
+
+    local doc = Document:new("/data/scribe/many.scribe")
+    local panel = PagePanel:new{ document = doc }
+    while doc:pageCount() <= panel.per_page do doc:insertPage(doc:pageCount()) end
+    doc.current_page = 1
+    panel.reveal = 1
+    panel:_layout()
+    assertEq(panel.page, 1, "the fixture does not start on the first screen")
+
+    panel:_turnPage(1)
+    assertEq(panel.page, 2, "the grid would not turn")
+    panel:_layout()
+    assertEq(panel.page, 2, "the grid snapped back to the page being read")
 end)
 
 -- The launcher bar ---------------------------------------------------------------------

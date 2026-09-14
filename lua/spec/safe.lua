@@ -135,6 +135,28 @@ test("the hook is taken back off afterwards", function()
     assertTrue(debug.gethook() == nil, "a debug hook was left installed")
 end)
 
+test("the compiler is put back the way it was found, not switched on", function()
+    -- The watchdog counts bytecode instructions, which a compiled trace does
+    -- not execute, so it has to turn the JIT off to see anything. A reader
+    -- started with the JIT already off -- which is how an unexplained crash on
+    -- a device gets narrowed down -- must not have it switched back on by the
+    -- first watched call it happens to make.
+    if not jit then return end
+    local was_on = select(1, jit.status())
+
+    jit.off()
+    Safe.watched("test:work", function() return 1 end)
+    assertTrue(not select(1, jit.status()),
+        "a watched call switched the compiler on behind the reader's back")
+
+    jit.on()
+    Safe.watched("test:work", function() return 1 end)
+    assertTrue(select(1, jit.status()),
+        "a watched call left the compiler off")
+
+    if was_on then jit.on() else jit.off() end
+end)
+
 -- Yielding -----------------------------------------------------------------------
 
 io.write("follow-up work yields to input\n")

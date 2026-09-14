@@ -42,27 +42,69 @@ inside an L therefore selected the L without ever having touched it.
 function Lasso.isStrokeSelected(stroke, poly_pts)
     if not stroke or stroke:count() == 0 then return false end
 
+    --[[
+    Nothing whose box misses the loop's box can be inside it.
+
+    Free, and worth having now rather than before: what follows walks the ink
+    itself rather than hopping from one recorded point to the next, so a page of
+    long strokes costs more of it than it used to. This answers for all the
+    strokes the loop is nowhere near, which on a written page is nearly all of
+    them, without measuring anything.
+    ]]
+    local lx0, ly0 = math.huge, math.huge
+    local lx1, ly1 = -math.huge, -math.huge
+    for _, p in ipairs(poly_pts) do
+        if p.x < lx0 then lx0 = p.x end
+        if p.y < ly0 then ly0 = p.y end
+        if p.x > lx1 then lx1 = p.x end
+        if p.y > ly1 then ly1 = p.y end
+    end
+    local bx, by, bw, bh = stroke:getBounds()
+    if lx1 < bx or lx0 > bx + bw or ly1 < by or ly0 > by + bh then
+        return false
+    end
+
+    local spacing = Tuning.lasso_sample_spacing
     local count = stroke:count()
     local px, py = stroke:getPoint(1)
     if Lasso.pointInPolygon(px, py, poly_pts) then return true end
 
-    -- Walked by distance travelled, so a densely sampled stroke is not tested
-    -- more finely than a sparse one covering the same ground.
+    --[[
+    Walked along the ink, not from one recorded point to the next.
+
+    The two are the same thing for handwriting, whose points are a few pixels
+    apart, and they are not the same thing at all for a straight line: a line is
+    stored as its two ends, and the shape recogniser reduces one to exactly
+    that. Testing only the points meant testing only the two ends, so a loop
+    drawn round the middle of a line selected nothing -- and the same line drawn
+    by the same hand was selectable before it was straightened and not after,
+    which is the kind of difference nobody can be expected to guess at.
+
+    Sampling by distance travelled is what keeps the resolution a property of
+    the lasso rather than of what happens to be under it, so `since` carries
+    across the join: a step does not restart at every recorded point.
+    ]]
     local since = 0
     for i = 2, count do
         local x, y = stroke:getPoint(i)
         local dx, dy = x - px, y - py
-        since = since + math.sqrt(dx * dx + dy * dy)
-        px, py = x, y
-        if since >= Tuning.lasso_sample_spacing or i == count then
-            since = 0
-            if Lasso.pointInPolygon(x, y, poly_pts) then
-                return true
+        local len = math.sqrt(dx * dx + dy * dy)
+        if len > 0 then
+            local at = spacing - since
+            while at <= len do
+                local t = at / len
+                if Lasso.pointInPolygon(px + dx * t, py + dy * t, poly_pts) then
+                    return true
+                end
+                at = at + spacing
             end
+            since = (since + len) % spacing
         end
+        px, py = x, y
     end
 
-    return false
+    -- The far end always counts, however short the last step to it was.
+    return Lasso.pointInPolygon(px, py, poly_pts)
 end
 
 --- Finds all strokes on a page selected by a lasso loop.

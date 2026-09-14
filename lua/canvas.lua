@@ -705,27 +705,25 @@ function Canvas:_showLassoMenu(selected)
         has_clipboard = Canvas.clipboard ~= nil and #Canvas.clipboard > 0,
         on_cut = function()
             self.lasso_menu = nil
-            Canvas.clipboard = {}
-            for _, s in ipairs(selected) do
-                table.insert(Canvas.clipboard, s)
-            end
+            --[[
+            Copies, like the copy above, and for a reason cut makes easy to
+            miss: the strokes it takes off the page are not gone, they are on
+            the undo stack, and one press of undo puts those very objects back
+            where they were. Holding the originals meant the clipboard went on
+            following them -- move the restored writing and what came out of a
+            later paste was where it had been moved to, not what had been cut.
+            ]]
+            Canvas.clipboard = Lasso.cloneStrokes(selected)
+            local box = self.selection_bbox
             self.document:removeStrokes(selected)
             self.selected_strokes = nil
             self.selection_bbox = nil
-            self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
+            self:_repaintSelection(box)
             if self.on_change then self:on_change() end
         end,
         on_copy = function()
             self.lasso_menu = nil
-            Canvas.clipboard = {}
-            for _, s in ipairs(selected) do
-                local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint }
-                for i = 1, s:count() do
-                    local x, y, p = s:getPoint(i)
-                    copy:addPoint(x, y, p)
-                end
-                table.insert(Canvas.clipboard, copy)
-            end
+            Canvas.clipboard = Lasso.cloneStrokes(selected)
             self:_deselectLasso()
         end,
         on_paste = function()
@@ -749,10 +747,11 @@ function Canvas:_showLassoMenu(selected)
         end,
         on_delete = function()
             self.lasso_menu = nil
+            local box = self.selection_bbox
             self.document:removeStrokes(selected)
             self.selected_strokes = nil
             self.selection_bbox = nil
-            self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
+            self:_repaintSelection(box)
             if self.on_change then self:on_change() end
         end,
         on_close = function()
@@ -768,14 +767,33 @@ function Canvas:_deselectLasso()
         UIManager:close(self.lasso_menu)
         self.lasso_menu = nil
     end
-    if self.selection_bbox then
-        local bx = self.selection_bbox
-        self.selected_strokes = nil
-        self.selection_bbox = nil
-        self:_repaintRegion(bx.x - 10, bx.y - 10, bx.w + 20, bx.h + 20)
-    else
-        self.selected_strokes = nil
+    local bx = self.selection_bbox
+    self.selected_strokes = nil
+    self.selection_bbox = nil
+    self:_repaintSelection(bx)
+end
+
+--[[--
+Repaints where a selection was, frame and all, or the page if it is not known.
+
+The frame is drawn *outside* the box the selection occupies, so repainting the
+box alone leaves the dashes standing around an empty rectangle. The slack is
+the one the drag uses, which is now a number the reader can change: taking it
+back to the ten that used to be written here would leave a ring of dashes
+behind for anyone who had raised it.
+
+Cut and delete used to repaint the whole drawing area instead. What they take
+away is inside the selection by definition, so that was a full-page raster and
+a full-page refresh -- the two operations that most obviously ought to be
+instant were the two slowest things the lasso could do.
+--]]
+function Canvas:_repaintSelection(box)
+    if not box then
+        return self:_repaintRegion(self.content.x, self.content.y,
+            self.content.w, self.content.h)
     end
+    local m = Tuning.frame_margin
+    self:_repaintRegion(box.x - m, box.y - m, box.w + 2 * m, box.h + 2 * m)
 end
 
 --[[--

@@ -228,6 +228,59 @@ test("a short loop over a long stroke catches it", function()
         "a 40px loop over a 600px stroke missed it")
 end)
 
+test("a straightened line is as selectable as the one that was drawn", function()
+    --[[
+    A line is stored as its two ends, and the shape recogniser reduces one to
+    exactly that. Tested at its recorded points, a line was tested at its two
+    ends and nowhere in between, so a loop around the middle of it selected
+    nothing -- and the same line by the same hand was selectable before it was
+    straightened and not after, which is not a difference anyone can guess at.
+    --]]
+    local drawn = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    for x = 0, 1000, 8 do drawn:addPoint(x, 100, 1) end
+
+    local snapped = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    snapped:addPoint(0, 100, 1)
+    snapped:addPoint(1000, 100, 1)
+
+    local middle = boxLoop(460, 60, 80, 80)
+    assertEq(Lasso.isStrokeSelected(drawn, middle), true,
+        "the fixture is wrong: the hand-drawn line was already missed")
+    assertEq(Lasso.isStrokeSelected(snapped, middle), true,
+        "the straightened line could not be caught round its middle")
+end)
+
+test("a loop the ink only passes through catches it", function()
+    -- Neither end of the diagonal is anywhere near the loop, and neither is any
+    -- recorded point: the stroke is two of them.
+    local diagonal = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    diagonal:addPoint(0, 0, 1)
+    diagonal:addPoint(800, 800, 1)
+    assertEq(Lasso.isStrokeSelected(diagonal, boxLoop(380, 380, 40, 40)), true,
+        "the loop was crossed and nothing was caught")
+end)
+
+test("a loop beside a long stroke still catches nothing", function()
+    -- Sampling along the ink must not turn into catching what it misses: the
+    -- loop is level with the line and well clear of it.
+    local line = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    line:addPoint(0, 100, 1)
+    line:addPoint(1000, 100, 1)
+    assertEq(Lasso.isStrokeSelected(line, boxLoop(460, 400, 80, 80)), false,
+        "a loop nowhere near the line caught it")
+end)
+
+test("a loop between two far-apart points of a stroke catches nothing", function()
+    -- The gap between two points is not ink either way: what is sampled is the
+    -- segment joining them, and a loop off to one side of it is still empty.
+    local vee = Stroke:new{ tool = "pen", width = 3, color = 0 }
+    vee:addPoint(0, 0, 1)
+    vee:addPoint(400, 800, 1)
+    vee:addPoint(800, 0, 1)
+    assertEq(Lasso.isStrokeSelected(vee, boxLoop(380, 60, 40, 40)), false,
+        "the empty space inside the V was treated as ink")
+end)
+
 test("cloning carries the tint across", function()
     local s = Stroke:new{ tool = "highlighter", width = 24, color = 0, tint = 100 }
     s:addPoint(10, 10, 1)

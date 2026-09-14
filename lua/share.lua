@@ -51,6 +51,15 @@ function Share.stagingDir()
         n = n + 1
         path = cacheDir() .. "/" .. STAGING_PREFIX .. tostring(os.time()) .. "-" .. n
     end
+    -- mkdir does not create parents. KOReader makes the cache directory when
+    -- it starts, so this is normally already there -- but it is the one
+    -- directory on the device that anything is entitled to delete, and a send
+    -- attempted after something had cleaned it out failed with "there is
+    -- nowhere to prepare the files", which says nothing about what to do next.
+    local cache = cacheDir()
+    if lfs.attributes(cache, "mode") ~= "directory" and not lfs.mkdir(cache) then
+        return nil
+    end
     return lfs.mkdir(path) and path or nil
 end
 

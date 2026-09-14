@@ -251,12 +251,12 @@ function Safe.watched(where, fn, ...)
     The hook counts bytecode instructions, which a compiled trace does not
     execute, so the JIT has to be off for the watchdog to be able to see
     anything at all. Turning it back *on* afterwards is a different statement
-    from putting it back, and it was wrong in both the cases where the two
-    differ: a reader started with the JIT disabled -- which is how an
-    unexplained crash on a device gets narrowed down -- had it silently
-    switched on again by the first watched call, and a watched call reached
-    from inside another one switched it on while the outer one still needed it
-    off, leaving the rest of that call uncounted.
+    from putting it back, and the two differ for a reader started with the JIT
+    disabled -- which is how an unexplained crash on a device gets narrowed
+    down. The first handler to be watched switched it on again, and the run
+    that was supposed to answer the question stopped being the run the question
+    was about. (Nesting needs no thought here: a watched call reached from
+    inside another one sees the outer one's hook and delegates above.)
     ]]
     local was_on = jit and select(1, jit.status())
     if jit then pcall(jit.off) end

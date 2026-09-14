@@ -914,8 +914,21 @@ function Gallery:_repaint(mode)
     UIManager:setDirty("all", mode or "ui")
 end
 
---- Rebuilds the grid after the contents change.
+--[[--
+Rebuilds the grid after the contents change.
+
+Nothing to rebuild once the gallery is gone, and the two callers that can
+arrive after it has are the reason this is checked here rather than at each of
+them. Exporting and sharing work through a list one tick at a time, and the
+reader is free to leave the gallery while that is running -- it can take a
+while, which is exactly why it is spread over ticks. Finishing after that used
+to relist the folder, build a screenful of cards nobody would see, and then
+mark the whole stack dirty, so a book being read was repainted from underneath
+by a screen that had been closed minutes earlier. The files still get written;
+it is only the screen that is no longer anyone's business.
+--]]
 function Gallery:_rebuild()
+    if self.closed then return end
     self.items = Library.list(self.folder, self.order)
     self:_layout()
     self:_repaint()

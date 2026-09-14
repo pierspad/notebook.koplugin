@@ -41,7 +41,28 @@ end
 
 function Widget:paintTo() end
 function Widget:free() self.freed = (self.freed or 0) + 1 end
-function Widget:handleEvent() return false end
+
+--[[--
+Dispatch, modelled on KOReader's own.
+
+A widget answers an event by running its `on<Name>` handler, if it has one, and
+whatever that returns is whether the event was consumed. A container offers the
+event to its children first, in order, and stops at the first one that says yes
+-- so a child listed before another can silence it, and a widget that answers
+`true` to an event it did not mean to claim silences everything after it.
+
+Modelled because that ordering is the whole of how taps find their way to a
+button, and a double that answers `false` to everything cannot tell a screen
+where every control works from one where none of them do.
+--]]
+function Widget:handleEvent(event)
+    local handler = self[event.handler]
+    if handler then
+        local args = event.args or {}
+        return handler(self, unpack(args, 1, args.n or #args))
+    end
+    return false
+end
 
 local function containerFree(self, full)
     for _, child in ipairs(self) do
@@ -52,6 +73,18 @@ end
 -- Containers ------------------------------------------------------------------
 
 local WidgetContainer = Widget:extend{}
+
+function WidgetContainer:propagateEvent(event)
+    for _, child in ipairs(self) do
+        if child.handleEvent and child:handleEvent(event) then return true end
+    end
+    return false
+end
+
+function WidgetContainer:handleEvent(event)
+    if self:propagateEvent(event) then return true end
+    return Widget.handleEvent(self, event)
+end
 
 function WidgetContainer:getSize()
     if self.dimen then return self.dimen end
@@ -66,6 +99,25 @@ end
 WidgetContainer.free = containerFree
 
 local InputContainer = WidgetContainer:extend{}
+
+--[[--
+Offers a gesture to this widget's own registered ranges.
+
+The container part has already tried the children by the time this runs, so
+this is the widget claiming the gesture for itself. Modelled because the whole
+question "does this button respond to a tap" is answered here.
+--]]
+function InputContainer:onGesture(ges)
+    for name, gsseq in pairs(self.ges_events or {}) do
+        for _, range in ipairs(gsseq) do
+            if range.match and range:match(ges) then
+                local handler = self[gsseq.event or name]
+                if handler and handler(self, nil, ges) then return true end
+            end
+        end
+    end
+    return self.stop_events_propagation or false
+end
 
 function InputContainer:paintTo(bb, x, y)
     if not self.dimen then
@@ -272,8 +324,27 @@ function stubs.install(fs)
         end,
     }
 
+    --[[--
+    A gesture range that actually answers whether a point is inside it.
+
+    It has to be the same table the caller passed in, `range` included: widgets
+    build their ranges once, at init, from a rectangle that is only filled in
+    later, when they are painted. A range that copied the rectangle would be
+    matching against where the widget was going to be before anyone knew.
+    ]]
+    local GestureRange = {}
+    GestureRange.__index = GestureRange
+
+    function GestureRange:match(ges)
+        if self.ges and ges.ges and self.ges ~= ges.ges then return false end
+        local r, pos = self.range, ges.pos
+        if not r or not pos then return true end
+        return pos.x >= (r.x or 0) and pos.x <= (r.x or 0) + (r.w or 0)
+           and pos.y >= (r.y or 0) and pos.y <= (r.y or 0) + (r.h or 0)
+    end
+
     package.loaded["ui/gesturerange"] = {
-        new = function(_, o) return o end,
+        new = function(_, o) return setmetatable(o, GestureRange) end,
     }
 
     package.loaded["ui/widget/widget"] = Widget
@@ -413,8 +484,22 @@ function stubs.install(fs)
                 return names[i]
             end
         end,
+        --[[
+        Fails when the parent is not there, the way mkdir(2) does.
+
+        A double that creates whatever it is asked for is gentler than the
+        system call, and the difference is exactly the bug worth catching:
+        code that builds a path a level at a time passes either way, and code
+        that assumes the parent exists only passes here.
+        ]]
         mkdir = function(path)
-            fs[normalize(path)] = { mode = "directory", modification = 0 }
+            path = normalize(path)
+            local parent = path:match("^(.*)/[^/]+$")
+            if parent and parent ~= "" and fs[parent] == nil then
+                return nil, "No such file or directory"
+            end
+            if fs[path] then return nil, "File exists" end
+            fs[path] = { mode = "directory", modification = 0 }
             return true
         end,
         rmdir = function(path)

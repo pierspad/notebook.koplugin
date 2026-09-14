@@ -108,9 +108,28 @@ function PageTile:paintTo(bb, x, y)
                            self.paper_h / Screen:getHeight())
 
     local paper = { x = px, y = py, w = self.paper_w, h = self.paper_h }
+    --[[
+    The background starts at the origin the strokes are in, not at the corner
+    of the tile.
+
+    A stroke is stored in the coordinates the canvas received it in, so every
+    point carries the height of the toolbar above the drawing area in its y.
+    Ruling the tile from its own top left put the lines a scaled toolbar's
+    height above the writing that had been done on them, and every tile in the
+    overview showed handwriting floating between the lines it was sitting on
+    while it was written. The thumbnails on the gallery cards already do this;
+    see Document:contentOrigin and Thumbnail.get.
+    ]]
+    local origin_x, origin_y = self.document:contentOrigin()
+    local ruling = {
+        x = px + origin_x * scale,
+        y = py + origin_y * scale,
+        w = self.paper_w,
+        h = self.paper_h,
+    }
     -- Clipped to the paper: a checklist's boxes hang above their line and would
     -- otherwise be drawn over the tile's border and the tile beside it.
-    Template.draw(bb, self.document:templateFor(self.index), paper, scale, paper)
+    Template.draw(bb, self.document:templateFor(self.index), ruling, scale, paper)
     Renderer.drawPage(bb, page, scale, px, py)
 
     if self.current then
@@ -143,6 +162,8 @@ function PagePanel:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
     self.covers_fullscreen = true
     self.page = 1
+    -- Open on the page being read, not on the first one; see _layout.
+    self.reveal = self.document.current_page
     self:_layout()
 
     self.ges_events = {
@@ -169,10 +190,24 @@ function PagePanel:_layout()
     self.page_count = math.max(1, math.ceil(count / self.per_page))
     if self.page > self.page_count then self.page = self.page_count end
 
-    -- Opening the panel should show the page you are on, not always the first.
-    if not self._placed then
-        self.page = math.ceil(self.document.current_page / self.per_page)
-        self._placed = true
+    --[[
+    Bring the page that was asked for into view, if one was.
+
+    Set when the panel opens, so it shows the page you are on rather than
+    always the first, and again whenever an action moves the notebook to a page
+    of its own making. Adding a page from the last tile of a full screen puts
+    the new one on the next screen, and without this the grid stayed where it
+    was: the button did nothing anyone could see, and the page it had just made
+    was somewhere off to the right.
+
+    Cleared once used, because turning the grid by hand goes through `_layout`
+    too -- and a grid that jumped back to the current page every time it was
+    swiped could not be paged through at all.
+    ]]
+    if self.reveal then
+        self.page = math.max(1, math.min(math.ceil(self.reveal / self.per_page),
+            self.page_count))
+        self.reveal = nil
     end
 
     local grid = VerticalGroup:new{ align = "left" }
@@ -221,29 +256,69 @@ function PagePanel:_layout()
     }
 end
 
+--[[--
+The sizes the header is tried at, largest first, then without the words.
+
+The same ladder the gallery goes down, and for the same reason: the row has a
+fixed width and its labels do not. Three buttons and a title fit across a
+Scribe in English and across nothing narrower -- an Elipsa is four hundred
+pixels short of it -- and a HorizontalGroup that does not fit is not wrapped or
+scrolled, it is cut off at the right. The button on the right is Done, so what
+was being cut off was the way out of the overview.
+--]]
+local HEADER_MODES = { 17, 16, 15, 14, 13, "icons" }
+
 function PagePanel:_buildHeader()
-    local row = HorizontalGroup:new{ align = "center" }
-    table.insert(row, TextWidget:new{
-        text = T(_("Pages (%1)"), self.document:pageCount()),
-        face = Font:getFace("tfont", 22),
-    })
-    table.insert(row, HorizontalSpan:new{ width = Size.padding.large })
-    table.insert(row, Widgets.textButton{
-        text = _("New page"), icon = "notebook.page",
-        callback = function() self:_insertAfter(self.document.current_page) end,
-    })
-    table.insert(row, HorizontalSpan:new{ width = Size.padding.large })
-    table.insert(row, Widgets.textButton{
-        text = _("Notebook background"), icon = "notebook.page",
-        callback = function() self:_pickNotebookTemplate() end,
-    })
-    table.insert(row, HorizontalSpan:new{ width = Size.padding.large })
-    -- A left chevron, the same one every other screen leaves by: an open-book
-    -- glyph on a button that closes the page said the opposite of what it does.
-    table.insert(row, Widgets.textButton{
-        text = _("Done"), icon = "chevron.left",
-        callback = function() self:onClose() end,
-    })
+    local gap = Size.padding.large
+    local avail = self.dimen.w - 2 * gap
+
+    local row
+    for i, mode in ipairs(HEADER_MODES) do
+        if row then
+            for _, child in ipairs(row) do
+                if child.free then child:free() end
+            end
+        end
+
+        -- Words go last, and only when no size fits: an icon alone says less
+        -- than a small word, so shrinking is always the better trade.
+        local words = mode ~= "icons"
+        local font = words and mode or 13
+        local icon = words and math.floor(mode * 1.5) or 26
+
+        local function button(text, glyph, callback)
+            return Widgets.textButton{
+                text = words and text or "",
+                icon = glyph, font_size = font, icon_size = icon,
+                callback = callback,
+            }
+        end
+
+        row = HorizontalGroup:new{ align = "center" }
+        table.insert(row, TextWidget:new{
+            text = T(_("Pages (%1)"), self.document:pageCount()),
+            face = Font:getFace("tfont", words and 22 or 18),
+        })
+        table.insert(row, HorizontalSpan:new{ width = gap })
+        table.insert(row, button(_("New page"), "notebook.page", function()
+            self:_insertAfter(self.document.current_page)
+        end))
+        table.insert(row, HorizontalSpan:new{ width = gap })
+        table.insert(row, button(_("Notebook background"), "notebook.page", function()
+            self:_pickNotebookTemplate()
+        end))
+        table.insert(row, HorizontalSpan:new{ width = gap })
+        -- A left chevron, the same one every other screen leaves by: an
+        -- open-book glyph on a button that closes the page said the opposite
+        -- of what it does.
+        table.insert(row, button(_("Done"), "chevron.left", function()
+            self:onClose()
+        end))
+
+        if row:getSize().w <= avail or i == #HEADER_MODES then
+            return row
+        end
+    end
     return row
 end
 
@@ -262,6 +337,7 @@ end
 
 function PagePanel:_insertAfter(index)
     local n = self.document:insertPage(index)
+    self.reveal = n
     self:_refresh()
     return n
 end
@@ -274,7 +350,7 @@ function PagePanel:_actions(index)
           callback = function() self:_insertAfter(index) end },
         { icon = "notebook.duplicate", text = _("Duplicate"),
           callback = function()
-              self.document:duplicatePage(index)
+              self.reveal = self.document:duplicatePage(index)
               self:_refresh()
           end },
         { icon = "notebook.page", text = _("Background of this page"),

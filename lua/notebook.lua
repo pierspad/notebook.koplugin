@@ -24,6 +24,8 @@ local IconWidget = require("ui/widget/iconwidget")
 local PagePanel = require("pagepanel")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local SettingsDialog = require("settings")
+local Tuning = require("tuning")
+local TuningDock = require("tuningdock")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
@@ -34,6 +36,22 @@ local Screen = Device.screen
 
 -- Height left clear at the top of the screen (0 to maximize space at the top).
 local TOP_INSET = 0
+
+-- Prefix every stored canvas setting is kept under. Declared here rather than
+-- beside the settings below because `init` reads it, and a local is not in
+-- scope above its own declaration.
+local SETTING_PREFIX = "notebook_"
+
+--[[--
+The title that opens the tuning dock.
+
+A notebook rather than a hidden gesture or a file on the device: it is made and
+unmade from the gallery, with no SSH and nothing to remember, and a multi-tap
+gesture on this digitizer is the kind of thing that fires by itself. The
+notebook that carries the dock is also the notebook whose pages have the odd
+geometry, which keeps both facts in one place.
+--]]
+local TUNING_TITLE = "_tuning_"
 
 local Notebook = InputContainer:extend{
     document = nil,
@@ -50,6 +68,16 @@ function Notebook:init()
     -- screen, including us. Leaving a band clear at the top keeps it from
     -- landing on top of the toolbar buttons and covering them.
     local toolbar_h = self.toolbar:getSize().h + TOP_INSET
+
+    -- The tuning dock takes a band off the bottom, by the same mechanism the
+    -- toolbar takes one off the top: `content` is what the canvas will accept
+    -- ink into, so shortening it is all there is to it.
+    local dock_h = 0
+    if self.title == TUNING_TITLE then
+        Tuning.load()
+        dock_h = math.floor(self.dimen.h * TuningDock.HEIGHT_RATIO)
+    end
+
     self.canvas = Canvas:new{
         document = self.document,
         owner = self,
@@ -57,12 +85,25 @@ function Notebook:init()
             x = 0,
             y = toolbar_h,
             w = self.dimen.w,
-            h = self.dimen.h - toolbar_h,
+            h = self.dimen.h - toolbar_h - dock_h,
         },
         on_change = function() self:_onDocumentChanged() end,
         on_page_swipe = function(delta) self:_turnPage(delta) end,
     }
     self:_loadSettings()
+
+    if dock_h > 0 then
+        self.tuning_dock = TuningDock:new{
+            width = self.dimen.w,
+            height = dock_h,
+            canvas = self.canvas,
+            owner = self,
+            tab = G_reader_settings:readSetting(SETTING_PREFIX .. "tuning_tab"),
+            on_tab = function(id)
+                G_reader_settings:saveSetting(SETTING_PREFIX .. "tuning_tab", id)
+            end,
+        }
+    end
 
     -- Both children are listed so that events reach them: a container only
     -- dispatches to its numbered children, and painting them by hand in
@@ -70,6 +111,14 @@ function Notebook:init()
     -- The toolbar comes first so it gets a chance at a tap before the canvas.
     self[1] = self.toolbar
     self[2] = self.canvas
+    if self.tuning_dock then
+        -- Listed so taps reach it, and first because it is in front of
+        -- everything it overlaps. Where it lands is its own business -- see
+        -- its paintTo -- because the container would otherwise paint it at the
+        -- origin, on top of the toolbar.
+        self.tuning_dock.paint_offset_y = self.dimen.h - self.tuning_dock.height
+        table.insert(self, 1, self.tuning_dock)
+    end
 end
 
 -- Toolbar ------------------------------------------------------------------------
@@ -359,8 +408,6 @@ end
 
 -- Settings ---------------------------------------------------------------------
 
-local SETTING_PREFIX = "notebook_"
-
 --- Persists a canvas setting and applies it immediately.
 function Notebook:_setSetting(key, value)
     self.canvas[key] = value
@@ -493,6 +540,14 @@ function Notebook:paintTo(bb, x, y)
     self.toolbar:paintTo(bb, x, y + TOP_INSET)
     self.toolbar.dimen.x = x
     self.toolbar.dimen.y = y + TOP_INSET
+    -- Painted here as well as listed as a child: this widget paints its
+    -- children by hand, in the order they have to be drawn, which is not the
+    -- order they have to be offered taps in. Being in the list is what makes
+    -- the dock tappable; being here is what makes it visible. Last, so the
+    -- band sits over the ink it covers rather than under it.
+    if self.tuning_dock then
+        self.tuning_dock:paintTo(bb, x, y)
+    end
     self.dimen.x, self.dimen.y = x, y
 end
 

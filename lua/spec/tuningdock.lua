@@ -15,7 +15,7 @@ package.path = "./?.lua;./spec/?.lua;" .. package.path
 local support = require("support")
 local uistubs = require("uistubs")
 support.installStubs()
-uistubs.install({})
+local recorder = uistubs.install({})
 
 local passed, failed = 0, 0
 
@@ -127,6 +127,60 @@ test("reset tab puts back only that tab's parameters", function()
     assertEq(Tuning.refresh_interval_ms, Tuning.spec.refresh_interval_ms.default, "ink reset")
     assertEq(Tuning.palm_grace_ms, 0, "input untouched")
     Tuning.resetAll()
+end)
+
+io.write("rebuilding the band\n")
+
+test("the tree a rebuild replaces is let go of", function()
+    --[[
+    Every tap on plus or minus rebuilds the band, and a tuning session is
+    hundreds of them. The widgets hold rendered text, so leaving the last lot
+    for the collector to find keeps that many bitmaps alive -- in the one
+    screen whose whole purpose is to be watched while the device is under
+    memory pressure.
+    --]]
+    Tuning.resetAll()
+    local d = dock()
+
+    local old_frame = d.frame
+    assertTrue(old_frame ~= nil, "the dock built nothing")
+
+    local freed = false
+    old_frame.free = function() freed = true end
+
+    d:step("refresh_interval_ms", 1)
+
+    assertTrue(freed, "the replaced tree was dropped on the floor")
+    assertTrue(d.frame ~= old_frame, "the dock did not rebuild at all")
+    assertEq(d[1], d.frame, "the dock is not showing what it just built")
+    Tuning.resetAll()
+end)
+
+test("refresh marks the owner dirty with UIManager", function()
+    local fake_owner = { name = "fake_notebook" }
+    recorder.dirty = {}
+    local d = TuningDock:new{ width = 800, height = 300, owner = fake_owner }
+    d:step("refresh_interval_ms", 1)
+    local last_dirty = recorder.dirty[#recorder.dirty]
+    assertTrue(last_dirty ~= nil, "UIManager:setDirty was not called")
+    assertEq(last_dirty.widget, fake_owner, "dirty widget is not the owner")
+    if type(last_dirty.mode) == "function" then
+        local m, r = last_dirty.mode()
+        assertEq(m, "ui", "refresh mode")
+        assertEq(r, d.dimen, "refresh region")
+    end
+end)
+
+test("setEraserMode updates canvas and persists setting", function()
+    local fake_canvas = { eraser_mode = "stroke" }
+    local fake_owner = {
+        saved = {},
+        _setSetting = function(self, k, v) self.saved[k] = v end,
+    }
+    local d = TuningDock:new{ width = 800, height = 300, canvas = fake_canvas, owner = fake_owner }
+    d:setEraserMode("area")
+    assertEq(fake_canvas.eraser_mode, "area", "canvas eraser_mode updated")
+    assertEq(fake_owner.saved["eraser_mode"], "area", "setting saved via owner")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))

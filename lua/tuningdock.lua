@@ -58,6 +58,9 @@ local Tappable = InputContainer:extend{
     selected = false,
     callback = nil,
     hold_callback = nil,
+    -- Set by the dock from the size it settled on; see TuningDock:_build.
+    cell_h = nil,
+    font_size = nil,
 }
 
 function Tappable:init()
@@ -69,10 +72,10 @@ function Tappable:init()
         margin = 0,
         padding = Size.padding.small,
         CenterContainer:new{
-            dimen = Geom:new{ w = self.width, h = Screen:scaleBySize(40) },
+            dimen = Geom:new{ w = self.width, h = self.cell_h or Screen:scaleBySize(40) },
             TextWidget:new{
                 text = self.text,
-                face = Font:getFace("cfont", 16),
+                face = Font:getFace("cfont", self.font_size or 16),
                 fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
                 max_width = self.width,
             },
@@ -92,7 +95,11 @@ function Tappable:onTap()
 end
 
 function Tappable:onHold()
-    if self.hold_callback then self.hold_callback() end
+    if self.hold_callback then
+        self.hold_callback()
+    elseif self.callback then
+        self.callback()
+    end
     return true
 end
 
@@ -107,6 +114,7 @@ local TuningDock = InputContainer:extend{
     -- Called with the tab id when it changes, so the owner can remember it.
     on_tab = nil,
     tab = nil,
+    owner = nil,
 }
 
 TuningDock.HEIGHT_RATIO = HEIGHT_RATIO
@@ -159,6 +167,22 @@ function TuningDock:resetAll()
 end
 
 --[[--
+Sets the eraser mode (stroke or area), only if a canvas is present.
+--]]
+function TuningDock:setEraserMode(value)
+    if not self.canvas then return end
+    if value == "stroke" or value == "area" then
+        self.canvas.eraser_mode = value
+        if self.owner and self.owner._setSetting then
+            self.owner:_setSetting("eraser_mode", value)
+        else
+            G_reader_settings:saveSetting("notebook_eraser_mode", value)
+        end
+        self:_refresh()
+    end
+end
+
+--[[--
 Writes the changed parameters to the log.
 
 The log is the one channel that already exists -- `tools/restart.sh --log` reads
@@ -173,31 +197,76 @@ function TuningDock:dump()
     UIManager:show(InfoMessage:new{ text = "Tuning written to the log", timeout = 2 })
 end
 
+--[[--
+The sizes the rows are tried at, tallest first.
+
+The band is a fixed fraction of the screen and the tabs are not all the same
+length: five parameters plus the banner, the tabs and the commands is eight
+rows, and at the size a control wants to be that is taller than a third of a
+Scribe. What ran off the bottom was the last two parameters of the two longest
+tabs -- present in the tree, painted past the edge of the screen, and therefore
+neither visible nor tappable, which is the worst of the three ways a control
+can be missing.
+
+Shrinking is the right trade here and not everywhere: these rows are a word and
+a number, read from a hand's length away by someone who is about to tap them,
+not body text.
+--]]
+local ROW_SIZES = {
+    { cell = 40, font = 16 },
+    { cell = 34, font = 15 },
+    { cell = 28, font = 14 },
+    { cell = 24, font = 13 },
+}
+
 function TuningDock:_build()
-    local content = VerticalGroup:new{ align = "left" }
+    --[[
+    The tree this replaces is let go of first.
+
+    Every tap on plus or minus rebuilds the band, and a tuning session is
+    hundreds of them: the widgets hold rendered text, and dropping the last lot
+    on the floor for the collector to find leaves that many bitmaps alive in a
+    plugin whose whole purpose is to be run while watching how the device
+    behaves under memory pressure.
+    ]]
+    if self.frame then self.frame:free() end
+
     local inner_w = self.width - 2 * Size.padding.large
+    -- What the frame around the content leaves for the content itself.
+    local room = self.height - 2 * Size.padding.large - 2 * Size.border.thin
 
-    -- The banner. Fixed, unerasable, and shown exactly in the condition it
-    -- warns about: a notebook that is named _tuning_ whether or not that was
-    -- meant.
-    table.insert(content, TextWidget:new{
-        text = "Test notebook - rename it if you are not tuning",
-        face = Font:getFace("cfont", 15),
-        max_width = inner_w,
-    })
+    local content
+    for i, size in ipairs(ROW_SIZES) do
+        if content then content:free() end
+        self.cell_h = Screen:scaleBySize(size.cell)
+        self.font_size = size.font
 
-    table.insert(content, self:_tabRow(inner_w))
-    table.insert(content, self:_commandRow(inner_w))
+        content = VerticalGroup:new{ align = "left" }
 
-    for _, tab in ipairs(Tuning.tabs) do
-        if tab.id == self.tab then
-            for _, key in ipairs(tab.keys) do
-                table.insert(content, self:_paramRow(key, inner_w))
-            end
-            if tab.id == "eraser" and self.canvas then
-                table.insert(content, self:_eraserModeRow(inner_w))
+        -- The banner. Fixed, unerasable, and shown exactly in the condition it
+        -- warns about: a notebook that is named _tuning_ whether or not that
+        -- was meant.
+        table.insert(content, TextWidget:new{
+            text = "Test notebook - rename it if you are not tuning",
+            face = Font:getFace("cfont", self.font_size - 1),
+            max_width = inner_w,
+        })
+
+        table.insert(content, self:_tabRow(inner_w))
+        table.insert(content, self:_commandRow(inner_w))
+
+        for _, tab in ipairs(Tuning.tabs) do
+            if tab.id == self.tab then
+                for _, key in ipairs(tab.keys) do
+                    table.insert(content, self:_paramRow(key, inner_w))
+                end
+                if tab.id == "eraser" and self.canvas then
+                    table.insert(content, self:_eraserModeRow(inner_w))
+                end
             end
         end
+
+        if content:getSize().h <= room or i == #ROW_SIZES then break end
     end
 
     self.frame = FrameContainer:new{
@@ -221,6 +290,7 @@ function TuningDock:_tabRow(inner_w)
         end
         local id = tab.id
         table.insert(row, Tappable:new{
+            cell_h = self.cell_h, font_size = self.font_size,
             text = tab.label,
             width = cell,
             selected = id == self.tab,
@@ -242,7 +312,9 @@ function TuningDock:_commandRow(inner_w)
         if i > 1 then
             table.insert(row, HorizontalSpan:new{ width = Size.padding.small })
         end
-        table.insert(row, Tappable:new{ text = c.text, width = cell, callback = c.fn })
+        table.insert(row, Tappable:new{
+            cell_h = self.cell_h, font_size = self.font_size,
+            text = c.text, width = cell, callback = c.fn })
     end
     return row
 end
@@ -261,24 +333,26 @@ function TuningDock:_paramRow(key, inner_w)
     local row = HorizontalGroup:new{ align = "center" }
 
     table.insert(row, Tappable:new{
+        cell_h = self.cell_h, font_size = self.font_size,
         text = "-", width = btn_w,
         callback = function() self:step(key, -1) end,
         hold_callback = function() self:step(key, -1, true) end,
     })
     table.insert(row, HorizontalSpan:new{ width = Size.padding.small })
     table.insert(row, CenterContainer:new{
-        dimen = Geom:new{ w = label_w, h = Screen:scaleBySize(40) },
+        dimen = Geom:new{ w = label_w, h = self.cell_h },
         TextWidget:new{
             -- A star on anything that is no longer at its default, so what has
             -- to be written down at the end can be seen at a glance.
             text = string.format("%s%s  %s", changed and "* " or "",
                 key, tostring(Tuning[key])),
-            face = Font:getFace("cfont", 16),
+            face = Font:getFace("cfont", self.font_size),
             max_width = label_w,
         },
     })
     table.insert(row, HorizontalSpan:new{ width = Size.padding.small })
     table.insert(row, Tappable:new{
+        cell_h = self.cell_h, font_size = self.font_size,
         text = "+", width = btn_w,
         callback = function() self:step(key, 1) end,
         hold_callback = function() self:step(key, 1, true) end,
@@ -308,12 +382,12 @@ function TuningDock:_eraserModeRow(inner_w)
         end
         local value = m.value
         table.insert(row, Tappable:new{
+            cell_h = self.cell_h, font_size = self.font_size,
             text = m.text,
             width = cell,
             selected = self.canvas.eraser_mode == value,
             callback = function()
-                self.canvas.eraser_mode = value
-                self:_refresh()
+                self:setEraserMode(value)
             end,
         })
     end
@@ -329,14 +403,38 @@ be repainted would flash it every time.
 --]]
 function TuningDock:_refresh()
     self:_build()
-    UIManager:setDirty(self, function()
+    UIManager:setDirty(self.owner or "all", function()
         return "ui", self.dimen
     end)
 end
 
+--[[--
+Paints the band where it belongs, not where the container would put it.
+
+The owner paints its children from the origin, and this one goes at the bottom.
+Carrying the offset here rather than painting the dock by hand from the owner
+keeps it a child in both senses -- painted by the container, reached by taps --
+instead of a widget the owner has to remember twice.
+--]]
 function TuningDock:paintTo(bb, x, y)
+    y = y + (self.paint_offset_y or 0)
+    -- Recorded after the offset, because this is the rectangle taps are matched
+    -- against and the one _refresh asks to be repainted.
     self.dimen.x, self.dimen.y = x, y
     InputContainer.paintTo(self, bb, x, y)
 end
 
-return Safe.widget(TuningDock, "tuningdock")
+--[[--
+Protected like every other screen, and like the canvas without the watchdog.
+
+Every other screen this wraps is a dialog: it is on top when it is on screen,
+so its handlers run only when the reader is looking at it. This one is not. It
+is a permanent child of the notebook, and the first one, so *every* event the
+notebook sees passes through here before it reaches the toolbar or the page --
+including the stream of contacts a hand makes while writing.
+
+The watchdog costs a `jit.off` and a counting hook per event, which is why the
+canvas gave it up: see the note above Safe.watched. A widget on the same path
+cannot keep it either.
+--]]
+return Safe.widget(TuningDock, "tuningdock", false)

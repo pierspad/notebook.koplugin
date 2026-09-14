@@ -175,6 +175,68 @@ test("moving a selection takes one undo to put back", function()
     assertEq(my, y0 + 20, "the selection did not move, y")
 end)
 
+test("what was cut stays what was cut, whatever happens to the page after", function()
+    --[[
+    Cut does not destroy the strokes it takes: they go on the undo stack, and
+    one press of undo puts those very objects back on the page. A clipboard
+    holding the originals therefore went on following them -- move the restored
+    writing and a later paste produced where it had been moved to, not what had
+    been cut.
+    --]]
+    local canvas, doc = newCanvas(3)
+    local victim = doc:getPage().strokes[2]
+    local x0 = select(1, victim:getPoint(1))
+
+    menuFor(canvas, { victim }).on_cut()
+    doc:undo()
+    assertEq(doc:getPage().strokes[2], victim, "the fixture is wrong: undo did not restore it")
+
+    -- The reader carries on: the restored writing is dragged somewhere else.
+    victim:translate(300, 0)
+
+    assertEq(#Canvas.clipboard, 1, "the clipboard is empty")
+    assertEq(select(1, Canvas.clipboard[1]:getPoint(1)), x0,
+        "the clipboard followed the strokes back onto the page")
+end)
+
+test("what was copied stays what was copied", function()
+    local canvas, doc = newCanvas(3)
+    local source = doc:getPage().strokes[2]
+    local x0 = select(1, source:getPoint(1))
+
+    menuFor(canvas, { source }).on_copy()
+    source:translate(300, 0)
+
+    assertEq(select(1, Canvas.clipboard[1]:getPoint(1)), x0,
+        "the clipboard followed the stroke it copied")
+end)
+
+test("cut repaints where the selection was, not the whole page", function()
+    -- What a cut takes away is inside the selection by definition, so a
+    -- full-page raster and a full-page refresh is the page over again for a
+    -- rectangle usually a fraction of it.
+    local canvas, doc = newCanvas(3)
+    local victim = doc:getPage().strokes[2]
+    local menu = menuFor(canvas, { victim })
+
+    local painted
+    canvas._repaintRegion = function(_, x, y, w, h)
+        painted = { x = x, y = y, w = w, h = h }
+    end
+    menu.on_cut()
+
+    assertTrue(painted ~= nil, "the cut repainted nothing at all")
+    assertTrue(painted.w < canvas.content.w or painted.h < canvas.content.h,
+        "the cut repainted the whole drawing area")
+
+    -- And it has to cover the dashed frame, which is drawn outside the box.
+    local vx, vy, vw, vh = victim:getBounds()
+    assertTrue(painted.x <= vx - 6 and painted.y <= vy - 6
+        and painted.x + painted.w >= vx + vw + 6
+        and painted.y + painted.h >= vy + vh + 6,
+        "the repaint does not reach the frame around what was cut")
+end)
+
 io.write("\nthe selection frame stays inside the screen\n")
 
 --[[--
