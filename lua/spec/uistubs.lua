@@ -231,6 +231,8 @@ end
 
 local HorizontalGroup = Widget:extend{}
 
+function HorizontalGroup:resetLayout() end -- getSize computes fresh in this double
+
 function HorizontalGroup:getSize()
     local w, h = 0, 0
     for _, child in ipairs(self) do

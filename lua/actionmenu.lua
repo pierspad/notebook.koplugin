@@ -112,6 +112,12 @@ function ActionMenu:init()
     end
 
     for i, action in ipairs(self.actions or {}) do
+        if action.section then
+            table.insert(content, CenterContainer:new{
+                dimen = Geom:new{w=width, h=math.floor(ROW_H * 0.7)},
+                TextWidget:new{text=action.section, face=Font:getFace("cfont", 17), bold=true},
+            })
+        end
         if i > 1 then
             table.insert(content, LineWidget:new{
                 dimen = Geom:new{ w = width, h = Size.line.thin },

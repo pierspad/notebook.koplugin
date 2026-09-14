@@ -63,12 +63,10 @@ local Notebook = InputContainer:extend{
 function Notebook:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
     self.covers_fullscreen = true
+    self._navbar_skip_inject = true
 
     self:_buildToolbar()
 
-    -- The system status bar (clock, battery) is drawn over whatever is on
-    -- screen, including us. Leaving a band clear at the top keeps it from
-    -- landing on top of the toolbar buttons and covering them.
     local toolbar_h = self.toolbar:getSize().h + TOP_INSET
 
     -- The tuning dock takes a band off the bottom, by the same mechanism the
@@ -314,11 +312,13 @@ function Notebook:_buildToolbar()
     self.page_button = self:_buildPageButton()
     local page_text_w = self.page_button:getSize().w
 
-    -- Exit (1) + 4 tools (4) + undo + redo + refresh (3) + prev + next page (2) + share (1) + settings (1) = 12 cells
-    local n_cells = 12
+    self.clock_text = TextWidget:new{text=os.date("%H:%M"), face=Font:getFace("cfont", 18)}
+    local clock_w = self.clock_text:getSize().w + gap
+    -- Back + four tools + undo/redo/refresh + previous/next + settings.
+    local n_cells = 11
     local cell_overhead = 2 * (Size.border.thin + Size.padding.button)
     local avail = self.dimen.w - 2 * Size.padding.small
-    local flexible = avail - n_gaps * gap - page_text_w - n_cells * cell_overhead
+    local flexible = avail - n_gaps * gap - page_text_w - clock_w - n_cells * cell_overhead
     local unit = math.floor(flexible / n_cells)
     local icon_size = math.floor(unit * 0.55)
 
@@ -384,12 +384,20 @@ function Notebook:_buildToolbar()
         self.prev_page_button,
         self.page_button,
         self.next_page_button,
+        CenterContainer:new{
+            dimen=Geom:new{w=clock_w, h=self.next_page_button:getSize().h},
+            self.clock_text,
+        },
         HorizontalSpan:new{ width = gap },
         self:_actionButton{
             icon = "appbar.settings", icon_size = icon_size, width = unit,
             callback = function() self:_showSettings() end,
         },
     }
+
+    local remaining = math.max(0, avail - self.toolbar_content:getSize().w)
+    table.insert(self.toolbar_content, 12, HorizontalSpan:new{width=remaining})
+    self.toolbar_content:resetLayout()
 
     self.toolbar = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
@@ -437,15 +445,16 @@ function Notebook:_showPenOptions()
     self:_finishInteraction()
     local actions = {}
     for _, option in ipairs({
-        { "pen_style", "fineliner", _("Fineliner") },
-        { "pen_style", "fountain", _("Fountain pen") },
-        { "pen_style", "pencil", _("Pencil") },
-        { "line_style", "line", _("Hold to straighten: line") },
-        { "line_style", "arrow", _("Hold to straighten: arrow") },
+        { "pen_style", "fineliner", _("Fineliner"), "notebook.fineliner", _("Pen type") },
+        { "pen_style", "fountain", _("Fountain pen"), "notebook.fountain" },
+        { "pen_style", "pencil", _("Pencil"), "notebook.pencil" },
+        { "line_style", "line", _("Hold to straighten: line"), "notebook.line", _("Hold effect") },
+        { "line_style", "arrow", _("Hold to straighten: arrow"), "notebook.arrow" },
     }) do
         local key, value, label = option[1], option[2], option[3]
         table.insert(actions, {
-            icon = "notebook.pen",
+            icon = option[4],
+            section = option[5],
             text = (self.canvas[key] == value and "✓ " or "") .. label,
             callback = function()
                 self:_setSetting(key, value)
@@ -610,10 +619,25 @@ end
 
 function Notebook:onShow()
     self.canvas:start()
+    self.clock_tick = self.clock_tick or function()
+        -- Never interrupt ink with a clock refresh or redraw a hidden notebook.
+        if UIManager:getTopmostVisibleWidget() == self and not self.canvas.pen_down
+            and not self.canvas.stroke and not self.canvas.erasing and not self.canvas.dragging_selection then
+            self.clock_text:setText(os.date("%H:%M"))
+            local r = self.clock_text.dimen
+            if r then UIManager:setDirty(self, "ui", r) end
+        end
+        UIManager:scheduleIn(60 - os.time() % 60, self.clock_tick)
+    end
+    Safe.onShutdown("notebook:clock", function() UIManager:unschedule(self.clock_tick) end)
+    UIManager:unschedule(self.clock_tick)
+    UIManager:scheduleIn(60 - os.time() % 60, self.clock_tick)
     return true
 end
 
 function Notebook:onCloseWidget()
+    Safe.clearShutdown("notebook:clock")
+    if self.clock_tick then UIManager:unschedule(self.clock_tick) end
     self.canvas:stop()
     if self.document.dirty then
         self.document:save()

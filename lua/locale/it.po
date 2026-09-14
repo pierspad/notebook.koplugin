@@ -297,3 +297,9 @@ msgstr "Lavoro"
 
 msgid "Personal"
 msgstr "Personale"
+
+msgid "Pen type"
+msgstr "Tipo di penna"
+
+msgid "Hold effect"
+msgstr "Effetto della pressione prolungata"
