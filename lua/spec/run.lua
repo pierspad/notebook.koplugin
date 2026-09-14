@@ -939,11 +939,11 @@ test("the background is drawn where the ink is, not at the top of the page", fun
     local bb = exportedPage(d, { width = 300, height = 400 })
     assertTrue(bb ~= nil, "no page buffer was captured")
 
-    -- The first rule belongs at the origin, and the strip above it -- where the
-    -- toolbar was, and where no stroke can ever be -- stays blank.
-    assertTrue(bb:get(150, 90) < 255, "no rule at the content origin")
-    assertEq(bb:get(150, 0), 255, "a rule was drawn above the drawing area")
-    assertEq(bb:get(150, 40), 255, "the toolbar strip was ruled")
+    -- Cropping moves both ruling and ink by the toolbar height.
+    assertEq(bb:getHeight(), 310, "toolbar was not cropped")
+    assertTrue(bb:get(150, 0) < 255, "no rule at the cropped origin")
+    assertEq(bb:get(150, 30), 0, "ink was not translated with the ruling")
+
 end)
 
 test("a notebook with no origin recorded exports the way it always did", function()

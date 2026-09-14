@@ -23,7 +23,7 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # Every suite in the bench. Named rather than globbed: spec/ also holds the
 # helpers the suites share and the two tools that render to a real file, and a
 # glob would run those as though they were tests.
-SUITES := run pages eraser palm safe i18n gallery shape lasso lassoedit migration tuning tuningdock tuninggate
+SUITES := run pages eraser palm safe i18n gallery shape lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish
 
 .PHONY: all test lint verify package check-package ci clean install-hooks deploy version
 

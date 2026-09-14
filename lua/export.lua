@@ -17,6 +17,7 @@ rendering one page at a time keeps peak memory flat regardless of length.
 --]]--
 
 local Blitbuffer = require("ffi/blitbuffer")
+local ffi = require("ffi")
 local Renderer = require("renderer")
 local Template = require("template")
 
@@ -125,27 +126,20 @@ function Export.packPage(bb, w, h)
     allocates for itself. Anything else falls back to the honest slow path,
     which is also what the test doubles use.
     ]]
-    local fast = bb.getPixelP
-        and (not bb.getRotation or bb:getRotation() == 0)
-        and (not bb.getInverse or bb:getInverse() == 0)
-
-    local fetchRow, sample
-    if fast then
-        fetchRow = function(y) return bb:getPixelP(0, y) end
-        sample = function(row, x) return row[x].a end
-    else
-        fetchRow = function(y) return y end
-        sample = function(y, x) return getGray(bb:getPixel(x, y)) end
-    end
-
-    local char = string.char
+    local fast = bb.getPixelP and bb.getType and bb:getType() == Blitbuffer.TYPE_BB8
+        and bb.getRotation and bb:getRotation() == 0
+        and bb.getInverse and bb:getInverse() == 0
     for y = 0, h - 1 do
-        local row = {}
-        local src = fetchRow(y)
-        for x = 0, w - 1 do
-            row[x + 1] = char(sample(src, x))
+        if fast then
+            -- Copy only visible bytes: a native row may include stride padding.
+            rows[y + 1] = ffi.string(bb:getPixelP(0, y), w)
+        else
+            local row = {}
+            for x = 0, w - 1 do
+                row[x + 1] = string.char(getGray(bb:getPixel(x, y)))
+            end
+            rows[y + 1] = table.concat(row)
         end
-        rows[y + 1] = table.concat(row)
     end
 
     return table.concat(rows)
@@ -176,33 +170,22 @@ function Export.toPDF(doc, out_path, opts)
 
     opts = opts or {}
     local content_area = opts.content_area
-    local width = content_area and content_area.w or (opts.width or DEFAULT_WIDTH)
-    local height = content_area and content_area.h or (opts.height or DEFAULT_HEIGHT)
-    local offset_x = content_area and content_area.x or 0
-    local offset_y = content_area and content_area.y or 0
-    local dpi = opts.dpi or DEFAULT_DPI
-
-    --[[
-    Where the background goes, in the coordinates the strokes are in.
-
-    The strokes carry the drawing area's offset on screen -- the height of the
-    toolbar -- and the background was being drawn from the top of the buffer
-    regardless, so the ruling and the writing that had sat on it came out of
-    step by whatever that offset was modulo the line spacing. Reading the
-    origin off the document puts them back into the same frame.
-
-    Zero when the caller has asked for an explicit content_area, because it has
-    then already said where the page is and the ink is being moved to match.
-    --]]
-    local origin_x, origin_y = 0, 0
-    if not content_area and type(doc.contentOrigin) == "function" then
-        origin_x, origin_y = doc:contentOrigin()
+    local offset_x, offset_y = 0, 0
+    if content_area then
+        offset_x, offset_y = content_area.x or 0, content_area.y or 0
+    elseif type(doc.contentOrigin) == "function" then
+        offset_x, offset_y = doc:contentOrigin()
     end
+    local width = content_area and content_area.w or (opts.width or DEFAULT_WIDTH) - offset_x
+    local height = content_area and content_area.h or (opts.height or DEFAULT_HEIGHT) - offset_y
+    local dpi = opts.dpi or DEFAULT_DPI
+    if width <= 0 or height <= 0 or dpi <= 0 then return false, "invalid page dimensions" end
 
     local page_w = width * POINTS_PER_INCH / dpi
     local page_h = height * POINTS_PER_INCH / dpi
 
-    local file, err = io.open(out_path, "wb")
+    local temporary = out_path .. ".tmp"
+    local file, err = io.open(temporary, "wb")
     if not file then
         return false, "cannot open output file: " .. tostring(err)
     end
@@ -211,6 +194,7 @@ function Export.toPDF(doc, out_path, opts)
     local bb = Blitbuffer.new(width, height, Blitbuffer.TYPE_BB8)
     if not bb then
         file:close()
+        os.remove(temporary)
         return false, "failed to allocate blitbuffer"
     end
 
@@ -281,7 +265,7 @@ function Export.toPDF(doc, out_path, opts)
                 #content_stream, content_stream))
             endObj()
 
-            -- Render page strokes into blitbuffer, pack to 1-bit rows, and RLE compress.
+            -- Render page strokes into blitbuffer, pack to 8-bit rows, and RLE compress.
             bb:fill(Blitbuffer.COLOR_WHITE)
             local page = doc.pages and doc.pages[i]
             if page then
@@ -292,7 +276,7 @@ function Export.toPDF(doc, out_path, opts)
                 -- scale to stay registered with them.
                 if doc.templateFor then
                     Template.draw(bb, doc:templateFor(i),
-                        { x = origin_x, y = origin_y, w = width, h = height }, 1)
+                        { x = 0, y = 0, w = width, h = height }, 1)
                 end
                 Renderer.drawPage(bb, page, 1, -offset_x, -offset_y)
             end
@@ -300,7 +284,7 @@ function Export.toPDF(doc, out_path, opts)
             local raw_bitmap = Export.packPage(bb, width, height)
             local rle_data = Export.encodeRLE(raw_bitmap)
 
-            -- 1-bit DeviceGray Image XObject.
+            -- 8-bit DeviceGray Image XObject.
             startObj(image_obj)
             write(string.format("<<\n" ..
                 "  /Type /XObject\n" ..
@@ -341,7 +325,13 @@ function Export.toPDF(doc, out_path, opts)
     if bb.free then bb:free() end
 
     if not ok then
+        os.remove(temporary)
         return false, tostring(write_err)
+    end
+    local renamed, rename_error = os.rename(temporary, out_path)
+    if not renamed then
+        os.remove(temporary)
+        return false, tostring(rename_error)
     end
     return true
 end

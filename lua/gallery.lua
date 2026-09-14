@@ -304,6 +304,8 @@ function Gallery:init()
 
     self.ges_events = {
         GallerySwipe = { GestureRange:new{ ges = "swipe", range = self.dimen } },
+        GalleryPan = { GestureRange:new{ ges = "pan", range = self.dimen } },
+        GalleryPanRelease = { GestureRange:new{ ges = "pan_release", range = self.dimen } },
     }
 end
 
@@ -953,7 +955,49 @@ function Gallery:_turnPage(delta)
     self:_repaint()
 end
 
+-- Test the swept segment, so fast drags also select cards between samples.
+local function crossesCard(a, b, r)
+    local lo, hi = 0, 1
+    for _, axis in ipairs({ {a.x, b.x-a.x, r.x, r.x+r.w},
+                              {a.y, b.y-a.y, r.y, r.y+r.h} }) do
+        local p, d, mn, mx = unpack(axis)
+        if d == 0 then
+            if p < mn or p > mx then return false end
+        else
+            local t0, t1 = (mn-p)/d, (mx-p)/d
+            if t0 > t1 then t0, t1 = t1, t0 end
+            lo, hi = math.max(lo,t0), math.min(hi,t1)
+            if lo > hi then return false end
+        end
+    end
+    return true
+end
+
+function Gallery:onGalleryPan(_, ges)
+    if not self.selection or not ges or not ges.pos then return false end
+    local previous = self.selection_drag or ges.start_pos or ges.pos
+    self.selection_drag = {x=ges.pos.x, y=ges.pos.y}
+    for _, card in ipairs(self.cards or {}) do
+        if not self.selection[card.item.path] and crossesCard(previous, ges.pos, card.dimen) then
+            self.selection[card.item.path] = card.item
+            card.selected = true
+            -- Reuse the loaded thumbnail; update only this card's region.
+            UIManager:setDirty(self, "ui", card.dimen)
+        end
+    end
+    return true
+end
+
+function Gallery:onGalleryPanRelease()
+    if not self.selection_drag then return false end
+    self.selection_drag = nil
+    self:_layout()
+    self:_repaint()
+    return true
+end
+
 function Gallery:onGallerySwipe(_, ges)
+    if self.selection then return true end
     local dir = ges.direction
     if dir == "west" then
         self:_turnPage(1)
@@ -1020,9 +1064,9 @@ local function nameError(reason)
     return _("That name cannot be used.")
 end
 
-function Gallery:_askName(title, initial, commit)
+function Gallery:_askName(title, initial, commit, presets)
     local dialog
-    dialog = InputDialog:new{
+    local args = {
         title = title,
         input = initial,
         buttons = {{
@@ -1042,6 +1086,17 @@ function Gallery:_askName(title, initial, commit)
             },
         }},
     }
+    if presets then
+        local row = {}
+        for _, name in ipairs(presets) do
+            row[#row + 1] = {text=name, callback=function()
+                UIManager:close(dialog)
+                commit(name)
+            end}
+        end
+        table.insert(args.buttons, 1, row)
+    end
+    dialog = InputDialog:new(args)
     UIManager:show(dialog)
     dialog:onShowKeyboard()
 end
@@ -1086,7 +1141,7 @@ function Gallery:_createFolder()
         local ok, reason = Library.createFolder(name, self.folder)
         if not ok then return self:_error(nameError(reason)) end
         self:_rebuild()
-    end)
+    end, {_("Work"), _("Personal"), os.date("%Y-%m")})
 end
 
 -- Choosing several things ------------------------------------------------------------
@@ -1404,7 +1459,7 @@ function Gallery:_deleteMany(chosen)
             Thumbnail.forget(item.path)
         end
     end
-    self:_endSelection()
+    self.selection, self.selection_drag = nil, nil
     self:_rebuild()
 end
 

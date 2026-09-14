@@ -291,3 +291,9 @@ msgstr "Penna e forme"
 
 msgid "Could not save the notebook. It has been left open."
 msgstr "Impossibile salvare il quaderno. È stato lasciato aperto."
+
+msgid "Work"
+msgstr "Lavoro"
+
+msgid "Personal"
+msgstr "Personale"
