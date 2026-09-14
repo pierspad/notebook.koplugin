@@ -1,0 +1,12 @@
+{
+  "branches": ["main", { "name": "dev", "prerelease": "dev" }],
+  "repositoryUrl": "https://github.com/pierspad/notebook.koplugin.git",
+  "tagFormat": "v${version}",
+  "plugins": [
+    ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
+    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/exec", { "prepareCmd": "node tools/prepare-release.mjs ${nextRelease.version} && make ci" }],
+    ["@semantic-release/git", { "assets": ["lua/_meta.lua"], "message": "chore(release): v${nextRelease.version} [skip ci]" }],
+    ["@semantic-release/github", { "assets": [{ "path": "build/*.zip", "label": "Notebook KOReader plugin" }], "successComment": false, "failComment": false, "releasedLabels": false }]
+  ]
+}

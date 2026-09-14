@@ -13,3 +13,6 @@ kindle.env
 
 .DS_Store
 .idea/
+
+# Release tooling.
+node_modules/

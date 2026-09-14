@@ -1,64 +1,43 @@
 name: Release
-
 on:
-  release:
-    types: [created]
+  push:
+    branches: [main, dev]
   workflow_dispatch:
-
 permissions:
   contents: write
-
 concurrency:
-  group: release-${{ github.event.release.tag_name || github.ref }}
+  group: notebook-release
   cancel-in-progress: false
-
 jobs:
-  package:
-    name: Build and attach the plugin
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
-          persist-credentials: false
-
-      - name: Install LuaJIT and luacheck
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install test dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y luajit lua5.1 luarocks
           sudo luarocks install luacheck
-
-      # Built from the tag rather than downloaded from a CI run: the package is
-      # a zip of Lua source with nothing compiled in it, so building it again
-      # costs seconds and removes a whole class of "which artifact was that"
-      # questions. `make ci` is the same target CI and the pre-push hook use,
-      # and it is where the checks on the package itself live.
-      - name: make ci
-        run: make ci
-
-      - name: The tag and the version must agree
-        if: github.event_name == 'release'
+      - run: npm ci --ignore-scripts
+      - run: make verify
+      - name: Version, build and publish
+        run: npm run release
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Bring stable history back to dev when it can fast-forward
+        if: github.ref == 'refs/heads/main'
+        shell: bash
         run: |
-          set -euo pipefail
-          version="$(make version)"
-          if [[ "$TAG" != "$version" ]]; then
-            echo "tag $TAG does not match lua/_meta.lua version $version" >&2
-            exit 1
+          git fetch origin main dev
+          if git merge-base --is-ancestor origin/dev origin/main; then
+            git push origin origin/main:refs/heads/dev
+          else
+            echo 'dev has additional work; merge main before the next stable promotion.'
           fi
-
-      - name: Attach to the release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v3
-        with:
-          files: build/*.zip
-          fail_on_unmatched_files: true
-
-      - name: Upload from a manual run
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v7
-        with:
-          name: koplugin-package
-          path: build/*.zip
-          if-no-files-found: error
