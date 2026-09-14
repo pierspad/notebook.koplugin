@@ -128,6 +128,16 @@ test("the cache key is the same wherever the root is", function()
         "the same notebook cached under two different names")
 end)
 
+test("cache keys distinguish folder boundaries from underscores", function()
+    local Library = libraryWith{"notebook"}
+    local Thumbnail = require("thumbnail")
+    local root = Library.root()
+    local nested = Thumbnail.pathFor(root .. "/Trip/day.scribe")
+    local flat = Thumbnail.pathFor(root .. "/Trip_day.scribe")
+    local escaped = Thumbnail.pathFor(root .. "/Trip%2Fday.scribe")
+    assertTrue(nested ~= flat and nested ~= escaped, "different notebooks share a thumbnail")
+end)
+
 io.write("the stored settings\n")
 
 --- A settings store holding whatever is given, recording what happens to it.

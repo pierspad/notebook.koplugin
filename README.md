@@ -46,6 +46,17 @@ after the nib does, the block outlasts the stroke by a moment. Writing with a
 finger is off by default for the same reason — on a device with a pen, a finger
 on the glass is usually somebody's hand.
 
+### Pen options and shape snapping
+
+Hold the pen icon to choose a uniform fineliner, a pressure-sensitive fountain
+pen, or a gray pressure-sensitive pencil. The same menu chooses whether a line
+snapped by holding still ends as a plain line or an arrow. Preferences survive
+reopening the notebook. Pressure normalization is verified on the Scribe's
+0–4095 Wacom range; missing pressure uses a solid line.
+
+The [September 2026 audit](docs/audits/2026-09-14-notebook.md) records the input
+and rendering fixes, Kindle benchmarks, regression tests, and remaining limits.
+
 ### Development
 
 ```bash

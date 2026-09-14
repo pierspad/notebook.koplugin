@@ -125,12 +125,31 @@ Paints the segment between two points and returns the dirtied rectangle.
 @tparam number x1,y1,p1 end point and its pressure
 @treturn number,number,number,number x, y, w, h of the dirtied area
 --]]
-function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1)
+function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
     local r0 = Renderer.radiusFor(stroke, p0)
     local r1 = Renderer.radiusFor(stroke, p1)
 
     local dx, dy = x1 - x0, y1 - y0
     local dist = math.sqrt(dx * dx + dy * dy)
+
+    -- Restrict work to samples whose stamp can touch the viewport. Preserve
+    -- the original step grid (and pressure interpolation) so partial and full
+    -- rendering agree exactly, including at the clipping boundary.
+    local first_t, last_t = 0, 1
+    if clip then
+        local pad = math.ceil(math.max(r0, r1)) + 2
+        local function axis(origin, delta, low, high)
+            if delta == 0 then return origin >= low and origin <= high end
+            local a, b = (low - origin) / delta, (high - origin) / delta
+            if a > b then a, b = b, a end
+            first_t, last_t = math.max(first_t, a), math.min(last_t, b)
+            return first_t <= last_t
+        end
+        if not axis(x0, dx, -pad, clip.w + pad)
+            or not axis(y0, dy, -pad, clip.h + pad) then
+            return
+        end
+    end
 
     local is_highlight = stroke.tool == "highlighter"
     local color = COLOR_BLACK
@@ -147,7 +166,7 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1)
         local cycle = dash_len + gap_len
         local steps = math.max(1, math.ceil(dist))
         local cur_len = stroke.accum_len or 0
-        for i = 0, steps do
+        for i = math.max(0, math.floor(first_t * steps)), math.min(steps, math.ceil(last_t * steps)) do
             local phase = (cur_len + dist * (i / steps)) % cycle
             if phase < dash_len then
                 local t = i / steps
@@ -161,7 +180,7 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1)
         local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.4)) or 1.0
         local steps = math.max(1, math.ceil(dist / step_dist))
 
-        for i = 0, steps do
+        for i = math.max(0, math.floor(first_t * steps)), math.min(steps, math.ceil(last_t * steps)) do
             local t = i / steps
             local x = x0 + dx * t
             local y = y0 + dy * t
@@ -237,6 +256,21 @@ function Renderer.drawStroke(bb, stroke, clip)
     local n = stroke:count()
     if n == 0 then return end
 
+    local ox, oy = 0, 0
+    local target = bb
+    if clip then
+        ox, oy = math.max(0, math.floor(clip.x)), math.max(0, math.floor(clip.y))
+        local w = math.min(bb:getWidth(), math.ceil(clip.x + clip.w)) - ox
+        local h = math.min(bb:getHeight(), math.ceil(clip.y + clip.h)) - oy
+        if w <= 0 or h <= 0 then return end
+        target = bb:viewport(ox, oy, w, h)
+    end
+    local bounds = clip and { w = target:getWidth(), h = target:getHeight() }
+    local function segment(x0, y0, p0, x1, y1, p1)
+        Renderer.drawSegment(target, stroke, x0 - ox, y0 - oy, p0,
+            x1 - ox, y1 - oy, p1, bounds)
+    end
+
     -- Short strokes have no index and are drawn whole: their bounding box has
     -- already said they are near the region, and there is nothing left to skip.
     local chunks = clip and n > 1 and stroke.chunkIndex and stroke:chunkIndex()
@@ -249,7 +283,7 @@ function Renderer.drawStroke(bb, stroke, clip)
                 local px, py, pp = stroke:getPoint(c[1])
                 for i = c[1] + 1, c[2] do
                     local x, y, p = stroke:getPoint(i)
-                    Renderer.drawSegment(bb, stroke, px, py, pp, x, y, p)
+                    segment(px, py, pp, x, y, p)
                     px, py, pp = x, y, p
                 end
             end
@@ -261,10 +295,10 @@ function Renderer.drawStroke(bb, stroke, clip)
         local x, y, p = stroke:getPoint(1)
         local r = Renderer.radiusFor(stroke, p)
         if stroke.tool == "highlighter" then
-            stampHighlight(bb, x, y, r,
+            stampHighlight(target, x - ox, y - oy, r,
                 Blitbuffer.Color8(stroke.tint or HIGHLIGHT_TINT))
         else
-            stamp(bb, x, y, r, Blitbuffer.Color8(stroke.color))
+            stamp(target, x - ox, y - oy, r, Blitbuffer.Color8(stroke.color))
         end
         return
     end
@@ -272,7 +306,7 @@ function Renderer.drawStroke(bb, stroke, clip)
     local px, py, pp = stroke:getPoint(1)
     for i = 2, n do
         local x, y, p = stroke:getPoint(i)
-        Renderer.drawSegment(bb, stroke, px, py, pp, x, y, p)
+        segment(px, py, pp, x, y, p)
         px, py, pp = x, y, p
     end
 end

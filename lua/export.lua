@@ -218,7 +218,8 @@ function Export.toPDF(doc, out_path, opts)
     local offsets = {}
 
     local function write(data)
-        file:write(data)
+        local written, write_error = file:write(data)
+        if not written then error(write_error or "PDF write failed") end
         current_offset = current_offset + #data
     end
 
@@ -332,7 +333,8 @@ function Export.toPDF(doc, out_path, opts)
             total_objs + 1, xref_offset))
     end)
 
-    file:close()
+    local closed, close_error = file:close()
+    if not closed and ok then ok, write_err = false, close_error or "PDF close failed" end
 
     -- A page buffer is several megabytes of off-heap memory; on a device this
     -- tight, waiting for the collector to notice is not good enough.

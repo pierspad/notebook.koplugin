@@ -28,13 +28,14 @@ local CACHE_DIR = ".thumbs"
 function Thumbnail.pathFor(path)
     -- The notebook's own path decides the file name, so notebooks of the same
     -- name in different folders do not collide. Slashes are not legal in a file
-    -- name, so they are folded away.
+    -- name, so they are escaped (including percent itself). Underscore folding
+    -- collides: Trip/day.scribe and Trip_day.scribe are different notebooks.
     -- Relative to the notebook root, so that the key is the same wherever that
     -- root happens to be -- it is one of two names, depending on whether this
     -- install predates the plugin having its own name.
     local root = Library.root()
     local key = path:sub(1, #root) == root and path:sub(#root + 2) or path
-    key = key:gsub("[/\\]", "_")
+    key = key:gsub("%%", "%%25"):gsub("/", "%%2F"):gsub("\\", "%%5C")
     return Library.abs(CACHE_DIR) .. "/" .. key .. ".png"
 end
 

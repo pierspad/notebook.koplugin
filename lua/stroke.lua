@@ -177,7 +177,14 @@ function Stroke:translate(dx, dy)
     self.x_max = self.x_max + dx
     self.y_min = self.y_min + dy
     self.y_max = self.y_max + dy
-    self.chunks = nil
+    -- Translation preserves each run's membership. Move its box rather than
+    -- rescanning every point on the next repaint of every drag frame.
+    if self.chunks then
+        for _, chunk in ipairs(self.chunks) do
+            chunk[3], chunk[5] = chunk[3] + dx, chunk[5] + dx
+            chunk[4], chunk[6] = chunk[4] + dy, chunk[6] + dy
+        end
+    end
 end
 
 --[[--

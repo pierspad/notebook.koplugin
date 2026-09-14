@@ -181,5 +181,51 @@ test("the dock is painted, not merely listed as a child", function()
         "the band is not at the bottom")
 end)
 
+test("holding the pen opens persistent nib and line options", function()
+    local nb = notebookNamed("notes")
+    local pen = nb.tool_buttons[1]
+    assertTrue(pen.ges_events.Hold, "pen has no hold gesture")
+    local ui = require("ui/uimanager")
+    local old_show, shown = ui.show, nil
+    ui.show = function(_, widget) shown = widget end
+    pen:onHold()
+    ui.show = old_show
+    assertTrue(shown and #shown.actions >= 5, "pen options not opened")
+    shown.actions[2].callback()
+    assertEq(nb.canvas.pen_style, "fountain", "fountain selection")
+    shown.actions[5].callback()
+    assertEq(nb.canvas.line_style, "arrow", "arrow selection")
+    local reopened = notebookNamed("notes")
+    assertEq(reopened.canvas.pen_style, "fountain", "nib not persisted")
+    assertEq(reopened.canvas.line_style, "arrow", "arrow not persisted")
+end)
+
+test("changing page drops the old page's selection", function()
+    local nb = notebookNamed("notes")
+    local Stroke = require("stroke")
+    local stroke = Stroke:new{}
+    stroke:addPoint(100, 200, 1)
+    nb.document:addStroke(stroke)
+    nb.canvas.selected_strokes = {stroke}
+    nb.canvas.selection_bbox = {x=90, y=190, w=20, h=20}
+    nb:_turnPage(1)
+    assertEq(nb.canvas.selected_strokes, nil, "old page selection survived")
+    assertEq(nb.document.current_page, 2, "page did not turn")
+end)
+
+test("a failed save keeps the notebook open with an error message", function()
+    local nb = notebookNamed("notes")
+    nb.document.save = function() return false, "disk full" end
+    local ui = require("ui/uimanager")
+    local close, show = ui.close, ui.show
+    local closed, notice = false, nil
+    ui.close = function(_, widget) if widget == nb then closed = true end end
+    ui.show = function(_, widget) notice = widget end
+    nb:_close()
+    ui.close, ui.show = close, show
+    assertEq(closed, false, "unsaved notebook closed")
+    assertTrue(notice and notice.text, "save failure was silent")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

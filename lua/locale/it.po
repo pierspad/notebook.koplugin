@@ -270,3 +270,24 @@ msgstr "Gira pagina"
 
 msgid "Whole strokes"
 msgstr "Tratti interi"
+
+msgid "Fineliner"
+msgstr "Penna a tratto uniforme"
+
+msgid "Fountain pen"
+msgstr "Stilografica"
+
+msgid "Pencil"
+msgstr "Matita"
+
+msgid "Hold to straighten: line"
+msgstr "Tenendo premuto: linea"
+
+msgid "Hold to straighten: arrow"
+msgstr "Tenendo premuto: freccia"
+
+msgid "Pen and shapes"
+msgstr "Penna e forme"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Impossibile salvare il quaderno. È stato lasciato aperto."

@@ -9,6 +9,7 @@ where the toolbar is, or ink would end up underneath it.
 @module notebook.notebook
 --]]--
 
+local ActionMenu = require("actionmenu")
 local Blitbuffer = require("ffi/blitbuffer")
 local Button = require("ui/widget/button")
 local Canvas = require("canvas")
@@ -22,6 +23,7 @@ local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
 local IconWidget = require("ui/widget/iconwidget")
 local PagePanel = require("pagepanel")
+local InfoMessage = require("ui/widget/infomessage")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local SettingsDialog = require("settings")
 local Tuning = require("tuning")
@@ -182,7 +184,13 @@ function ToolButton:init()
     self.dimen = self.frame:getSize()
     self.ges_events = {
         Tap = { GestureRange:new{ ges = "tap", range = self.dimen } },
+        Hold = { GestureRange:new{ ges = "hold", range = self.dimen } },
     }
+end
+
+function ToolButton:onHold()
+    if self.hold_callback then self.hold_callback() end
+    return true
 end
 
 function ToolButton:setSelected(selected)
@@ -268,7 +276,16 @@ function Notebook:_buildPageButton()
 end
 
 --- Opens the page overview.
+function Notebook:_finishInteraction()
+    self.canvas:_endStroke()
+    self.canvas:_endErase()
+    self.canvas.erasing = false
+    self.canvas.last_erase_x, self.canvas.last_erase_y = nil, nil
+    self.canvas:_deselectLasso()
+end
+
 function Notebook:_showPages()
+    self:_finishInteraction()
     UIManager:show(PagePanel:new{
         document = self.document,
         on_goto = function(index)
@@ -317,6 +334,7 @@ function Notebook:_buildToolbar()
             icon_size = icon_size,
             selected = i == 1,
             callback = function() self:_selectTool(i) end,
+            hold_callback = spec.tool == "pen" and function() self:_showPenOptions() end or nil,
         }
         self.tool_buttons[i] = btn
         table.insert(tool_group, btn)
@@ -386,6 +404,7 @@ function Notebook:_buildToolbar()
 end
 
 function Notebook:_selectTool(index)
+    self:_finishInteraction()
     self.canvas.tool = TOOLS[index].tool
     for i, btn in ipairs(self.tool_buttons) do
         btn:setSelected(i == index)
@@ -414,7 +433,31 @@ function Notebook:_setSetting(key, value)
     G_reader_settings:saveSetting(SETTING_PREFIX .. key, value)
 end
 
+function Notebook:_showPenOptions()
+    self:_finishInteraction()
+    local actions = {}
+    for _, option in ipairs({
+        { "pen_style", "fineliner", _("Fineliner") },
+        { "pen_style", "fountain", _("Fountain pen") },
+        { "pen_style", "pencil", _("Pencil") },
+        { "line_style", "line", _("Hold to straighten: line") },
+        { "line_style", "arrow", _("Hold to straighten: arrow") },
+    }) do
+        local key, value, label = option[1], option[2], option[3]
+        table.insert(actions, {
+            icon = "notebook.pen",
+            text = (self.canvas[key] == value and "✓ " or "") .. label,
+            callback = function()
+                self:_setSetting(key, value)
+                self:_selectTool(1)
+            end,
+        })
+    end
+    UIManager:show(ActionMenu:new{ title = _("Pen and shapes"), actions = actions })
+end
+
 function Notebook:_showSettings()
+    self:_finishInteraction()
     UIManager:show(SettingsDialog:new{
         canvas = self.canvas,
         on_change = function(key, value) self:_setSetting(key, value) end,
@@ -431,6 +474,9 @@ function Notebook:_loadSettings()
         return value
     end
     local canvas = self.canvas
+    local style = get("pen_style", "fineliner")
+    canvas.pen_style = (style == "fountain" or style == "pencil") and style or "fineliner"
+    canvas.line_style = get("line_style", "line") == "arrow" and "arrow" or "line"
     canvas.pen_width         = get("pen_width", canvas.pen_width)
     canvas.highlighter_width = get("highlighter_width", canvas.highlighter_width)
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
@@ -471,12 +517,14 @@ end
 -- Actions --------------------------------------------------------------------------
 
 function Notebook:_undo()
+    self:_finishInteraction()
     local page, x, y, w, h = self.document:undo()
     if not page then return end
     self:_afterHistoryChange(page, x, y, w, h)
 end
 
 function Notebook:_redo()
+    self:_finishInteraction()
     local page, x, y, w, h = self.document:redo()
     if not page then return end
     self:_afterHistoryChange(page, x, y, w, h)
@@ -504,6 +552,7 @@ function Notebook:_afterHistoryChange(page, x, y, w, h)
 end
 
 function Notebook:_turnPage(delta)
+    self:_finishInteraction()
     local target = self.document.current_page + delta
     if target < 1 then return end
     if target > self.document:pageCount() then
@@ -521,7 +570,15 @@ function Notebook:_fullRepaint()
 end
 
 function Notebook:_close()
-    self.document:save()
+    self:_finishInteraction()
+    local saved, err = self.document:save()
+    if not saved then
+        UIManager:show(InfoMessage:new{
+            text = _("Could not save the notebook. It has been left open.")
+                .. "\n\n" .. tostring(err or ""),
+        })
+        return
+    end
     -- Closed with an explicit full refresh. The canvas painted straight into the
     -- framebuffer, bypassing UIManager's bookkeeping, so UIManager has no idea
     -- how much of the screen we actually dirtied; without this, ink can be left

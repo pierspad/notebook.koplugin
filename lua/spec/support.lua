@@ -55,6 +55,24 @@ function FakeBB.new(w, h)
     return o
 end
 
+-- Like the real buffer: coordinates are local and writes share parent pixels.
+function FakeBB:viewport(x, y, w, h)
+    local parent = self
+    local view = setmetatable({ w = w, h = h }, FakeBB)
+    function view:set(px, py, value)
+        px, py = math.floor(px), math.floor(py)
+        if px >= 0 and py >= 0 and px < w and py < h then
+            parent:set(x + px, y + py, value)
+        end
+    end
+    function view:get(px, py)
+        if px >= 0 and py >= 0 and px < w and py < h then
+            return parent:get(x + px, y + py)
+        end
+    end
+    return view
+end
+
 function FakeBB:getWidth() return self.w end
 function FakeBB:getHeight() return self.h end
 

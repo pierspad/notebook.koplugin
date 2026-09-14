@@ -982,5 +982,46 @@ end)
 
 -- Summary ----------------------------------------------------------------------
 
+test("clipped rendering preserves pixels outside the dirty region", function()
+    for _, tool in ipairs({"pen", "highlighter"}) do
+        local s = Stroke:new{ tool = tool, width = 5 }
+        s:addPoint(5, 5, 0.5)
+        s:addPoint(190, 190, 1)
+        local bb = support.FakeBB.new(200, 200)
+        local full = support.FakeBB.new(200, 200)
+        Renderer.drawStroke(full, s)
+        Renderer.drawStroke(bb, s, { x = 80, y = 80, w = 20, h = 20 })
+        for y = 0, 199 do
+            for x = 0, 199 do
+                local expected = x >= 80 and x < 100 and y >= 80 and y < 100
+                    and full:get(x, y) or 255
+                assertEq(bb:get(x, y), expected, tool .. " clip pixel " .. x .. "," .. y)
+            end
+        end
+    end
+end)
+
+test("moving a stroke retains its spatial index and hit geometry", function()
+    local s = Stroke:new{ width = 3 }
+    for x = 1, 200 do s:addPoint(x, 100, 1) end
+    local index = s:chunkIndex()
+    s:translate(40, 60)
+    assertTrue(s:chunkIndex() == index, "drag discarded the reusable index")
+    assertTrue(s:hitTest(100, 160, 2), "translated ink not found")
+    assertTrue(not s:hitTest(100, 100, 2), "old position still hit")
+end)
+
+test("PDF export reports a failed write instead of success", function()
+    local doc = Document:new("/tmp/fail.scribe")
+    local open = io.open
+    io.open = function()
+        return { write = function() return nil, "disk full" end,
+            close = function() return true end }
+    end
+    local ok = Export.toPDF(doc, "/tmp/fail.pdf", {width=10, height=10})
+    io.open = open
+    assertEq(ok, false, "failed PDF write reported success")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

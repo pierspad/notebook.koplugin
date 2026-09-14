@@ -58,6 +58,8 @@ local Canvas = InputContainer:extend{
     -- What the barrel button does while held. The rubber tip always erases.
     barrel_button_tool = "highlighter",
     pen_width = 3,
+    pen_style = "fineliner",
+    line_style = "line",
     highlighter_width = 24,
     eraser_size = Tuning.spec.eraser_radius.default,
     -- "stroke" removes whole strokes; "area" rubs out only what is under the tip.
@@ -91,7 +93,6 @@ function Canvas:init()
     -- Live stroke state.
     self.stroke = nil
     self.last_x, self.last_y, self.last_p = nil, nil, nil
-    self.coverage = nil
 
     -- Pending refresh region, accumulated between flushes.
     self.pending = nil
@@ -109,6 +110,10 @@ function Canvas:init()
 
     -- Background auto-save on writing pause
     self.autosave_cb = function()
+        if self.stroke or self.erasing or self.dragging_selection then
+            UIManager:scheduleIn(2.5, self.autosave_cb)
+            return
+        end
         if self.document and self.document.dirty then
             self.document:save()
         end
@@ -135,6 +140,14 @@ function Canvas:init()
     self.erase_pending = nil
     self.last_erase_repaint = nil
     self.erase_flush_scheduled = false
+    self.erase_flush_cb = function()
+        self.erase_flush_scheduled = false
+        self:_flushEraseRepaint()
+    end
+    self.drag_step_cb = function()
+        self.drag_step_scheduled = false
+        if self.dragging_selection then self:_maybeDragStep() end
+    end
 
     if Device:isTouchDevice() then
         self.ges_events = {
@@ -325,7 +338,7 @@ function Canvas:_triggerShapeSnap()
     if not self.stroke or self.shape_snapped or self.stroke:count() < 4 or self.erasing or self.dragging_selection then
         return
     end
-    local clean = Shape.recognize(self.stroke)
+    local clean = Shape.recognize(self.stroke, self.line_style)
     if clean then
         self.shape_snapped = true
         local bx, by, bw, bh = self.stroke:getBounds()
@@ -342,7 +355,7 @@ function Canvas:_triggerShapeSnap()
         end
         local nbx, nby, nbw, nbh = clean:getBounds()
         if nbx then
-            Renderer.drawStroke(Screen.bb, clean)
+            Renderer.drawStroke(Screen.bb, clean, self.content)
             self:_accumulate(nbx, nby, nbw, nbh)
         end
         self:_flush()
@@ -393,10 +406,9 @@ function Canvas:_beginStroke(tool, x, y, p)
     self.stroke = Stroke:new{
         tool = tool,
         width = self:widthFor(tool),
-        color = 0,
+        color = tool == "pen" and self.pen_style == "pencil" and 96 or 0,
     }
-    self.coverage = tool == "highlighter" and {} or nil
-    self.refresh_mode = tool == "highlighter" and "ui" or "fast"
+    self.refresh_mode = (tool == "highlighter" or self.stroke.color ~= 0) and "ui" or "fast"
     -- While it is being drawn the highlighter lays down a darker tint than the
     -- one it settles to when the pen lifts; see Tuning.live_highlight_tint.
     self.stroke.tint = tool == "highlighter" and Tuning.live_highlight_tint or nil
@@ -415,7 +427,7 @@ function Canvas:_beginStroke(tool, x, y, p)
 
     -- Put down the initial dot so a tap leaves a mark rather than nothing.
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
-        x, y, p, x, y, p, self.coverage)
+        x, y, p, x, y, p)
     self:_accumulate(rx, ry, rw, rh)
     self:_maybeFlush()
 end
@@ -458,7 +470,6 @@ function Canvas:_dragStep()
     self.drag_moved_dy = (self.drag_moved_dy or 0) + dy
     local new_b = { x = old_b.x + dx, y = old_b.y + dy, w = old_b.w, h = old_b.h }
     self.selection_bbox = new_b
-    self.last_drag_step = time.now()
 
     local m = Tuning.frame_margin
     local box = Rect.grow(
@@ -471,6 +482,7 @@ function Canvas:_dragStep()
     -- Everywhere the selection has been during this drag, for the one clean
     -- refresh that ends it; see _settleDrag.
     self.drag_touched = Rect.grow(self.drag_touched, box.x, box.y, box.w, box.h)
+    self.last_drag_step = time.now()
 end
 
 --[[--
@@ -520,10 +532,8 @@ function Canvas:_maybeDragStep()
 
     if not self.drag_step_scheduled then
         self.drag_step_scheduled = true
-        UIManager:scheduleIn(Tuning.drag_repaint_ms / 1000, function()
-            self.drag_step_scheduled = false
-            self:_dragStep()
-        end)
+        local remaining = Tuning.drag_repaint_ms - time.to_ms(now - self.last_drag_step)
+        UIManager:scheduleIn(math.max(1, remaining) / 1000, self.drag_step_cb)
     end
 end
 
@@ -580,7 +590,7 @@ function Canvas:_extendStroke(x, y, p)
     if jdx * jdx + jdy * jdy < Tuning.jitter_floor_sq then return end
 
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
-        self.last_x, self.last_y, self.last_p, x, y, p, self.coverage)
+        self.last_x, self.last_y, self.last_p, x, y, p)
     self.stroke:addPoint(x, y, p)
     self.last_x, self.last_y, self.last_p = x, y, p
 
@@ -590,6 +600,8 @@ end
 
 function Canvas:_endStroke()
     if self.dragging_selection then
+        UIManager:unschedule(self.drag_step_cb)
+        self.drag_step_scheduled = false
         self.dragging_selection = false
         -- Whatever the last interval had not got to yet. The menu is placed
         -- against the selection's box, so this has to happen before it is
@@ -607,7 +619,6 @@ function Canvas:_endStroke()
     if not self.stroke then return end
     local stroke = self.stroke
     self.stroke = nil
-    self.coverage = nil
     self.last_x, self.last_y, self.last_p = nil, nil, nil
     self.last_point_at = nil
 
@@ -763,6 +774,7 @@ function Canvas:_showLassoMenu(selected)
 end
 
 function Canvas:_deselectLasso()
+    if not self.selected_strokes and not self.selection_bbox and not self.lasso_menu then return end
     if self.lasso_menu then
         UIManager:close(self.lasso_menu)
         self.lasso_menu = nil
@@ -843,6 +855,8 @@ end
 
 --- Closes the eraser's undo group, if one is open.
 function Canvas:_endErase()
+    UIManager:unschedule(self.erase_flush_cb)
+    self.erase_flush_scheduled = false
     self:_flushEraseRepaint()
     local b = self.erase_bounds
     self.erase_bounds = nil
@@ -918,10 +932,7 @@ function Canvas:_queueEraseRepaint(x, y, w, h)
         -- Without this the last sweep of a slow, short rub sat in the buffer
         -- until the pen was lifted, and the ink looked like it had survived.
         self.erase_flush_scheduled = true
-        UIManager:scheduleIn(Tuning.erase_repaint_ms / 1000, function()
-            self.erase_flush_scheduled = false
-            self:_flushEraseRepaint()
-        end)
+        UIManager:scheduleIn(Tuning.erase_repaint_ms / 1000, self.erase_flush_cb)
     end
 end
 
@@ -929,8 +940,8 @@ function Canvas:_flushEraseRepaint()
     local p = self.erase_pending
     if not p then return end
     self.erase_pending = nil
-    self.last_erase_repaint = time.now()
     self:_repaintRegion(p.x, p.y, p.w, p.h)
+    self.last_erase_repaint = time.now()
 end
 
 --[[--
@@ -998,7 +1009,8 @@ function Canvas:onStylusEvent(slot)
     end
 
     -- Explicit finger tools are always rejected from the stylus callback
-    if slot.tool == Input.TOOL_TYPE_FINGER then
+    local pen_release = slot.id == -1 and Input.pen_slot and slot.slot == Input.pen_slot
+    if slot.tool == Input.TOOL_TYPE_FINGER and not pen_release then
         return false
     end
 
@@ -1015,12 +1027,21 @@ function Canvas:onStylusEvent(slot)
         or slot.tool == Input.TOOL_TYPE_PEN
         or slot.tool == Input.TOOL_TYPE_ERASER
         or slot.tool == Input.TOOL_TYPE_HIGHLIGHTER
+        or pen_release
 
     if not is_stylus then
         return false
     end
 
-    local tool = self:resolveTool(slot.tool)
+    -- KOReader may overwrite a persistent slot.tool with the barrel tool.
+    -- Remember the physical Wacom end separately so releasing the button does
+    -- not leave the pen stuck in that override until it exits proximity.
+    local slot_tool = self.physical_pen_tool or slot.tool
+    if self.physical_pen_tool == Input.TOOL_TYPE_PEN then
+        if Input.stylus_eraser_active then slot_tool = Input.TOOL_TYPE_ERASER
+        elseif Input.stylus_highlighter_active then slot_tool = Input.TOOL_TYPE_HIGHLIGHTER end
+    end
+    local tool = self:resolveTool(slot_tool)
 
     -- If tapping directly on the lasso menu buttons with the stylus, pass through to the menu
     if self.lasso_menu and self.lasso_menu.dimen and slot.x and slot.y then
@@ -1043,11 +1064,8 @@ function Canvas:onStylusEvent(slot)
         -- undo group.
         self.last_erase_x, self.last_erase_y = nil, nil
         self:_endErase()
-        if tool == "eraser" then
-            self.erasing = false
-        else
-            self:_endStroke()
-        end
+        self.erasing = false
+        self:_endStroke()
         return was_drawing
     end
 
@@ -1069,13 +1087,26 @@ function Canvas:onStylusEvent(slot)
         return false
     end
 
-    -- Constant pressure, for now.
+    -- The Scribe Wacom digitizer reports 0..4095 (EVIOCGABS ABS_PRESSURE).
+    -- Pressure is baked into ordinary stroke points, so exports and old readers
+    -- need no new codec or brush metadata. Missing pressure keeps a solid line.
     local p = 1
+    if tool == "pen" and self.pen_style ~= "fineliner" and slot.pressure
+        and Input.wacom_protocol then
+        p = math.max(0, math.min(1, slot.pressure / 4095))
+    end
 
     if tool == "eraser" then
+        if self.stroke or self.dragging_selection then self:_endStroke() end
         self.erasing = true
         self:_eraseAlong(x, y)
         return true
+    end
+
+    if self.erasing then
+        self:_endErase()
+        self.erasing = false
+        self.last_erase_x, self.last_erase_y = nil, nil
     end
 
     if self.dragging_selection then
@@ -1230,6 +1261,8 @@ function Canvas:onTouchRelease(_, ges)
     self.touch_start_x, self.touch_start_y = nil, nil
     self.touch_last_x, self.touch_last_y = nil, nil
 
+    if self:_touchIsPalm() then return true end
+
     if self.dragging_selection then
         self:_endStroke()
         return true
@@ -1258,7 +1291,7 @@ end
 
 --- Horizontal finger swipes turn the page, the way they do in the reader.
 function Canvas:onPageSwipe(_, ges)
-    if self.pen_down then return true end
+    if self:_touchIsPalm() then return true end
     -- A swipe while drawing with a finger is part of the drawing, not a gesture.
     if self.draw_with_finger and self.stroke then return true end
     if not self.on_page_swipe then return false end
@@ -1330,16 +1363,24 @@ function Canvas:start()
     -- than left to the normal path alone; see Safe.onShutdown.
     Safe.onShutdown("canvas:input", function() self:stop() end)
 
-    if Input and Input.pen_slot then
+    if Input and Input.pen_slot and Input.wacom_protocol then
         self.orig_pen_slot = Input.pen_slot
         -- Move pen_slot out of the capacitive multi-touch panel's slot range (0..9)
         Input.pen_slot = 15
+        self.panel_slot = Input.main_finger_slot or 0
 
         -- On Notebook: ensure all single-touch Wacom digitizer events route strictly to pen_slot
         if not self.orig_handleTouchEv and Input.handleTouchEv then
             self.orig_handleTouchEv = Input.handleTouchEv
             Input.handleTouchEv = function(this, ev)
                 if ev.type == 3 then -- EV_ABS
+                    -- Each device retains its own current slot across frames.
+                    -- Wacom ABS_X/Y must not redirect a later slotless MT frame.
+                    if ev.code == 47 then -- ABS_MT_SLOT
+                        self.panel_slot = ev.value
+                    elseif ev.code >= 48 and ev.code <= 61 then -- ABS_MT_*
+                        this:setupSlotData(self.panel_slot)
+                    end
                     if ev.code == 0 then -- ABS_X
                         this:setupSlotData(this.pen_slot)
                         this:setCurrentMtSlotChecked("x", ev.value)
@@ -1361,6 +1402,10 @@ function Canvas:start()
         if not self.orig_handleKeyBoardEv and Input.handleKeyBoardEv then
             self.orig_handleKeyBoardEv = Input.handleKeyBoardEv
             Input.handleKeyBoardEv = function(this, ev)
+                if ev.code == 320 or ev.code == 321 then -- BTN_TOOL_PEN/RUBBER
+                    self.physical_pen_tool = ev.value == 1
+                        and (ev.code == 320 and this.TOOL_TYPE_PEN or this.TOOL_TYPE_ERASER) or nil
+                end
                 if ev.code == 330 then -- BTN_TOUCH
                     this:setupSlotData(this.pen_slot)
                     if ev.value == 1 then
@@ -1395,8 +1440,15 @@ function Canvas:stop()
     end
     if self.orig_pen_slot and Input then
         Input.pen_slot = self.orig_pen_slot
+        Input.cur_slot = Input.main_finger_slot or 0
+        self.orig_pen_slot = nil
     end
+    self:_endStroke()
+    self:_endErase()
+    self.physical_pen_tool = nil
     self:_deselectLasso()
+    UIManager:unschedule(self.drag_step_cb)
+    UIManager:unschedule(self.erase_flush_cb)
     UIManager:unschedule(self.reconcile_cb)
     UIManager:unschedule(self.autosave_cb)
     UIManager:unschedule(self.shape_snap_cb)

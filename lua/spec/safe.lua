@@ -282,6 +282,7 @@ test("the canvas restores the input handlers when it faults", function()
     local Device = package.loaded["device"]
     local original_touch = function() end
     Device.input.pen_slot = 4
+    Device.input.wacom_protocol = true
     Device.input.handleTouchEv = original_touch
     Device.input.handleKeyBoardEv = function() end
     Device.input.registerStylusCallback = function() end

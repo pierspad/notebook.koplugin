@@ -551,6 +551,157 @@ test("the refresh after a snap covers where the raw stroke was", function()
         "the refresh does not cover the shape it drew")
 end)
 
+test("palm grace blocks every page gesture after pen lift", function()
+    local canvas = newCanvas()
+    local turned = 0
+    canvas.on_page_swipe = function() turned = turned + 1 end
+    canvas.pen_left_at = clock.ms
+    after(100)
+    canvas:onPageSwipe(nil, { direction = "west" })
+    canvas:onPageMultiSwipe(nil, { direction = "west" })
+    canvas:onPageTwoFingerSwipe(nil, { direction = "west" })
+    assertEq(turned, 0, "palm turned the page during grace")
+    after(700)
+    canvas:onPageSwipe(nil, { direction = "west" })
+    assertEq(turned, 1, "intentional swipe after grace")
+end)
+
+test("palm release cannot finish a stylus selection drag", function()
+    local canvas = draggingCanvas()
+    canvas.pen_down = true
+    canvas:onTouchRelease(nil, { pos = { x = 300, y = 300 } })
+    assertTrue(canvas.dragging_selection, "palm release ended the pen drag")
+end)
+
+test("slow repaint does not immediately license another drag repaint", function()
+    local canvas, _, repaints = draggingCanvas()
+    local repaint = canvas._repaintRegion
+    canvas._repaintRegion = function(...)
+        repaint(...)
+        after(100) -- work itself is slower than the refresh interval
+    end
+    canvas:_extendStroke(201, 201, 1)
+    canvas:_extendStroke(202, 202, 1)
+    assertEq(repaints(), 1, "back-to-back expensive frames")
+end)
+
+test("switching to eraser commits the pen stroke before erasing", function()
+    local canvas, doc = newCanvas()
+    canvas:onStylusEvent{ tool = 1, x = 100, y = 100, id = 1 }
+    canvas:onStylusEvent{ tool = 2, x = 300, y = 300, id = 1 }
+    assertEq(canvas.stroke, nil, "pen remained live under eraser")
+    assertEq(#doc:getPage().strokes, 1, "pen stroke not committed")
+    canvas:onStylusEvent{ tool = 2, id = -1 }
+    assertEq(canvas.erasing, false, "eraser did not end")
+end)
+
+test("panel coordinates without a repeated slot never overwrite the pen", function()
+    local input = Device.input
+    input.pen_slot, input.main_finger_slot, input.cur_slot = 4, 0, 0
+    input.wacom_protocol = true
+    local slots = {}
+    input.setupSlotData = function(self, n)
+        self.cur_slot = n
+        slots[n] = slots[n] or {}
+    end
+    input.setCurrentMtSlotChecked = function(self, key, value) slots[self.cur_slot][key] = value end
+    input.setCurrentMtSlot = input.setCurrentMtSlotChecked
+    input.handleTouchEv = function(self, ev)
+        if ev.code == 47 then self:setupSlotData(ev.value)
+        elseif ev.code == 53 then self:setCurrentMtSlotChecked("x", ev.value)
+        elseif ev.code == 54 then self:setCurrentMtSlotChecked("y", ev.value) end
+    end
+    input.handleKeyBoardEv = function() end
+    local canvas = newCanvas()
+    canvas:start()
+    input:handleTouchEv{ type = 3, code = 47, value = 2 }
+    input:handleTouchEv{ type = 3, code = 0, value = 100 }
+    input:handleTouchEv{ type = 3, code = 1, value = 120 }
+    input:handleTouchEv{ type = 3, code = 53, value = 500 }
+    input:handleTouchEv{ type = 3, code = 54, value = 700 }
+    local pen_x, panel_x = slots[15].x, slots[2].x
+    canvas:stop()
+    input.pen_slot = nil
+    assertEq(pen_x, 100, "palm overwrote nib")
+    assertEq(panel_x, 500, "panel lost its selected slot")
+end)
+
+test("queued drag callback is cancelled at release", function()
+    local canvas = draggingCanvas()
+    local ui = require("ui/uimanager")
+    local old_schedule, old_unschedule = ui.scheduleIn, ui.unschedule
+    local queue = {}
+    ui.scheduleIn = function(_, _, fn) queue[fn] = true end
+    ui.unschedule = function(_, fn) queue[fn] = nil end
+    canvas:_extendStroke(201, 201, 1)
+    after(2)
+    canvas:_extendStroke(202, 202, 1)
+    canvas:_endStroke()
+    local pending = 0
+    for _ in pairs(queue) do pending = pending + 1 end
+    ui.scheduleIn, ui.unschedule = old_schedule, old_unschedule
+    assertEq(pending, 0, "callback escaped its drag lifetime")
+end)
+
+test("autosave waits while a new stroke is active", function()
+    local canvas, doc = newCanvas()
+    local saved = 0
+    doc.save = function() saved = saved + 1 end
+    canvas:_beginStroke("pen", 100, 100, 1)
+    doc.dirty = true
+    canvas.autosave_cb()
+    assertEq(saved, 0, "disk serialization interrupted writing")
+end)
+
+test("pressure brushes preserve their appearance in ordinary stroke data", function()
+    local input = Device.input
+    input.wacom_protocol = true
+    local canvas, doc = newCanvas()
+    canvas.pen_style = "fountain"
+    canvas:onStylusEvent{tool=1, id=1, x=100, y=100, pressure=1024}
+    after(10)
+    canvas:onStylusEvent{tool=1, id=1, x=120, y=100, pressure=4095}
+    canvas:onStylusEvent{tool=1, id=-1}
+    local s = doc:getPage().strokes[1]
+    local _, _, low = s:getPoint(1)
+    local _, _, high = s:getPoint(2)
+    assertTrue(low < high, "pressure ignored")
+    canvas.pen_style = "pencil"
+    canvas:onStylusEvent{tool=1, id=1, x=200, y=200, pressure=2048}
+    canvas:onStylusEvent{tool=1, id=-1}
+    local pencil = doc:getPage().strokes[2]
+    local copy = Stroke:deserialize(pencil:serialize())
+    assertEq(copy.color, 96, "pencil gray not persisted")
+    assertEq(copy.pts[3], pencil.pts[3], "pencil pressure not persisted")
+end)
+
+test("a stylus release still ends the stroke when proximity clears its tool", function()
+    local input = Device.input
+    input.pen_slot = 15
+    local canvas, doc = newCanvas()
+    canvas:onStylusEvent{slot=15, tool=1, id=1, x=100, y=100}
+    canvas:onStylusEvent{slot=15, tool=0, id=-1}
+    input.pen_slot = nil
+    assertEq(canvas.stroke, nil, "pen stroke stuck after tool cleared")
+    assertEq(canvas.pen_down, false, "palm block stuck on")
+    assertEq(#doc:getPage().strokes, 1, "stroke lost at proximity exit")
+end)
+
+test("barrel release returns to pen despite a mutated framework slot", function()
+    local input = Device.input
+    local canvas, doc = newCanvas()
+    canvas.physical_pen_tool = input.TOOL_TYPE_PEN
+    input.stylus_eraser_active = true
+    canvas:onStylusEvent{tool=2, id=1, x=100, y=100}
+    input.stylus_eraser_active = false
+    after(10)
+    canvas:onStylusEvent{tool=2, id=1, x=120, y=100}
+    canvas:onStylusEvent{tool=2, id=-1}
+    assertEq(#doc:getPage().strokes, 2, "barrel tool never returned to pen")
+    assertEq(doc:getPage().strokes[1].tool, "highlighter", "barrel tool")
+    assertEq(doc:getPage().strokes[2].tool, "pen", "released barrel tool")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)
 

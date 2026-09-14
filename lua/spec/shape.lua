@@ -224,5 +224,20 @@ test("gracefully handles very short strokes", function()
     assertEq(Shape.recognize(s_tiny), nil, "tiny stroke length < 25px")
 end)
 
+test("line snap can add an arrowhead without changing the raw stroke", function()
+    local s = Stroke:new{ width = 3 }
+    for x = 100, 500, 10 do s:addPoint(x, 200, 1) end
+    local line, line_kind = Shape.recognize(s, "line")
+    local arrow, kind = Shape.recognize(s, "arrow")
+    assertEq(line_kind, "line", "ordinary line")
+    assertEq(line:count(), 2, "line vertices")
+    assertEq(kind, "arrow", "arrow mode")
+    assertTrue(arrow:count() >= 5, "arrowhead missing")
+    local x, y = arrow:getPoint(2)
+    assertEq(x, 500, "tip x")
+    assertEq(y, 200, "tip y")
+    assertEq(s:count(), 41, "raw stroke was changed")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

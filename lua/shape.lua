@@ -384,7 +384,7 @@ end
 
 --- Recognizes a geometric shape from a raw stroke.
 -- Returns new_stroke, shape_type or nil if not a recognized shape.
-function Shape.recognize(raw_stroke)
+function Shape.recognize(raw_stroke, line_style)
     if not raw_stroke or raw_stroke:count() < 3 then return nil end
 
     local raw_points = {}
@@ -410,6 +410,22 @@ function Shape.recognize(raw_stroke)
     -- 3. Try Polygon (Triangle, Rectangle, Square)
     if not shape_type then
         shape_type, pts = detectPolygon(points, total_len)
+    end
+
+    if shape_type == "line" and line_style == "arrow" then
+        local a, b = pts[1], pts[2]
+        local dx, dy = b.x - a.x, b.y - a.y
+        local length = math.sqrt(dx * dx + dy * dy)
+        if length > 0 then
+            local head = math.min(length * 0.3, math.max(14, raw_stroke.width * 4))
+            local ux, uy = dx / length, dy / length
+            local function wing(side)
+                return { x = b.x - head * ux + side * head * 0.5 * uy,
+                    y = b.y - head * uy - side * head * 0.5 * ux, p = 1 }
+            end
+            pts = { a, b, wing(1), b, wing(-1) }
+            shape_type = "arrow"
+        end
     end
 
     if shape_type and pts then
