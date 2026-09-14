@@ -1181,6 +1181,9 @@ function Canvas:onTouchStart(_, ges)
     self.touch_last_x = x
     self.touch_last_y = y
 
+    -- A resting hand must not move or dismiss a pen selection.
+    if self.selected_strokes and not self.draw_with_finger then return true end
+
     -- If lasso selection is active, finger touching inside selection initiates drag/move
     if self.tool == "lasso" and self.selected_strokes and self.selection_bbox then
         if self.lasso_menu and self.lasso_menu.dimen then
@@ -1275,6 +1278,8 @@ function Canvas:onTouchRelease(_, ges)
         return true
     end
 
+    if self.selected_strokes then return true end
+
     -- Slower horizontal pan drags also turn pages reliably
     if not self.pen_down and start_x and end_x and self.on_page_swipe then
         local dx = end_x - start_x
@@ -1291,6 +1296,7 @@ end
 
 --- Horizontal finger swipes turn the page, the way they do in the reader.
 function Canvas:onPageSwipe(_, ges)
+    if self.selected_strokes or self.dragging_selection then return true end
     if self:_touchIsPalm() then return true end
     -- A swipe while drawing with a finger is part of the drawing, not a gesture.
     if self.draw_with_finger and self.stroke then return true end

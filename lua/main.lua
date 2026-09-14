@@ -12,6 +12,9 @@ fail to resolve.
 @module koplugin.notebook
 --]]--
 
+local plugin_dir = assert(debug.getinfo(1, "S").source:match("^@(.+)/[^/]+$"))
+local require = assert(loadfile(plugin_dir .. "/loader.lua"))()(plugin_dir)
+
 local DataStorage = require("datastorage")
 local Dispatcher = require("dispatcher")
 local Document = require("document")

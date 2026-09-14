@@ -702,6 +702,21 @@ test("barrel release returns to pen despite a mutated framework slot", function(
     assertEq(doc:getPage().strokes[2].tool, "pen", "released barrel tool")
 end)
 
+test("resting hand cannot dismiss a pen selection or turn its page", function()
+    local canvas = newCanvas()
+    canvas.tool = "lasso"
+    canvas.draw_with_finger = false
+    canvas.selected_strokes = {}
+    canvas.selection_bbox = {x=100,y=100,w=50,h=50}
+    local turns = 0
+    canvas.on_page_swipe = function() turns = turns + 1 end
+    canvas:onTouchStart(nil,{pos={x=400,y=400}})
+    assertTrue(canvas.selected_strokes ~= nil, "palm dismissed selection")
+    canvas:onPageSwipe(nil,{direction="west"})
+    canvas:onTouchRelease(nil,{pos={x=50,y=400}})
+    assertEq(turns,0,"selection gesture changed page")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)
 

@@ -23,7 +23,7 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # Every suite in the bench. Named rather than globbed: spec/ also holds the
 # helpers the suites share and the two tools that render to a real file, and a
 # glob would run those as though they were tests.
-SUITES := run pages eraser palm safe i18n gallery shape lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish
+SUITES := run pages eraser palm safe i18n gallery shape lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader
 
 .PHONY: all test lint verify package check-package ci clean install-hooks deploy version
 
@@ -74,13 +74,14 @@ $(ZIP): $(shell find lua -type f -not -path 'lua/spec/*')
 check-package: package
 	@set -euo pipefail; \
 	unzip -tq $(ZIP); \
-	unzip -l $(ZIP) | grep -q '$(PLUGIN)/main.lua' \
+	unzip -Z1 $(ZIP) > $(BUILD)/contents.txt; \
+	grep -q '$(PLUGIN)/main.lua' $(BUILD)/contents.txt \
 	    || { echo "$(ZIP) has no main.lua in it" >&2; exit 1; }; \
-	unzip -l $(ZIP) | grep -q '$(PLUGIN)/_meta.lua' \
+	grep -q '$(PLUGIN)/_meta.lua' $(BUILD)/contents.txt \
 	    || { echo "$(ZIP) has no _meta.lua in it" >&2; exit 1; }; \
-	unzip -l $(ZIP) | grep -q '$(PLUGIN)/locale/' \
+	grep -q '$(PLUGIN)/locale/' $(BUILD)/contents.txt \
 	    || { echo "$(ZIP) has no translations in it" >&2; exit 1; }; \
-	! unzip -l $(ZIP) | grep -q '$(PLUGIN)/spec/' \
+	! grep -q '$(PLUGIN)/spec/' $(BUILD)/contents.txt \
 	    || { echo "$(ZIP) carries the test bench" >&2; exit 1; }; \
 	echo "$(ZIP) checks out"
 
