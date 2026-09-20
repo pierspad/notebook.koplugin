@@ -129,6 +129,7 @@ local TOOLS = {
     { tool = "highlighter", icon = "notebook.marker" },
     { tool = "eraser",      icon = "notebook.eraser" },
     { tool = "lasso",       icon = "notebook.lasso" },
+    { tool = "shape",       icon = "notebook.shape" },
 }
 
 --[[--
@@ -315,7 +316,7 @@ function Notebook:_buildToolbar()
     self.clock_text = TextWidget:new{text=os.date("%H:%M"), face=Font:getFace("cfont", 18)}
     local clock_w = self.clock_text:getSize().w + gap
     -- Back + four tools + undo/redo/refresh + previous/next + settings.
-    local n_cells = 11
+    local n_cells = 12
     local cell_overhead = 2 * (Size.border.thin + Size.padding.button)
     local avail = self.dimen.w - 2 * Size.padding.small
     local flexible = avail - n_gaps * gap - page_text_w - clock_w - n_cells * cell_overhead
@@ -334,7 +335,7 @@ function Notebook:_buildToolbar()
             icon_size = icon_size,
             selected = i == 1,
             callback = function() self:_selectTool(i) end,
-            hold_callback = spec.tool == "pen" and function() self:_showPenOptions() end or nil,
+            hold_callback = function() self:_showToolOptions(i) end,
         }
         self.tool_buttons[i] = btn
         table.insert(tool_group, btn)
@@ -445,24 +446,69 @@ function Notebook:_showPenOptions()
     self:_finishInteraction()
     local actions = {}
     for _, option in ipairs({
-        { "pen_style", "fineliner", _("Fineliner"), "notebook.fineliner", _("Pen type") },
+        { "pen_style", "fineliner", _("Fineliner"), "notebook.fineliner" },
         { "pen_style", "fountain", _("Fountain pen"), "notebook.fountain" },
         { "pen_style", "pencil", _("Pencil"), "notebook.pencil" },
-        { "line_style", "line", _("Hold to straighten: line"), "notebook.line", _("Hold effect") },
-        { "line_style", "arrow", _("Hold to straighten: arrow"), "notebook.arrow" },
+        { "line_style", "line", _("Straight line"), "notebook.line", _("Pause at the end of a stroke") },
+        { "line_style", "arrow", _("Arrow (straight or curved)"), "notebook.arrow" },
     }) do
         local key, value, label = option[1], option[2], option[3]
         table.insert(actions, {
             icon = option[4],
             section = option[5],
-            text = (self.canvas[key] == value and "✓ " or "") .. label,
+            text = label,
+            selected = self.canvas[key] == value,
             callback = function()
                 self:_setSetting(key, value)
                 self:_selectTool(1)
             end,
         })
     end
-    UIManager:show(ActionMenu:new{ title = _("Pen and shapes"), actions = actions })
+    self:_showToolMenu(1, _("Pen type"), actions, "pen_width")
+end
+
+function Notebook:_showToolMenu(index, title, actions, key)
+    self:_finishInteraction()
+    local menu
+    local footer = key and SettingsDialog.sizeChoices(key, self.canvas[key], function(value)
+        self:_setSetting(key, value)
+        UIManager:close(menu)
+        self:_selectTool(index)
+    end)
+    menu = ActionMenu:new{
+        title=title, actions=actions, footer=footer,
+        width=math.min(self.dimen.w - 2 * Size.border.window,
+            math.max(footer and footer:getSize().w or 0, Screen:scaleBySize(340))),
+        anchor=self.tool_buttons[index].dimen,
+    }
+    UIManager:show(menu)
+end
+
+function Notebook:_showToolOptions(index)
+    local tool = TOOLS[index].tool
+    if tool == "pen" then return self:_showPenOptions() end
+    if tool == "highlighter" then
+        return self:_showToolMenu(index, _("Marker size"), {}, "highlighter_width")
+    end
+    local actions = {}
+    if tool == "eraser" then
+        for _, option in ipairs({{"stroke", _("Whole strokes")}, {"area", _("Part of a stroke")}}) do
+            local value = option[1]
+            table.insert(actions, {icon="notebook.eraser",
+                text=option[2], selected=self.canvas.eraser_mode == value,
+                callback=function() self:_setSetting("eraser_mode", value); self:_selectTool(index) end})
+        end
+        return self:_showToolMenu(index, _("Eraser size"), actions, "eraser_size")
+    end
+    if tool == "shape" then
+        for _, option in ipairs({{"square", _("Square")}, {"rectangle", _("Rectangle")}, {"circle", _("Circle")}}) do
+            local kind = option[1]
+            table.insert(actions, {icon="notebook." .. kind,
+                text=option[2], selected=self.canvas.shape_kind == kind,
+                callback=function() self:_setSetting("shape_kind", kind); self:_selectTool(index) end})
+        end
+        return self:_showToolMenu(index, _("Shapes"), actions)
+    end
 end
 
 function Notebook:_showSettings()
@@ -486,6 +532,7 @@ function Notebook:_loadSettings()
     local style = get("pen_style", "fineliner")
     canvas.pen_style = (style == "fountain" or style == "pencil") and style or "fineliner"
     canvas.line_style = get("line_style", "line") == "arrow" and "arrow" or "line"
+    canvas.shape_kind        = get("shape_kind", "rectangle")
     canvas.pen_width         = get("pen_width", canvas.pen_width)
     canvas.highlighter_width = get("highlighter_width", canvas.highlighter_width)
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
@@ -619,7 +666,7 @@ end
 
 function Notebook:onShow()
     self.canvas:start()
-    self.clock_tick = self.clock_tick or function()
+    self.clock_tick = self.clock_tick or Safe.wrap("notebook:clock", function()
         -- Never interrupt ink with a clock refresh or redraw a hidden notebook.
         if UIManager:getTopmostVisibleWidget() == self and not self.canvas.pen_down
             and not self.canvas.stroke and not self.canvas.erasing and not self.canvas.dragging_selection then
@@ -628,7 +675,7 @@ function Notebook:onShow()
             if r then UIManager:setDirty(self, "ui", r) end
         end
         UIManager:scheduleIn(60 - os.time() % 60, self.clock_tick)
-    end
+    end)
     Safe.onShutdown("notebook:clock", function() UIManager:unschedule(self.clock_tick) end)
     UIManager:unschedule(self.clock_tick)
     UIManager:scheduleIn(60 - os.time() % 60, self.clock_tick)

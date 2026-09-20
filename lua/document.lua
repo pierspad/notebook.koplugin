@@ -237,6 +237,20 @@ time there is anything to record the strokes are already where they were put.
 What the history needs is not the move but the way back from it, which is the
 total offset.
 --]]
+function Document:replaceStroke(original, replacement)
+    local page = self:getPage()
+    for i, stroke in ipairs(page.strokes) do
+        if stroke == original then
+            self:beginBatch()
+            page.strokes[i] = replacement
+            self._batch.changed = true
+            self:commitBatch()
+            return true
+        end
+    end
+    return false
+end
+
 function Document:recordTranslation(strokes, dx, dy)
     if not strokes or #strokes == 0 then return end
     if dx == 0 and dy == 0 then return end
@@ -254,14 +268,16 @@ the path -- a dozen times for one flick of the wrist -- and each call walked
 every stroke on the page. Passing the path down instead means one walk, and a
 continuous swept shape rather than a row of circles with gaps between them.
 --]]
-function Document:eraseAlongPath(path, r)
+function Document:eraseAlongPath(path, r, shapes)
     local page = self:getPage()
     local removed = {}
     local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
 
     for i = #page.strokes, 1, -1 do
         local stroke = page.strokes[i]
-        if stroke:hitTestPath(path, r) then
+        if shapes and stroke.shape_kind then
+            if stroke:hitTestPath(path, r) then shapes[stroke] = true end
+        elseif stroke:hitTestPath(path, r) then
             local sx, sy, sw, sh = stroke:getBounds()
             if sx < bx0 then bx0 = sx end
             if sy < by0 then by0 = sy end
@@ -299,7 +315,7 @@ repaint behind it was the size of the page.
 @treturn boolean,number,number,number,number,number,number,number,number
   changed, then x, y, w, h of the ink removed, then x, y, w, h for undo
 --]]
-function Document:eraseAreaAlongPath(path, r)
+function Document:eraseAreaAlongPath(path, r, shapes)
     local page = self:getPage()
     local strokes = page.strokes
 
@@ -313,7 +329,12 @@ function Document:eraseAreaAlongPath(path, r)
 
     for i = 1, #strokes do
         local stroke = strokes[i]
-        local fragments, ex, ey, ew, eh = stroke:splitAlongPath(path, r)
+        local fragments, ex, ey, ew, eh
+        if shapes and stroke.shape_kind then
+            if stroke:hitTestPath(path, r) then shapes[stroke] = true end
+        else
+            fragments, ex, ey, ew, eh = stroke:splitAlongPath(path, r)
+        end
         if fragments then
             hits = hits or {}
             splits = splits or {}

@@ -1,20 +1,10 @@
 --[[--
 Geometric shape recognizer for handwriting strokes.
 
-Analyzes raw stroke point streams and classifies them into:
-- "line": straight line between endpoints
-- "circle": circle centered on stroke centroid
-- "ellipse": axis-aligned ellipse (a tilted one is measured against the box
-  around it, fails that test, and is left as it was drawn)
-- "triangle": closed 3-vertex polygon, with the corners that were drawn
-- "rectangle": closed 4-vertex quadrilateral whose corners are square (or square)
-- "quadrilateral": any other closed 4-vertex polygon, corners as drawn
-
-Straightening, not substituting: a shape comes back with the edges tidied and
-the vertices where the reader put them. Only the circle, the ellipse and the
-rectangle are regularised, because for those the reader's intent *is* the
-regular figure -- and even the rectangle only when the corners are already
-square.
+Recognizes lines/arrows and regular circles, squares and rectangles. Four-sided
+loops are aligned to the page axes. Unsupported triangles and ellipses stay
+freehand. Explicit shapes use the same vector stroke model and optional metadata
+so selection, resizing, erasing and persistence agree about their identity.
 
 @module notebook.shape
 --]]--
@@ -141,14 +131,14 @@ local function detectCircleOrEllipse(points, total_len)
     -- Must be closed or near-closed (gap <= 35% of path length)
     if close_dist > total_len * 0.35 then return nil end
 
-    -- Compute centroid
-    local cx, cy = 0, 0
+    -- The average sample position shifts towards the slow part of a gesture.
+    -- Extents do not depend on how long the writer paused on either side.
+    local xmin, ymin, xmax, ymax = math.huge, math.huge, -math.huge, -math.huge
     for _, pt in ipairs(points) do
-        cx = cx + pt.x
-        cy = cy + pt.y
+        xmin, ymin = math.min(xmin, pt.x), math.min(ymin, pt.y)
+        xmax, ymax = math.max(xmax, pt.x), math.max(ymax, pt.y)
     end
-    cx = cx / #points
-    cy = cy / #points
+    local cx, cy = (xmin+xmax)/2, (ymin+ymax)/2
 
     -- Compute radii from centroid
     local radii = {}
@@ -174,7 +164,8 @@ local function detectCircleOrEllipse(points, total_len)
     -- A single closed loop has length roughly equal to its circumference ~ 2*pi*r_mean.
     -- Multi-turn spirals have path length much greater than one circumference.
     local expected_circumference = 2 * math.pi * r_mean
-    if total_len > 1.45 * expected_circumference then return nil end
+    if total_len > 1.45 * expected_circumference
+        or total_len < 0.78 * expected_circumference then return nil end
 
     -- Bounding box
     local min_x, min_y, max_x, max_y = math.huge, math.huge, -math.huge, -math.huge
@@ -189,7 +180,7 @@ local function detectCircleOrEllipse(points, total_len)
     local aspect = (w > 0 and h > 0) and (math.min(w, h) / math.max(w, h)) or 1
 
     -- Circle check: tight radial variance and radius range
-    if std / r_mean <= 0.18 and (r_max - r_min) / r_mean <= 0.30 and aspect >= 0.75 then
+    if std / r_mean <= 0.18 and (r_max - r_min) / r_mean <= 0.32 and aspect >= 0.75 then
         local circle_pts = {}
         local num_segs = 36
         for i = 0, num_segs do
@@ -382,6 +373,33 @@ local function detectPolygon(points, total_len)
     return nil
 end
 
+--- Creates a regular, axis-aligned shape inside a dragged rectangle.
+function Shape.create(kind, x0, y0, x1, y1, width, color)
+    if kind ~= "rectangle" and kind ~= "square" and kind ~= "circle" then return nil end
+    local w, h = math.abs(x1-x0), math.abs(y1-y0)
+    if kind ~= "rectangle" then
+        local side = math.min(w, h)
+        x1 = x0 + (x1 < x0 and -side or side)
+        y1 = y0 + (y1 < y0 and -side or side)
+    end
+    local left, right = math.min(x0,x1), math.max(x0,x1)
+    local top, bottom = math.min(y0,y1), math.max(y0,y1)
+    local stroke = Stroke:new{tool="pen", width=width, color=color, shape_kind=kind}
+    if kind == "circle" then
+        local radius = (right-left)/2
+        local cx, cy = (left+right)/2, (top+bottom)/2
+        for n = 0, 64 do
+            local angle = n * math.pi / 32
+            stroke:addPoint(cx + radius*math.cos(angle), cy + radius*math.sin(angle), 1)
+        end
+    else
+        for _, point in ipairs({{left,top},{right,top},{right,bottom},{left,bottom},{left,top}}) do
+            stroke:addPoint(point[1],point[2],1)
+        end
+    end
+    return stroke
+end
+
 --- Recognizes a geometric shape from a raw stroke.
 -- Returns new_stroke, shape_type or nil if not a recognized shape.
 function Shape.recognize(raw_stroke, line_style)
@@ -412,24 +430,53 @@ function Shape.recognize(raw_stroke, line_style)
         shape_type, pts = detectPolygon(points, total_len)
     end
 
+    -- In arrow mode an open curved shaft keeps its route. RDP removes hand
+    -- tremor; two corner-cutting passes soften it while preserving endpoints.
+    if not shape_type and line_style == "arrow" then
+        local a, b = points[1], points[#points]
+        local chord = math.sqrt((b.x-a.x)^2 + (b.y-a.y)^2)
+        if chord >= total_len * 0.45 then
+            pts = simplifyRDP(points, math.max(2, total_len * 0.008))
+            for _ = 1, 2 do
+                local smooth = {pts[1]}
+                for i = 1, #pts-1 do
+                    local u, v = pts[i], pts[i+1]
+                    smooth[#smooth+1] = {x=.75*u.x+.25*v.x, y=.75*u.y+.25*v.y}
+                    smooth[#smooth+1] = {x=.25*u.x+.75*v.x, y=.25*u.y+.75*v.y}
+                end
+                smooth[#smooth+1] = pts[#pts]
+                pts = smooth
+            end
+            shape_type = "line"
+        end
+    end
+    if shape_type == "triangle" or shape_type == "ellipse" then return nil end
+    if shape_type == "quadrilateral" or shape_type == "rectangle" or shape_type == "square" then
+        local kind = shape_type == "square" and "square" or "rectangle"
+        local clean = Shape.create(kind, raw_stroke.x_min, raw_stroke.y_min,
+            raw_stroke.x_max, raw_stroke.y_max, raw_stroke.width, raw_stroke.color)
+        clean.tint = raw_stroke.tint
+        return clean, kind
+    end
     if shape_type == "line" and line_style == "arrow" then
-        local a, b = pts[1], pts[2]
+        local a, b = pts[math.max(1, #pts-3)], pts[#pts]
         local dx, dy = b.x - a.x, b.y - a.y
         local length = math.sqrt(dx * dx + dy * dy)
         if length > 0 then
-            local head = math.min(length * 0.3, math.max(14, raw_stroke.width * 4))
+            local head = math.min(total_len * 0.3, math.max(14, raw_stroke.width * 4))
             local ux, uy = dx / length, dy / length
             local function wing(side)
                 return { x = b.x - head * ux + side * head * 0.5 * uy,
                     y = b.y - head * uy - side * head * 0.5 * ux, p = 1 }
             end
-            pts = { a, b, wing(1), b, wing(-1) }
+            pts[#pts+1], pts[#pts+2], pts[#pts+3] = wing(1), b, wing(-1)
             shape_type = "arrow"
         end
     end
 
     if shape_type and pts then
         local clean_stroke = Stroke:new{
+            shape_kind = shape_type,
             tool = raw_stroke.tool,
             width = raw_stroke.width,
             color = raw_stroke.color,

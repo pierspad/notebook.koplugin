@@ -675,6 +675,21 @@ test("pressure brushes preserve their appearance in ordinary stroke data", funct
     assertEq(copy.pts[3], pencil.pts[3], "pencil pressure not persisted")
 end)
 
+test("virtual stylus without pressure uses the physical sensor", function()
+    Device.input.wacom_protocol = true
+    local canvas, doc = newCanvas()
+    canvas.pen_style = "fountain"
+    local pressure = 100
+    canvas.pressure_sensor = {read=function() return pressure end}
+    canvas:onStylusEvent{tool=1,id=1,x=100,y=100}
+    pressure = 3900
+    after(10)
+    canvas:onStylusEvent{tool=1,id=1,x=150,y=100}
+    canvas:onStylusEvent{tool=1,id=-1}
+    local stroke = doc:getPage().strokes[1]
+    assertTrue(stroke.pts[3]<.1 and stroke.pts[6]>.9,"physical pressure was ignored")
+end)
+
 test("a stylus release still ends the stroke when proximity clears its tool", function()
     local input = Device.input
     input.pen_slot = 15
@@ -719,4 +734,3 @@ end)
 
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)
-

@@ -76,6 +76,16 @@ end
 function FakeBB:getWidth() return self.w end
 function FakeBB:getHeight() return self.h end
 
+function FakeBB:blitFrom(source, dx, dy, sx, sy, w, h)
+    for y=0,h-1 do for x=0,w-1 do self:set(dx+x,dy+y,source:get(sx+x,sy+y)) end end
+end
+function FakeBB:copy()
+    local copy = FakeBB.new(self.w,self.h)
+    copy:blitFrom(self,0,0,0,0,self.w,self.h)
+    return copy
+end
+function FakeBB:free() self.freed = true end
+
 function FakeBB:set(x, y, v)
     x, y = math.floor(x), math.floor(y)
     if x < 0 or y < 0 or x >= self.w or y >= self.h then return end

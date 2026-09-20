@@ -383,5 +383,14 @@ test("clamping something wholly outside gives nothing", function()
         "a rectangle outside the bounds came back")
 end)
 
+test("partial eraser invalidates adjoining segments and dropped singletons", function()
+    local s = Stroke:new{width=4}
+    for _,x in ipairs({10,80,90,180}) do s:addPoint(x,50) end
+    local kept,x,y,w,h = s:splitAlongPath({85,40,85,60},8)
+    assertEq(#kept,0,"isolated endpoints are discarded")
+    assertTrue(x<=8 and x+w>=182,"dirty rectangle misses surviving segment ends")
+    assertTrue(y<=48 and y+h>=52,"dirty rectangle misses stroke width")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

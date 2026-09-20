@@ -306,6 +306,8 @@ function Gallery:init()
         GallerySwipe = { GestureRange:new{ ges = "swipe", range = self.dimen } },
         GalleryPan = { GestureRange:new{ ges = "pan", range = self.dimen } },
         GalleryPanRelease = { GestureRange:new{ ges = "pan_release", range = self.dimen } },
+        GalleryHoldPan = { GestureRange:new{ ges = "hold_pan", range = self.dimen } },
+        GalleryHoldRelease = { GestureRange:new{ ges = "hold_release", range = self.dimen } },
     }
 end
 
@@ -317,6 +319,7 @@ bar shrinks us to the area above it and moves our top edge down. Measuring the
 screen instead would put the last row of cards underneath the bar.
 --]]
 function Gallery:_layout()
+    self:_listenForSelectionPen()
     -- Release the widgets of the previous layout before dropping them.
     --
     -- Every card holds a picture, and an ImageWidget scaled to the card owns a
@@ -973,6 +976,60 @@ local function crossesCard(a, b, r)
     return true
 end
 
+-- The raw pen stream avoids gesture thresholds and hold-to-pan conversion.
+function Gallery:_listenForSelectionPen()
+    local input = Device.input
+    if not input or not input.registerStylusCallback then return end
+    if not self.selection then
+        if self.selection_pen_cb and input.stylus_callback == self.selection_pen_cb then
+            input:unregisterStylusCallback()
+        end
+        return
+    end
+    self.selection_pen_cb = self.selection_pen_cb or Safe.wrap("gallery:stylus", function(_, slot)
+        if UIManager:getTopmostVisibleWidget() ~= self or not self.selection then return false end
+        if slot.id == -1 then
+            local active = self.selection_drag ~= nil
+            self:onGalleryPanRelease()
+            return active
+        end
+        if not slot.x or not slot.y then return false end
+        local pos = {x=slot.x, y=slot.y}
+        if not self.selection_drag then
+            local over_card = false
+            for _, card in ipairs(self.cards or {}) do
+                if crossesCard(pos, pos, card.dimen) then over_card = true; break end
+            end
+            if not over_card then return false end
+            self.selection_drag = pos
+            self.selection_pen_start = pos
+            self.selection_pen_moved = false
+            return true
+        end
+        local start = self.selection_pen_start
+        if start and not self.selection_pen_moved then
+            local dx, dy = pos.x-start.x, pos.y-start.y
+            if dx*dx+dy*dy < Screen:scaleBySize(6)^2 then return true end
+            self.selection_pen_moved = true
+        end
+        return self:onGalleryPan(nil, {pos=pos})
+    end)
+    input:registerStylusCallback(self.selection_pen_cb)
+    Safe.onShutdown(self, function()
+        if input.stylus_callback == self.selection_pen_cb then input:unregisterStylusCallback() end
+        self.closed = true
+        self:_cancelThumbnails()
+    end)
+end
+
+function Gallery:onGalleryHoldPan(_, ges)
+    return self:onGalleryPan(nil, ges)
+end
+
+function Gallery:onGalleryHoldRelease()
+    return self:onGalleryPanRelease()
+end
+
 function Gallery:onGalleryPan(_, ges)
     if not self.selection or not ges or not ges.pos then return false end
     local previous = self.selection_drag or ges.start_pos or ges.pos
@@ -990,7 +1047,13 @@ end
 
 function Gallery:onGalleryPanRelease()
     if not self.selection_drag then return false end
-    self.selection_drag = nil
+    local start, moved = self.selection_pen_start, self.selection_pen_moved
+    self.selection_drag, self.selection_pen_start, self.selection_pen_moved = nil, nil, nil
+    if start and not moved then
+        for _, card in ipairs(self.cards or {}) do
+            if crossesCard(start, start, card.dimen) then self:_tapped(card.item); return true end
+        end
+    end
     self:_layout()
     self:_repaint()
     return true
@@ -1571,6 +1634,9 @@ Also stops any thumbnail run still in flight: it would go on loading notebooks
 and rasterising pages for a screen nobody is looking at.
 --]]
 function Gallery:onCloseWidget()
+    Safe.clearShutdown(self)
+    if Device.input and Device.input.stylus_callback == self.selection_pen_cb
+        and self.selection_pen_cb then Device.input:unregisterStylusCallback() end
     self.closed = true
     self:_cancelThumbnails()
     self:_freeWidgets()

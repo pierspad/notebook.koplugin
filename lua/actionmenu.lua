@@ -46,7 +46,7 @@ function Row:init()
     local pad = Size.padding.large
 
     self.frame = FrameContainer:new{
-        background = Blitbuffer.COLOR_WHITE,
+        background = self.selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE,
         bordersize = 0,
         margin = 0,
         padding = 0,
@@ -55,7 +55,7 @@ function Row:init()
             HorizontalSpan:new{ width = pad },
             CenterContainer:new{
                 dimen = Geom:new{ w = ICON_SZ, h = ROW_H },
-                IconWidget:new{ icon = self.icon, width = ICON_SZ, height = ICON_SZ },
+                IconWidget:new{ icon = self.icon, width = ICON_SZ, height = ICON_SZ, invert = self.selected },
             },
             HorizontalSpan:new{ width = pad },
             LeftContainer:new{
@@ -64,10 +64,13 @@ function Row:init()
                 dimen = Geom:new{ w = self.width - ICON_SZ - 3 * pad, h = ROW_H },
                 TextWidget:new{
                     text = self.text,
+                    bold = self.selected,
+                    fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
                     face = Font:getFace("cfont", 19),
                     max_width = self.width - ICON_SZ - 3 * pad,
                 },
             },
+            HorizontalSpan:new{ width = pad },
         },
     }
     self[1] = self.frame
@@ -93,7 +96,7 @@ local ActionMenu = InputContainer:extend{
 function ActionMenu:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
 
-    local width = math.floor(Screen:getWidth() * 0.62)
+    local width = self.width or math.floor(Screen:getWidth() * 0.62)
     local content = VerticalGroup:new{ align = "left" }
 
     if self.title then
@@ -127,6 +130,7 @@ function ActionMenu:init()
         table.insert(content, Row:new{
             icon = action.icon,
             text = action.text,
+            selected = action.selected,
             width = width,
             callback = function()
                 UIManager:close(self)
@@ -134,6 +138,8 @@ function ActionMenu:init()
             end,
         })
     end
+
+    if self.footer then table.insert(content, self.footer) end
 
     self.panel = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
@@ -152,6 +158,14 @@ function ActionMenu:init()
     self.ges_events = {
         TapClose = { GestureRange:new{ ges = "tap", range = self.dimen } },
     }
+end
+
+function ActionMenu:paintTo(bb, x, y)
+    if not self.anchor then return InputContainer.paintTo(self, bb, x, y) end
+    local sz = self.panel:getSize()
+    local px = math.max(0, math.min(self.anchor.x, Screen:getWidth()-sz.w))
+    local py = math.max(0, math.min(self.anchor.y+self.anchor.h, Screen:getHeight()-sz.h))
+    self.panel:paintTo(bb, px, py)
 end
 
 function ActionMenu:onTapClose(_, ges)

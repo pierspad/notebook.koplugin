@@ -51,6 +51,11 @@ local _ = require("i18n")
 local T = require("ffi/util").template
 
 local Safe = {}
+local function pack(...) return {n=select("#", ...), ...} end
+local function protected(fn, ...)
+    local args = pack(...)
+    return pack(xpcall(function() return fn(unpack(args, 1, args.n)) end, debug.traceback))
+end
 
 --[[--
 Delay used for follow-up work, in seconds.
@@ -138,6 +143,7 @@ local function closeScreens()
     for i = #stack, 1, -1 do
         local widget = stack[i] and stack[i].widget
         if widget and widget.notebook_screen then
+            widget.closed = true
             pcall(function() UIManager:close(widget) end)
         end
     end
@@ -189,9 +195,9 @@ there is nothing left to handle.
 --]]
 function Safe.call(where, fn, ...)
     if Safe.failed then return nil end
-    local results = { pcall(fn, ...) }
+    local results = protected(fn, ...)
     if results[1] then
-        return unpack(results, 2, #results)
+        return unpack(results, 2, results.n)
     end
     Safe.report(where, results[2])
     return nil
@@ -261,13 +267,13 @@ function Safe.watched(where, fn, ...)
     local was_on = jit and select(1, jit.status())
     if jit then pcall(jit.off) end
 
-    local results = { pcall(fn, ...) }
+    local results = protected(fn, ...)
 
     if was_on then pcall(jit.on) end
     debug.sethook()
 
     if results[1] then
-        return unpack(results, 2, #results)
+        return unpack(results, 2, results.n)
     end
     Safe.report(where, results[2])
     return nil
@@ -345,7 +351,9 @@ function Safe.widget(class, name, watch)
     local init = class.init
     if init then
         class.init = function(self)
-            return Safe.call(name .. ":init", init, self)
+            local result = Safe.call(name .. ":init", init, self)
+            if Safe.failed then self.closed = true end
+            return result
         end
     end
 

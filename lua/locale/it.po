@@ -76,8 +76,6 @@ msgstr "Disegna"
 msgid "Duplicate"
 msgstr "Duplica"
 
-msgid "Eraser removes"
-msgstr "La gomma cancella"
 
 msgid "Eraser size"
 msgstr "Dimensione gomma"
@@ -202,8 +200,6 @@ msgstr "Parte di un tratto"
 msgid "Paste"
 msgstr "Incolla"
 
-msgid "Pen size"
-msgstr "Dimensione penna"
 
 msgid "Preparing %1 items…"
 msgstr "Preparazione di %1 elementi…"
@@ -280,14 +276,12 @@ msgstr "Stilografica"
 msgid "Pencil"
 msgstr "Matita"
 
-msgid "Hold to straighten: line"
-msgstr "Tenendo premuto: linea"
+msgid "Straight line"
+msgstr "Linea retta"
 
-msgid "Hold to straighten: arrow"
-msgstr "Tenendo premuto: freccia"
+msgid "Arrow (straight or curved)"
+msgstr "Freccia retta o curva"
 
-msgid "Pen and shapes"
-msgstr "Penna e forme"
 
 msgid "Could not save the notebook. It has been left open."
 msgstr "Impossibile salvare il quaderno. È stato lasciato aperto."
@@ -301,5 +295,20 @@ msgstr "Personale"
 msgid "Pen type"
 msgstr "Tipo di penna"
 
-msgid "Hold effect"
-msgstr "Effetto della pressione prolungata"
+msgid "Pause at the end of a stroke"
+msgstr "Fermandoti alla fine del tratto"
+
+msgid "Square"
+msgstr "Quadrato"
+
+msgid "Rectangle"
+msgstr "Rettangolo"
+
+msgid "Circle"
+msgstr "Cerchio"
+
+msgid "Shapes"
+msgstr "Forme"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "Notebook ha riscontrato un errore. Riavvia KOReader per riaprirlo; i dettagli sono in notebook-error.log."

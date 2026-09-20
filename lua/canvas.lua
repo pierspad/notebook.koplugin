@@ -60,6 +60,7 @@ local Canvas = InputContainer:extend{
     pen_width = 3,
     pen_style = "fineliner",
     line_style = "line",
+    shape_kind = "rectangle",
     highlighter_width = 24,
     eraser_size = Tuning.spec.eraser_radius.default,
     -- "stroke" removes whole strokes; "area" rubs out only what is under the tip.
@@ -110,7 +111,7 @@ function Canvas:init()
 
     -- Background auto-save on writing pause
     self.autosave_cb = function()
-        if self.stroke or self.erasing or self.dragging_selection then
+        if self.stroke or self.erasing or self.dragging_selection or self.shape_gesture then
             UIManager:scheduleIn(2.5, self.autosave_cb)
             return
         end
@@ -144,9 +145,15 @@ function Canvas:init()
         self.erase_flush_scheduled = false
         self:_flushEraseRepaint()
     end
+    self.shape_preview_cb = function() self:_paintShape() end
     self.drag_step_cb = function()
         self.drag_step_scheduled = false
         if self.dragging_selection then self:_maybeDragStep() end
+    end
+
+    for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
+        "shape_snap_cb", "erase_flush_cb", "drag_step_cb", "shape_preview_cb"}) do
+        self[name] = Safe.wrap("canvas:" .. name, self[name])
     end
 
     if Device:isTouchDevice() then
@@ -364,6 +371,86 @@ end
 
 -- Drawing ----------------------------------------------------------------------
 
+function Canvas:_beginShape(x, y, original)
+    UIManager:unschedule(self.shape_snap_cb)
+    UIManager:unschedule(self.reconcile_cb)
+    self.shape_gesture = {x=x, y=y, original=original,
+        kind=original and original.shape_kind or self.shape_kind or "rectangle"}
+    self:_deselectLasso()
+    if original then self:_repaintRegion(original:getBounds()) end
+    -- One immutable raster snapshot per gesture replaces rerendering all the
+    -- underlying vector ink on every preview frame (about 5 MB on a Scribe).
+    self.shape_gesture.background = Screen.bb:copy()
+    self.refresh_mode = "fast"
+end
+
+function Canvas:_extendShape(x, y)
+    local gesture = self.shape_gesture
+    gesture.next_x, gesture.next_y = x, y
+    if not gesture.last_paint or time.to_ms(time.now()-gesture.last_paint) >= Tuning.drag_repaint_ms then
+        self:_paintShape()
+    elseif not gesture.scheduled then
+        gesture.scheduled = true
+        UIManager:scheduleIn(Tuning.drag_repaint_ms / 1000, self.shape_preview_cb)
+    end
+end
+
+function Canvas:_paintShape()
+    local gesture = self.shape_gesture
+    if not gesture or not gesture.next_x then return end
+    gesture.last_paint = time.now()
+    UIManager:unschedule(self.shape_preview_cb)
+    gesture.scheduled = nil
+    local x, y = gesture.next_x, gesture.next_y
+    gesture.next_x, gesture.next_y = nil, nil
+    local original = gesture.original
+    local x0, y0 = gesture.x, gesture.y
+    if original then x0, y0 = original.x_min, original.y_min end
+    local clean = Shape.create(gesture.kind, x0, y0, x, y,
+        original and original.width or self.pen_width, original and original.color or 0)
+    local old = self.stroke
+    self.stroke = nil
+    if old then
+        local bx, by, bw, bh = old:getBounds()
+        -- getBounds can reach beyond the drawing area at the initial point.
+        bx, by, bw, bh = Rect.clamp(bx, by, bw, bh, self.content)
+        if bx then
+            Screen.bb:blitFrom(gesture.background, bx, by, bx, by, bw, bh)
+            self:_accumulate(bx, by, bw, bh)
+        end
+    end
+    self.stroke = clean
+    if clean then
+        Renderer.drawStroke(Screen.bb, clean, self.content)
+        self:_accumulate(clean:getBounds())
+    end
+    self:_flush()
+end
+
+function Canvas:_endShape()
+    UIManager:unschedule(self.shape_preview_cb)
+    self:_paintShape()
+    local gesture, stroke = self.shape_gesture, self.stroke
+    if gesture.background then gesture.background:free(); gesture.background = nil end
+    self.shape_gesture, self.stroke = nil, nil
+    self:_flush()
+    if stroke and stroke.x_max-stroke.x_min >= 4 and stroke.y_max-stroke.y_min >= 4 then
+        if gesture.original then self.document:replaceStroke(gesture.original, stroke)
+        else self.document:addStroke(stroke) end
+        if gesture.original then self:_repaintRegion(gesture.original:getBounds()) end
+        self:_repaintRegion(stroke:getBounds())
+        if not self.stopping then
+            self:_showLassoMenu({stroke})
+            UIManager:unschedule(self.autosave_cb)
+            UIManager:scheduleIn(2.5, self.autosave_cb)
+        end
+        if self.on_change then self:on_change() end
+    else
+        if stroke then self:_repaintRegion(stroke:getBounds()) end
+        if gesture.original then self:_repaintRegion(gesture.original:getBounds()) end
+    end
+end
+
 function Canvas:_beginStroke(tool, x, y, p)
     -- The pen is back on the page, so the pending tidy-up must stand down: it
     -- would otherwise fire in the middle of the new stroke. The region it had
@@ -383,6 +470,11 @@ function Canvas:_beginStroke(tool, x, y, p)
     --]]
     if tool ~= "lasso" and self.selected_strokes then
         self:_deselectLasso()
+    end
+
+    if tool == "shape" then
+        self:_beginShape(x, y)
+        return
     end
 
     -- If lasso selection is active, check if touching inside selection to drag/move
@@ -538,6 +630,7 @@ function Canvas:_maybeDragStep()
 end
 
 function Canvas:_extendStroke(x, y, p)
+    if self.shape_gesture then return self:_extendShape(x, y) end
     -- Handle dragging selected strokes
     if self.dragging_selection and self.selected_strokes then
         local dx = x - (self.drag_last_x or x)
@@ -599,6 +692,7 @@ function Canvas:_extendStroke(x, y, p)
 end
 
 function Canvas:_endStroke()
+    if self.shape_gesture then return self:_endShape() end
     if self.dragging_selection then
         UIManager:unschedule(self.drag_step_cb)
         self.drag_step_scheduled = false
@@ -641,7 +735,7 @@ function Canvas:_endStroke()
                 local pasted = {}
                 self.document:beginBatch()
                 for _, s in ipairs(Canvas.clipboard) do
-                    local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint }
+                    local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint, shape_kind = s.shape_kind }
                     for i = 1, s:count() do
                         local px, py, p = s:getPoint(i)
                         copy:addPoint(px + dx, py + dy, p)
@@ -711,6 +805,12 @@ function Canvas:_showLassoMenu(selected)
         self:_refreshNow(bbox.x - 8, bbox.y - 8, bbox.w + 16, bbox.h + 16)
     end
 
+    if #selected == 1 and selected[1].shape_kind then
+        local shape = selected[1]
+        Renderer.drawDashedRect(Screen.bb, shape.x_max-9, shape.y_max-9, 18, 18)
+        self:_refreshNow(shape.x_max-12, shape.y_max-12, 24, 24)
+    end
+
     self.lasso_menu = LassoMenu:new{
         bbox = bbox or { x = self.content.x + 100, y = self.content.y + 100, w = 200, h = 100 },
         has_clipboard = Canvas.clipboard ~= nil and #Canvas.clipboard > 0,
@@ -743,7 +843,7 @@ function Canvas:_showLassoMenu(selected)
             local pasted = {}
             self.document:beginBatch()
             for _, s in ipairs(Canvas.clipboard) do
-                local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint }
+                local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint, shape_kind = s.shape_kind }
                 for i = 1, s:count() do
                     local x, y, p = s:getPoint(i)
                     copy:addPoint(x + 40, y + 40, p)
@@ -774,6 +874,7 @@ function Canvas:_showLassoMenu(selected)
 end
 
 function Canvas:_deselectLasso()
+    self.erased_shape_selection = nil
     if not self.selected_strokes and not self.selection_bbox and not self.lasso_menu then return end
     if self.lasso_menu then
         UIManager:close(self.lasso_menu)
@@ -858,12 +959,24 @@ function Canvas:_endErase()
     UIManager:unschedule(self.erase_flush_cb)
     self.erase_flush_scheduled = false
     self:_flushEraseRepaint()
+    local shapes = self.erase_shapes
+    self.erase_shapes = nil
     local b = self.erase_bounds
     self.erase_bounds = nil
     if b then
         self.document:commitBatch(b.x, b.y, b.w, b.h)
     else
         self.document:commitBatch()
+    end
+    if shapes and not Safe.failed and not self.stopping then
+        local selected = {}
+        for _, stroke in ipairs(self.document:getPage().strokes) do
+            if shapes[stroke] then table.insert(selected, stroke) end
+        end
+        if #selected > 0 then
+            self.erased_shape_selection = true
+            self:_showLassoMenu(selected)
+        end
     end
 end
 
@@ -899,13 +1012,14 @@ function Canvas:_eraseAlong(x, y)
         px, py = x, y
     end
 
+    self.erase_shapes = self.erase_shapes or {}
     local path = { px, py, x, y }
     local hit, rx, ry, rw, rh, ux, uy, uw, uh
     if self.eraser_mode == "area" then
         hit, rx, ry, rw, rh, ux, uy, uw, uh =
-            self.document:eraseAreaAlongPath(path, self.eraser_size)
+            self.document:eraseAreaAlongPath(path, self.eraser_size, self.erase_shapes)
     else
-        hit, rx, ry, rw, rh = self.document:eraseAlongPath(path, self.eraser_size)
+        hit, rx, ry, rw, rh = self.document:eraseAlongPath(path, self.eraser_size, self.erase_shapes)
     end
 
     if hit then
@@ -977,7 +1091,8 @@ function Canvas:_repaintRegion(x, y, w, h, defer_refresh)
     -- a line that merely crosses this region is not rasterised end to end.
     for _, stroke in ipairs(self.document:getPage().strokes) do
         local sx, sy, sw, sh = stroke:getBounds()
-        if sx < x + w and sx + sw > x and sy < y + h and sy + sh > y then
+        if not (self.shape_gesture and stroke == self.shape_gesture.original)
+            and sx < x + w and sx + sw > x and sy < y + h and sy + sh > y then
             Renderer.drawStroke(Screen.bb, stroke, clip)
         end
     end
@@ -1004,7 +1119,7 @@ function Canvas:onStylusEvent(slot)
     -- cannot be pressed with the pen and tapping outside does not dismiss them.
     local top_widget = UIManager:getTopmostVisibleWidget()
     if self.owner and top_widget ~= self.owner and top_widget ~= self.lasso_menu then
-        if self.stroke then self:_endStroke() end
+        if self.stroke or self.shape_gesture then self:_endStroke() end
         return false
     end
 
@@ -1057,6 +1172,8 @@ function Canvas:onStylusEvent(slot)
         -- ends a tap on the toolbar has to reach the gesture engine, or the
         -- button never completes its tap.
         local was_drawing = self.stroke ~= nil or self.erasing or self.dragging_selection
+            or self.shape_gesture ~= nil or self.dismiss_contact
+        self.dismiss_contact = nil
         self.pen_down = false
         self.pen_left_at = time.now()
         -- Forget where the eraser was, so the next sweep does not rub out the
@@ -1069,6 +1186,7 @@ function Canvas:onStylusEvent(slot)
         return was_drawing
     end
 
+    local new_contact = not self.pen_down
     self.pen_down = true
     self.pen_left_at = nil
 
@@ -1083,7 +1201,7 @@ function Canvas:onStylusEvent(slot)
     -- Ending the stroke as well means dragging off the canvas lifts the pen,
     -- rather than leaving a segment that jumps the gap when you come back.
     if not self:_withinContent(x, y, self:widthFor(tool)) then
-        if self.stroke or self.dragging_selection then self:_endStroke() end
+        if self.stroke or self.dragging_selection or self.shape_gesture then self:_endStroke() end
         return false
     end
 
@@ -1091,13 +1209,35 @@ function Canvas:onStylusEvent(slot)
     -- Pressure is baked into ordinary stroke points, so exports and old readers
     -- need no new codec or brush metadata. Missing pressure keeps a solid line.
     local p = 1
-    if tool == "pen" and self.pen_style ~= "fineliner" and slot.pressure
-        and Input.wacom_protocol then
-        p = math.max(0, math.min(1, slot.pressure / 4095))
+    if tool == "pen" and self.pen_style ~= "fineliner" and Input.wacom_protocol then
+        local pressure = slot.pressure
+        if pressure == nil and self.pressure_sensor then
+            pressure = self.pressure_sensor:read()
+        end
+        if pressure then p = math.max(0, math.min(1, pressure / 4095)) end
     end
 
+    if self.dismiss_contact then return true end
+    if new_contact and self.selected_strokes then
+        local selected = self.selected_strokes
+        local shape = #selected == 1 and selected[1]
+        if shape and (shape.shape_kind == "rectangle" or shape.shape_kind == "square"
+            or shape.shape_kind == "circle") and math.abs(x-shape.x_max) <= Screen:scaleBySize(24)
+            and math.abs(y-shape.y_max) <= Screen:scaleBySize(24) then
+            self:_beginShape(x, y, shape)
+            return true
+        end
+        if self.erased_shape_selection then
+            self.erased_shape_selection = nil
+            self:_deselectLasso()
+            self.dismiss_contact = true
+            return true
+        end
+    end
+    if self.shape_gesture then self:_extendShape(x, y); return true end
+
     if tool == "eraser" then
-        if self.stroke or self.dragging_selection then self:_endStroke() end
+        if self.stroke or self.dragging_selection or self.shape_gesture then self:_endStroke() end
         self.erasing = true
         self:_eraseAlong(x, y)
         return true
@@ -1242,13 +1382,13 @@ function Canvas:onTouchPan(_, ges)
     end
 
     if not self:_withinContent(x, y, self:widthFor(self.tool)) then
-        if self.stroke then self:_endStroke() end
+        if self.stroke or self.shape_gesture then self:_endStroke() end
         return true
     end
 
     if self.tool == "eraser" then
         self:_eraseAlong(x, y)
-    elseif self.stroke then
+    elseif self.stroke or self.shape_gesture then
         self:_extendStroke(x, y, 1)
     else
         self:_beginStroke(self.tool, x, y, 1)
@@ -1274,7 +1414,7 @@ function Canvas:onTouchRelease(_, ges)
     if self.draw_with_finger then
         self.last_erase_x, self.last_erase_y = nil, nil
         self:_endErase()
-        if self.stroke then self:_endStroke() end
+        if self.stroke or self.shape_gesture then self:_endStroke() end
         return true
     end
 
@@ -1363,6 +1503,7 @@ that puts the notebook on the panel. Lifecycle that the parent drives should be
 called by the parent, not arrived at through event propagation.
 --]]
 function Canvas:start()
+    self.stopping = false
     -- The patches below are KOReader's, not ours, and they outlive any screen
     -- of ours that is holding them. A fault closes this plugin without ever
     -- reaching onCloseWidget, so the undoing is registered here as well rather
@@ -1370,6 +1511,7 @@ function Canvas:start()
     Safe.onShutdown("canvas:input", function() self:stop() end)
 
     if Input and Input.pen_slot and Input.wacom_protocol then
+        self.pressure_sensor = require("pressure").open()
         self.orig_pen_slot = Input.pen_slot
         -- Move pen_slot out of the capacitive multi-touch panel's slot range (0..9)
         Input.pen_slot = 15
@@ -1431,9 +1573,11 @@ function Canvas:start()
 end
 
 function Canvas:stop()
+    self.stopping = true
     -- Whichever path got here first is the one that does it; the other must not
     -- run again and put the patches back on top of the restored handlers.
     Safe.clearShutdown("canvas:input")
+    if self.pressure_sensor then self.pressure_sensor:close(); self.pressure_sensor = nil end
 
     Input:unregisterStylusCallback()
     if self.orig_handleTouchEv and Input then
@@ -1448,6 +1592,10 @@ function Canvas:stop()
         Input.pen_slot = self.orig_pen_slot
         Input.cur_slot = Input.main_finger_slot or 0
         self.orig_pen_slot = nil
+    end
+    for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
+        "shape_snap_cb", "erase_flush_cb", "drag_step_cb", "shape_preview_cb"}) do
+        if self[name] then UIManager:unschedule(self[name]) end
     end
     self:_endStroke()
     self:_endErase()

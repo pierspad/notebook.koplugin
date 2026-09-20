@@ -24,6 +24,7 @@ local LauncherBar = require("launcherbar")
 local Library = require("library")
 local Notebook = require("notebook")
 local Share = require("share")
+local Safe = require("safe")
 local UIManager = require("ui/uimanager")
 local lfs = require("libs/libkoreader-lfs")
 local logger = require("logger")
@@ -85,16 +86,19 @@ local function installIcons()
     end
 
     for name in lfs.dir(src) do
-        if name:match("%.svg$") and lfs.attributes(dst .. "/" .. name, "mode") ~= "file" then
+        if name:match("%.svg$") then
             local from = io.open(src .. "/" .. name, "rb")
             if from then
                 local data = from:read("*a")
                 from:close()
-                local to = io.open(dst .. "/" .. name, "wb")
+                local existing = io.open(dst .. "/" .. name, "rb")
+                local unchanged = existing and existing:read("*a") == data
+                if existing then existing:close() end
+                local to = not unchanged and io.open(dst .. "/" .. name, "wb")
                 if to then
                     to:write(data)
                     to:close()
-                else
+                elseif not unchanged then
                     logger.warn("Notebook: cannot write icon", name)
                 end
             end
@@ -147,6 +151,12 @@ end
 
 --- Opens the gallery: the list of notebooks, rather than one fixed notebook.
 function Scribe:openNotebook()
+    if Safe.failed then
+        UIManager:show(InfoMessage:new{
+            text = _("Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."),
+        })
+        return
+    end
     if not Library.ensureDir("") then
         UIManager:show(InfoMessage:new{
             text = _("Could not create the notebook folder."),
@@ -203,6 +213,7 @@ function Scribe:openNotebook()
         end,
         on_share = on_share,
     }
+    if Safe.failed or gallery.closed then return end
     live_gallery = gallery
     --[[
     Shown with an ordinary refresh, not the flashing one a fullscreen widget
@@ -245,7 +256,7 @@ function Scribe:_openByName(name, folder, gallery, template)
     -- notebook is painted into the buffer and the screen keeps showing the
     -- gallery. Saying it here, at the one place a notebook is opened, does not
     -- depend on which widget ends up handling the Show event.
-    UIManager:show(Notebook:new{
+    local notebook = Notebook:new{
         document = doc,
         title = name,
         -- Coming back should show the new modification time and, for a notebook
@@ -257,7 +268,8 @@ function Scribe:_openByName(name, folder, gallery, template)
         -- start out carrying the ghosts of the grid that was there a moment
         -- ago, and this is the one moment where half a second buys a clean
         -- page for the whole time you spend on it.
-    }, "full")
+    }
+    if not Safe.failed and not notebook.closed then UIManager:show(notebook, "full") end
 end
 
 return Scribe

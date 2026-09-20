@@ -48,6 +48,7 @@ function Stroke:new(opts)
         color = opts.color or 0,
         -- Highlighter tint; nil means the renderer's default.
         tint = opts.tint,
+        shape_kind = opts.shape_kind,
         pts = {},
         n = 0,
         -- Bounding box, kept up to date as points come in so that neither
@@ -201,6 +202,7 @@ function Stroke:clone()
         width = self.width,
         color = self.color,
         tint = self.tint,
+        shape_kind = self.shape_kind,
     }
     local pts, spts = copy.pts, self.pts
     for i = 1, self.n * STRIDE do pts[i] = spts[i] end
@@ -459,6 +461,7 @@ function Stroke:splitAlongPath(path, r)
             width = self.width,
             color = self.color,
             tint = self.tint,
+        shape_kind = self.shape_kind,
         }
         table.insert(fragments, current)
         return current
@@ -471,10 +474,13 @@ function Stroke:splitAlongPath(path, r)
             local x, y = pts[o + 1], pts[o + 2]
             if distToPathSq(x, y, path) <= r2 then
                 current = nil
-                if x < rx0 then rx0 = x end
-                if y < ry0 then ry0 = y end
-                if x > rx1 then rx1 = x end
-                if y > ry1 then ry1 = y end
+                -- Removing a point also removes both adjoining segments, not
+                -- just the stamp at its centre. Include their surviving ends.
+                for j = math.max(1, i-1), math.min(self.n, i+1) do
+                    local q = (j-1)*STRIDE
+                    rx0, ry0 = math.min(rx0, pts[q+1]), math.min(ry0, pts[q+2])
+                    rx1, ry1 = math.max(rx1, pts[q+1]), math.max(ry1, pts[q+2])
+                end
             else
                 fragment():addPoint(x, y, pts[o + 3])
             end
@@ -533,6 +539,7 @@ function Stroke:serialize()
         width = self.width,
         color = self.color,
         tint = self.tint,
+        shape_kind = self.shape_kind,
         n = self.n,
         pts = self.pts,
     }
@@ -541,7 +548,7 @@ end
 --- Rebuilds a stroke from serialized data.
 function Stroke:deserialize(data)
     local o = Stroke:new{ tool = data.tool, width = data.width, color = data.color,
-        tint = data.tint }
+        tint = data.tint, shape_kind = data.shape_kind }
     o.pts = data.pts
     o.n = data.n
     -- Recompute bounds rather than trusting the file.

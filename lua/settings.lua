@@ -166,30 +166,12 @@ function SettingsDialog:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
 
     local content = VerticalGroup:new{ align = "left" }
-    local gap = VerticalSpan:new{ width = Size.padding.large }
 
     local function heading(text)
         return TextWidget:new{
             text = text,
             face = Font:getFace("cfont", 18),
         }
-    end
-
-    local function sizeRow(key, shape)
-        local row = HorizontalGroup:new{ align = "center" }
-        local current = self.canvas[key]
-        for i, value in ipairs(PRESETS[key]) do
-            if i > 1 then
-                table.insert(row, HorizontalSpan:new{ width = Size.padding.small })
-            end
-            table.insert(row, SampleButton:new{
-                value = value,
-                shape = shape,
-                selected = value == current,
-                callback = function() self:_choose(key, value) end,
-            })
-        end
-        return row
     end
 
     --[[
@@ -233,31 +215,6 @@ function SettingsDialog:init()
     table.insert(content, header)
     table.insert(content, VerticalSpan:new{ width = Size.padding.small })
 
-    table.insert(content, heading(_("Pen size")))
-    table.insert(content, sizeRow("pen_width", "bar"))
-    table.insert(content, gap)
-    table.insert(content, heading(_("Marker size")))
-    table.insert(content, sizeRow("highlighter_width", "bar"))
-    table.insert(content, gap)
-    table.insert(content, heading(_("Eraser size")))
-    table.insert(content, sizeRow("eraser_size", "circle"))
-    table.insert(content, gap)
-
-    table.insert(content, heading(_("Eraser removes")))
-    table.insert(content, switchRow(self.canvas.eraser_mode, {
-        {
-            text = _("Whole strokes"),
-            value = "stroke",
-            callback = function() self:_choose("eraser_mode", "stroke") end,
-        },
-        {
-            text = _("Part of a stroke"),
-            value = "area",
-            callback = function() self:_choose("eraser_mode", "area") end,
-        },
-    }))
-    table.insert(content, gap)
-
     table.insert(content, heading(_("Finger")))
     table.insert(content, switchRow(self.canvas.draw_with_finger, {
         {
@@ -290,6 +247,17 @@ function SettingsDialog:init()
     self.ges_events = {
         TapClose = { GestureRange:new{ ges = "tap", range = self.dimen } },
     }
+end
+
+function SettingsDialog.sizeChoices(key, current, callback)
+    local row = HorizontalGroup:new{align="center"}
+    for _, value in ipairs(PRESETS[key]) do
+        table.insert(row, SampleButton:new{
+            value=value, shape=key == "eraser_size" and "circle" or "bar",
+            selected=value == current, callback=callback,
+        })
+    end
+    return row
 end
 
 function SettingsDialog:_choose(key, value)

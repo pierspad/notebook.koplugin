@@ -127,7 +127,7 @@ local function nearestVertex(clean, x, y)
     return best
 end
 
-test("snaps a 3-sided loop to a triangle with the corners that were drawn", function()
+test("leaves triangles as freehand ink", function()
     local s = Stroke:new{ tool = "pen", width = 3 }
     -- Bottom
     for x = 100, 300, 20 do s:addPoint(x, 300, 1) end
@@ -137,20 +137,11 @@ test("snaps a 3-sided loop to a triangle with the corners that were drawn", func
     for t = 0, 1, 0.1 do s:addPoint(200 - t * 100, 100 + t * 200, 1) end
 
     local clean, kind = Shape.recognize(s)
-    assertTrue(clean ~= nil, "should recognize triangle")
-    assertEq(kind, "triangle", "shape kind")
-    assertEq(clean:count(), 4, "triangle closed points")
-
-    -- This one is isoceles and must stay isoceles. Forcing it onto a regular
-    -- triangle -- every vertex at the mean distance from the centroid, angles
-    -- 120 degrees apart -- moved all three corners off what was drawn.
-    for _, corner in ipairs{ {100, 300}, {300, 300}, {200, 100} } do
-        assertTrue(nearestVertex(clean, corner[1], corner[2]) < 20,
-            string.format("corner (%d,%d) survived the snap", corner[1], corner[2]))
-    end
+    assertEq(clean, nil, "triangles stay freehand")
+    assertEq(kind, nil, "unsupported geometry has no shape metadata")
 end)
 
-test("keeps a trapezium a trapezium rather than squaring it off", function()
+test("regularizes a trapezium to an axis-aligned rectangle", function()
     local s = Stroke:new{ tool = "pen", width = 3 }
     -- A trapezium: wide base, narrow top, sloping sides.
     for x = 100, 400, 20 do s:addPoint(x, 300, 1) end
@@ -160,23 +151,13 @@ test("keeps a trapezium a trapezium rather than squaring it off", function()
 
     local clean, kind = Shape.recognize(s)
     assertTrue(clean ~= nil, "should recognize a four-sided shape")
-    assertEq(kind, "quadrilateral", "a sloping-sided quad is not a rectangle")
-    assertEq(clean:count(), 5, "quadrilateral closed points")
-
-    -- The narrow top must still be narrower than the base.
-    local top_w, base_w = math.huge, 0
-    local xs = {}
-    for i = 1, 4 do local x, y = clean:getPoint(i); table.insert(xs, { x = x, y = y }) end
-    for i = 1, 4 do
-        for j = i + 1, 4 do
-            if math.abs(xs[i].y - xs[j].y) < 30 then
-                local w = math.abs(xs[i].x - xs[j].x)
-                if xs[i].y < 220 then top_w = math.min(top_w, w)
-                else base_w = math.max(base_w, w) end
-            end
-        end
+    assertEq(kind, "rectangle", "sloping sides become a regular rectangle")
+    assertEq(clean:count(), 5, "rectangle is closed")
+    for i=1,4 do
+        local x0,y0=clean:getPoint(i)
+        local x1,y1=clean:getPoint(i+1)
+        assertTrue(x0==x1 or y0==y1, "edges are horizontal or vertical")
     end
-    assertTrue(top_w < base_w, "the top stayed narrower than the base")
 end)
 
 test("filters micro-jitter clusters when pen is held stationary at end of stroke", function()
@@ -237,6 +218,32 @@ test("line snap can add an arrowhead without changing the raw stroke", function(
     assertEq(x, 500, "tip x")
     assertEq(y, 200, "tip y")
     assertEq(s:count(), 41, "raw stroke was changed")
+end)
+
+test("circle recognition tolerates a slow quarter and an imperfect closure", function()
+    local s = Stroke:new{width=3}
+    for i=0,200 do
+        local angle = (i/200)^2 * math.pi * 1.97
+        local r = 100 + 3*math.sin(angle*5)
+        s:addPoint(250+r*math.cos(angle),300+r*math.sin(angle))
+    end
+    local clean, kind = Shape.recognize(s)
+    assertEq(kind,"circle","unevenly sampled circle")
+    assertTrue(math.abs(clean.x_min-150)<8,"centre shifted towards slow samples")
+end)
+
+test("curved arrows retain their shaft and end with a tangent arrowhead", function()
+    local s = Stroke:new{width=3}
+    for i=0,100 do
+        s:addPoint(100+i*3,200+80*math.sin(i*math.pi/100)+math.sin(i*2))
+    end
+    local clean, kind = Shape.recognize(s,"arrow")
+    assertEq(kind,"arrow","curved arrow")
+    assertTrue(clean.y_max>270,"curve flattened")
+    local x,y = clean:getPoint(clean.n-3)
+    assertEq(x,400,"tip remains at endpoint")
+    assertTrue(math.abs(y-s.pts[(s.n-1)*3+2])<.01,"endpoint moved")
+    assertTrue(clean.n<s.n,"smoothing should reduce the point count")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
