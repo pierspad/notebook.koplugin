@@ -116,9 +116,8 @@ end
 --- Where the crash log goes. Beside the notebooks, so it is easy to find over USB.
 local function logPath()
     local ok, Library = pcall(require, "library")
-    if ok and Library and Library.abs then
-        local dir = Library.abs("")
-        if dir then return dir .. "/notebook-error.log" end
+    if ok and Library and Library.errorLogPath then
+        return Library.errorLogPath()
     end
     return "/tmp/notebook-error.log"
 end

@@ -575,6 +575,17 @@ local function cardWhere(gallery, pred)
     end
 end
 
+test("an XOPP export appears as an export card", function()
+    local gallery, rec = newGallery(4)
+    rec.fs[ROOT .. "/editable.xopp"] = {mode="file", modification=200, size=20}
+    gallery:_rebuild()
+    gallery:paintTo(RectBB.new(), 0, 0)
+    local card = cardWhere(gallery, function(it) return it.is_xopp end)
+    assertTrue(card ~= nil, "the XOPP export is missing from the gallery")
+    assertEq(card.item.extension, "xopp", "XOPP extension")
+    assertTrue(card.ribbon and card.ribbon.text == "XOPP", "the XOPP ribbon is missing")
+end)
+
 test("sending is not offered when there is nowhere to send", function()
     local gallery = newGallery(6)
     gallery:paintTo(RectBB.new(), 0, 0)

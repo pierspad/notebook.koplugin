@@ -255,19 +255,16 @@ function Canvas:_flush()
     local x, y, w, h = Rect.clamp(p.x, p.y, p.w, p.h, self.content)
     if not x then return end
 
-    -- Waveform choice while a stroke is live. Both alternatives to what is here
-    -- were tried on the device and both were worse:
+    -- Waveform choice while a stroke is live.
     --
     --  * refreshPartial (grayscale/REAGL) is forced to UPDATE_MODE_FULL by the
     --    driver, and full updates are fenced, so every segment blocks on the
     --    previous one and the ink crawls behind the nib.
-    --  * refreshFast (DU) is a binary waveform, so the highlighter's gray gets
-    --    rounded to white: nothing appears at all until the stroke is finished.
+    --  * refreshFast (DU) is binary. The highlighter therefore uses its darker
+    --    live tint while the nib is down, then is redrawn once in gray on lift.
     --
-    -- refreshUI (AUTO) lets the driver decide per update. For the highlighter it
-    -- shows the band dark immediately and settles it to gray a moment later --
-    -- two passes rather than one, but it tracks the pen, and tracking the pen is
-    -- what matters while you are drawing.
+    -- refreshUI (AUTO) remains for pencil gray; using it for every highlighter
+    -- segment was visibly behind the nib on a Scribe.
     if self.refresh_mode == "ui" then
         Screen:refreshUI(x, y, w, h)
     else
@@ -443,10 +440,20 @@ function Canvas:_endShape()
     self.shape_gesture, self.stroke = nil, nil
     self:_flush()
     if stroke and stroke.x_max-stroke.x_min >= 4 and stroke.y_max-stroke.y_min >= 4 then
-        if gesture.original then self.document:replaceStroke(gesture.original, stroke)
-        else self.document:addStroke(stroke) end
-        if gesture.original then self:_repaintRegion(gesture.original:getBounds()) end
-        self:_repaintRegion(stroke:getBounds())
+        if gesture.original then
+            self.document:replaceStroke(gesture.original, stroke)
+            -- The preview background still contains the old shape. Clean the
+            -- union once after a resize; repainting old and new separately did
+            -- the same expensive vector pass twice.
+            local dirty = Rect.grow(nil, gesture.original:getBounds())
+            dirty = Rect.grow(dirty, stroke:getBounds())
+            self:_repaintRegion(dirty.x, dirty.y, dirty.w, dirty.h)
+        else
+            self.document:addStroke(stroke)
+            -- The final preview is already the exact stored shape. Repainting
+            -- it from the document here made pen-up look frozen, especially
+            -- for a large, thick figure.
+        end
         if not self.stopping then
             self:_showLassoMenu({stroke})
             UIManager:unschedule(self.autosave_cb)
@@ -513,7 +520,10 @@ function Canvas:_beginStroke(tool, x, y, p)
         width = self:widthFor(tool),
         color = tool == "pen" and self.pen_style == "pencil" and 96 or 0,
     }
-    self.refresh_mode = (tool == "highlighter" or self.stroke.color ~= 0) and "ui" or "fast"
+    -- The live highlighter uses a deliberately dark tint, so the Kindle's DU
+    -- waveform can show it immediately just like pen ink. It is settled to its
+    -- true gray once on pen-up; AUTO on every segment lagged behind the nib.
+    self.refresh_mode = self.stroke.color ~= 0 and "ui" or "fast"
     -- While it is being drawn the highlighter lays down a darker tint than the
     -- one it settles to when the pen lifts; see Tuning.live_highlight_tint.
     self.stroke.tint = tool == "highlighter" and Tuning.live_highlight_tint or nil

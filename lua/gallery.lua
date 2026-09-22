@@ -52,6 +52,10 @@ local COLUMNS = 3
 -- Proportions of a notebook page, used for the thumbnail area of a card.
 local PAGE_W, PAGE_H = 1860, 2480
 
+local function isExport(item)
+    return item.is_export or item.is_pdf or item.is_xopp
+end
+
 -- One card ----------------------------------------------------------------------
 
 --[[--
@@ -63,7 +67,7 @@ the corner already says it is a PDF.
 --]]
 local function pictureSource(item)
     if item.is_folder then return nil end
-    if item.is_pdf then return (item.path:gsub("%.pdf$", ".scribe")) end
+    if isExport(item) then return (item.path:gsub("%.[^./]+$", ".scribe")) end
     return item.path
 end
 
@@ -151,9 +155,9 @@ function Card:init()
             },
         },
     }
-    if self.item.is_pdf then
+    if isExport(self.item) then
         self.ribbon = TextWidget:new{
-            text = _("PDF"),
+            text = self.item.is_xopp and _("XOPP") or _("PDF"),
             face = Font:getFace("cfont", 20),
             fgcolor = Blitbuffer.COLOR_WHITE,
             bold = true,
@@ -1081,6 +1085,9 @@ function Gallery:_open(item)
     if item.is_pdf then
         return self:_openPDF(item)
     end
+    if item.is_xopp then
+        return self:_error(_("Open this XOPP file with Xournal++."))
+    end
     if self.on_open then self.on_open(item.name, self.folder) end
 end
 
@@ -1313,7 +1320,7 @@ end
 local function notebooksOnly(items)
     local out = {}
     for _, item in ipairs(items) do
-        if not item.is_folder and not item.is_pdf then table.insert(out, item) end
+        if not item.is_folder and not isExport(item) then table.insert(out, item) end
     end
     return out
 end
@@ -1350,7 +1357,7 @@ function Gallery:_bulkActions(chosen)
                 self:_open(item)
             end,
         })
-        if not item.is_pdf then
+        if not isExport(item) then
             table.insert(actions, {
                 icon = "notebook.rename", text = _("Rename"),
                 callback = function() self:_renameOne(item) end,
@@ -1484,7 +1491,7 @@ notebooks back to back would freeze the screen for the whole run.
 function Gallery:_shareMany(chosen)
     self:_endSelection()
 
-    if #chosen == 1 and chosen[1].is_pdf then
+    if #chosen == 1 and isExport(chosen[1]) then
         return self.on_share(chosen[1].path)
     end
 
@@ -1529,9 +1536,9 @@ function Gallery:_shareMany(chosen)
             return self.on_share(done == 1 and not multiple_files and last_out or staging)
         end
 
-        local out = staging .. "/" .. item.name .. "." .. format
+        local out = staging .. "/" .. item.name .. "." .. (item.extension or format)
         local ok
-        if item.is_pdf then
+        if isExport(item) then
             ok = Library.copyFile(item.path, out)
         else
             local doc = Document:new(item.path)

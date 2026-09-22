@@ -346,6 +346,12 @@ msgstr "PDF"
 msgid "Xournal++"
 msgstr "Xournal++"
 
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "Apri questo file XOPP con Xournal++."
+
 msgid "Export"
 msgstr "Esporta"
 

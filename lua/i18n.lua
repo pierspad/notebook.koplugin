@@ -18,6 +18,7 @@ change, and nothing needs to be registered.
 --]]--
 
 local logger = require("logger")
+local gettext = require("gettext")
 
 local catalogue = {}
 
@@ -140,6 +141,9 @@ local Text = { parse = parsePO }
 
 return setmetatable(Text, {
     __call = function(_, text)
-        return catalogue[text] or text
+        -- Our catalogue wins for plugin-specific wording. For every other
+        -- language, let KOReader translate common labels such as Save, Delete,
+        -- PDF and Settings before falling back to the English source string.
+        return catalogue[text] or gettext(text)
     end,
 })

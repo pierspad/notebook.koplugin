@@ -123,7 +123,7 @@ end
 --- Creates a directory, and any parent it needs.
 function Library.ensureDir(rel)
     local path = Library.abs(rel)
-    if lfs.attributes(path, "mode") == "directory" then return true end
+    if lfs.attributes(path, "mode") == "directory" and rel ~= "" then return true end
 
     -- Build the path a level at a time; mkdir does not create parents.
     local acc = Library.root()
@@ -136,6 +136,18 @@ function Library.ensureDir(rel)
         if lfs.attributes(acc, "mode") ~= "directory" and not lfs.mkdir(acc) then
             logger.err("Notebook: cannot create", acc)
             return false
+        end
+    end
+    -- Old Scribe builds wrote diagnostics beside notebooks, where KOReader
+    -- could mistake the log for a document and create a sidecar for it. Keep
+    -- both old and current diagnostics in a hidden directory instead.
+    if rel == "" then
+        local logs = acc .. "/.logs"
+        if lfs.attributes(logs, "mode") ~= "directory" then lfs.mkdir(logs) end
+        for _, name in ipairs({"scribe-error.log", "notebook-error.log",
+                               "scribe-error.sdr", "notebook-error.sdr"}) do
+            local old, new = acc .. "/" .. name, logs .. "/" .. name
+            if lfs.attributes(old) and not lfs.attributes(new) then os.rename(old, new) end
         end
     end
     return true
@@ -268,12 +280,16 @@ function Library.list(folder, sort)
             elseif attr and attr.mode == "file" then
                 local name = entry:match("^(.+)%" .. EXT .. "$")
                 local pdf_name = not name and entry:match("^(.+)%.pdf$") or nil
-                if name or pdf_name then
+                local xopp_name = not name and not pdf_name and entry:match("^(.+)%.xopp$") or nil
+                if name or pdf_name or xopp_name then
                     table.insert(files, {
-                        name = name or pdf_name,
+                        name = name or pdf_name or xopp_name,
                         path = path,
                         folder = folder,
                         is_pdf = pdf_name ~= nil,
+                        is_xopp = xopp_name ~= nil,
+                        is_export = pdf_name ~= nil or xopp_name ~= nil,
+                        extension = pdf_name and "pdf" or (xopp_name and "xopp" or nil),
                         modified = attr.modification or 0,
                         size = attr.size or 0,
                     })
@@ -290,6 +306,12 @@ function Library.list(folder, sort)
     for _, f in ipairs(folders) do table.insert(items, f) end
     for _, f in ipairs(files) do table.insert(items, f) end
     return items
+end
+
+--- Absolute path for crash diagnostics, kept outside the visible file list.
+function Library.errorLogPath()
+    if not Library.ensureDir(".logs") then return "/tmp/notebook-error.log" end
+    return Library.abs(".logs/notebook-error.log")
 end
 
 --- The folder containing `rel`, or "" if it is already at the root.

@@ -575,6 +575,7 @@ function stubs.install(fs)
     end
 
     recorder.screen_w, recorder.screen_h = SCREEN_W, SCREEN_H
+    recorder.fs = fs
     return recorder
 end
 
