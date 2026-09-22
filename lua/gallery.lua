@@ -16,6 +16,7 @@ local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local Document = require("document")
 local Export = require("export")
+local Xopp = require("xopp")
 local Font = require("ui/font")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
@@ -41,6 +42,7 @@ local CenterContainer = require("ui/widget/container/centercontainer")
 local _ = require("i18n")
 local Safe = require("safe")
 local Share = require("share")
+local lfs = require("libs/libkoreader-lfs")
 local T = require("ffi/util").template
 
 local Screen = Device.screen
@@ -733,14 +735,9 @@ function Gallery:_buildHeader()
             self:onClose()
         end)
 
-        -- Two buttons rather than a plus that opens a menu of two. The menu was
-        -- one tap of ceremony in front of the two things anybody comes here to
-        -- do, and it hid both behind a symbol that says neither.
+        -- Notebook, folder and imported PDF share one compact Add menu.
         local buttons = {
-            headerButton(mode, _("New notebook"), "notebook.page",
-                function() self:_createNotebook() end),
-            headerButton(mode, _("New folder"), "notebook.folder",
-                function() self:_createFolder() end),
+            headerButton(mode, _("Add"), "notebook.page", function() self:_addMenu() end),
         }
 
         --[[
@@ -1172,6 +1169,18 @@ function Gallery:_addMenu()
               callback = function() self:_createNotebook() end },
             { icon = "notebook.folder", text = _("New folder"),
               callback = function() self:_createFolder() end },
+            { icon = "notebook.export", text = _("Annotate PDF"),
+              callback = function() self:_importPDF() end },
+        },
+    })
+end
+
+function Gallery:_exportMenu(notebooks)
+    UIManager:show(ActionMenu:new{
+        title = _("Export"),
+        actions = {
+            {icon="notebook.export", text=_("PDF"), callback=function() self:_exportMany(notebooks,"pdf") end},
+            {icon="notebook.export", text=_("Xournal++"), callback=function() self:_exportMany(notebooks,"xopp") end},
         },
     })
 end
@@ -1195,6 +1204,35 @@ function Gallery:_createNotebook()
                 return self:_error(nameError("exists"))
             end
             if self.on_open then self.on_open(name, self.folder, paper) end
+        end,
+    })
+end
+
+function Gallery:_importPDF()
+    local PathChooser=require("ui/widget/pathchooser")
+    UIManager:show(PathChooser:new{
+        select_directory=false,
+        path=G_reader_settings:readSetting("notebook_pdf_folder") or "/mnt/us/documents",
+        onConfirm=function(path)
+            if not path:lower():match("%.pdf$") then return self:_error(_("Choose a PDF file.")) end
+            local ok,count=pcall(require("pdfbackground").count,path)
+            if not ok or count<1 then return self:_error(_("Could not open this PDF.")) end
+            G_reader_settings:saveSetting("notebook_pdf_folder",path:match("^(.*)/"))
+            local name=Library.uniqueName(path:match("([^/]+)$"):sub(1,-5),self.folder)
+            Library.ensureDir(".pdfs")
+            local source=Library.abs(".pdfs/"..os.time().."-"..name..".pdf")
+            local suffix=0
+            while lfs.attributes(source) do
+                suffix=suffix+1
+                source=Library.abs(".pdfs/"..os.time().."-"..suffix.."-"..name..".pdf")
+            end
+            if not Library.copyFile(path,source) then return self:_error(_("Could not open this PDF.")) end
+            local doc=Document:new(Library.pathFor(name,self.folder))
+            doc.pages={}
+            for i=1,count do doc.pages[i]={strokes={},background={file=source,page=i}} end
+            if not doc:save() then os.remove(source); return self:_error(_("Could not save the notebook.")) end
+            self:_rebuild()
+            if self.on_open then self.on_open(name,self.folder) end
         end,
     })
 end
@@ -1347,10 +1385,8 @@ function Gallery:_bulkActions(chosen)
                 self:_rebuild()
             end,
         })
-        table.insert(actions, {
-            icon = "notebook.export", text = _("Export PDF"),
-            callback = function() self:_exportMany(notebooks) end,
-        })
+        table.insert(actions, {icon="notebook.export", text=_("Export"),
+            callback=function() self:_exportMenu(notebooks) end})
     end
 
     table.insert(actions, {
@@ -1466,7 +1502,8 @@ function Gallery:_shareMany(chosen)
     }
     UIManager:show(working)
 
-    local i, done, failed, last_out = 0, 0, 0, nil
+    local i, done, failed, last_out, multiple_files = 0, 0, 0, nil, false
+    local format=G_reader_settings:readSetting("notebook_share_format") == "xopp" and "xopp" or "pdf"
     local function step()
         i = i + 1
         local item = chosen[i]
@@ -1489,16 +1526,22 @@ function Gallery:_shareMany(chosen)
             -- One file staged on its own goes as a file rather than as a
             -- directory holding one thing, which is what the other device
             -- would otherwise be asked to accept.
-            return self.on_share(done == 1 and last_out or staging)
+            return self.on_share(done == 1 and not multiple_files and last_out or staging)
         end
 
-        local out = staging .. "/" .. item.name .. ".pdf"
+        local out = staging .. "/" .. item.name .. "." .. format
         local ok
         if item.is_pdf then
             ok = Library.copyFile(item.path, out)
         else
             local doc = Document:new(item.path)
-            ok = doc:load() and Export.toPDF(doc, out)
+            if doc:load() then
+                if format=="xopp" then
+                    local extra
+                    ok,extra=Xopp.toXOPP(doc,out)
+                    if extra then multiple_files=true end
+                else ok=Export.toPDF(doc,out) end
+            end
         end
         if ok then
             done, last_out = done + 1, out
@@ -1534,8 +1577,9 @@ back to back would freeze the panel for the whole run with nothing to show for
 it. One per tick keeps the screen answering, and the message says which one is
 being worked on so the wait is legible rather than mysterious.
 --]]
-function Gallery:_exportMany(notebooks)
+function Gallery:_exportMany(notebooks, format)
     self:_endSelection()
+    format=format or "pdf"
 
     local working = InfoMessage:new{
         text = #notebooks == 1 and T(_("Exporting '%1'…"), notebooks[1].name)
@@ -1567,8 +1611,9 @@ function Gallery:_exportMany(notebooks)
 
         local doc = Document:new(item.path)
         if doc:load() then
-            local out = Library.abs(self.folder) .. "/" .. item.name .. ".pdf"
-            if Export.toPDF(doc, out) then
+            local out = Library.abs(self.folder) .. "/" .. item.name .. "." .. format
+            local ok = format=="xopp" and Xopp.toXOPP(doc,out) or Export.toPDF(doc,out)
+            if ok then
                 done, last_path = done + 1, out
             else
                 failed = failed + 1

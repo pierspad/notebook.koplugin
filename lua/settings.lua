@@ -229,6 +229,13 @@ function SettingsDialog:init()
         },
     }))
 
+    table.insert(content, VerticalSpan:new{ width = Size.padding.large })
+    table.insert(content, heading(_("Sharing format")))
+    table.insert(content, switchRow(self.canvas.share_format, {
+        {text=_("PDF"), value="pdf", callback=function() self:_choose("share_format","pdf") end},
+        {text=_("Xournal++"), value="xopp", callback=function() self:_choose("share_format","xopp") end},
+    }))
+
     self.panel = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
         color = Blitbuffer.COLOR_BLACK,

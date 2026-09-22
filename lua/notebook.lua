@@ -25,6 +25,7 @@ local IconWidget = require("ui/widget/iconwidget")
 local PagePanel = require("pagepanel")
 local InfoMessage = require("ui/widget/infomessage")
 local InputContainer = require("ui/widget/container/inputcontainer")
+local InputDialog = require("ui/widget/inputdialog")
 local SettingsDialog = require("settings")
 local Tuning = require("tuning")
 local TuningDock = require("tuningdock")
@@ -89,8 +90,10 @@ function Notebook:init()
         },
         on_change = function() self:_onDocumentChanged() end,
         on_page_swipe = function(delta) self:_turnPage(delta) end,
+        on_text = function(_, x, y) self:_insertText(x, y) end,
     }
     self:_loadSettings()
+    self.document.page_size={w=self.canvas.content.w,h=self.canvas.content.h}
 
     if dock_h > 0 then
         self.tuning_dock = TuningDock:new{
@@ -130,6 +133,7 @@ local TOOLS = {
     { tool = "eraser",      icon = "notebook.eraser" },
     { tool = "lasso",       icon = "notebook.lasso" },
     { tool = "shape",       icon = "notebook.shape" },
+    { tool = "text",        icon = "notebook.text" },
 }
 
 --[[--
@@ -316,7 +320,7 @@ function Notebook:_buildToolbar()
     self.clock_text = TextWidget:new{text=os.date("%H:%M"), face=Font:getFace("cfont", 18)}
     local clock_w = self.clock_text:getSize().w + gap
     -- Back + four tools + undo/redo/refresh + previous/next + settings.
-    local n_cells = 12
+    local n_cells = #TOOLS + 7
     local cell_overhead = 2 * (Size.border.thin + Size.padding.button)
     local avail = self.dimen.w - 2 * Size.padding.small
     local flexible = avail - n_gaps * gap - page_text_w - clock_w - n_cells * cell_overhead
@@ -509,6 +513,35 @@ function Notebook:_showToolOptions(index)
         end
         return self:_showToolMenu(index, _("Shapes"), actions)
     end
+    if tool == "text" then
+        for _, option in ipairs({{18, _("Small")}, {26, _("Medium")}, {36, _("Large")}}) do
+            table.insert(actions, {icon="notebook.text", text=option[2],
+                selected=self.canvas.text_size == option[1],
+                callback=function() self:_setSetting("text_size", option[1]); self:_selectTool(index) end})
+        end
+        return self:_showToolMenu(index, _("Text size"), actions)
+    end
+end
+
+function Notebook:_insertText(x, y)
+    local dialog
+    dialog = InputDialog:new{
+        title = _("Insert text"), input = "",
+        buttons = {{{text=_("Cancel"), id="close", callback=function() UIManager:close(dialog) end},
+            {text=_("Insert"), is_enter_default=true, callback=function()
+                local value = dialog:getInputText()
+                UIManager:close(dialog)
+                if not value or value == "" then return end
+                local stroke = require("textobject").create(value, x, y,
+                    math.max(80, math.min(Screen:scaleBySize(600), self.canvas.content.x+self.canvas.content.w-x)),
+                    self.canvas.text_size)
+                self.document:addStroke(stroke)
+                self.canvas:_repaintRegion(stroke:getBounds())
+                self:_onDocumentChanged()
+            end}}},
+    }
+    UIManager:show(dialog)
+    dialog:onShowKeyboard()
 end
 
 function Notebook:_showSettings()
@@ -538,6 +571,8 @@ function Notebook:_loadSettings()
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
     canvas.eraser_mode       = get("eraser_mode", canvas.eraser_mode)
     canvas.draw_with_finger  = get("draw_with_finger", canvas.draw_with_finger)
+    canvas.text_size         = get("text_size", 26)
+    canvas.share_format      = get("share_format", "pdf") == "xopp" and "xopp" or "pdf"
 end
 
 function Notebook:_updatePageText()

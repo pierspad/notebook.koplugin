@@ -246,5 +246,16 @@ test("curved arrows retain their shaft and end with a tangent arrowhead", functi
     assertTrue(clean.n<s.n,"smoothing should reduce the point count")
 end)
 
+test("an almost closed loop stays an arrow when its endpoints do not touch", function()
+    local s=Stroke:new{width=4}
+    for i=0,94 do
+        local a=i/100*2*math.pi
+        s:addPoint(300+120*math.cos(a),400+120*math.sin(a))
+    end
+    local clean,kind=Shape.recognize(s,"arrow")
+    assertEq(kind,"arrow","almost-circle arrow")
+    assertTrue(clean and clean:count()>8,"curved shaft was replaced by a primitive")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

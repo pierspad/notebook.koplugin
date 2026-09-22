@@ -577,7 +577,7 @@ function Document:duplicatePage(index)
     it that nothing on screen explained. Duplicating a page is not expensive
     enough for sharing them to have been worth it.
     ]]
-    local copy = { template = source.template, strokes = {} }
+    local copy = { template = source.template, background = source.background, strokes = {} }
     for i, stroke in ipairs(source.strokes) do copy.strokes[i] = stroke:clone() end
 
     local before = snapshot(self.pages)
@@ -659,7 +659,7 @@ function Document:save()
         for j, stroke in ipairs(page.strokes) do
             strokes[j] = stroke:serialize()
         end
-        pages[i] = { strokes = strokes, template = page.template }
+        pages[i] = { strokes = strokes, template = page.template, background = page.background }
     end
 
     --[[
@@ -682,6 +682,7 @@ function Document:save()
         current_page = self.current_page,
         template = self.template,
         content_origin = self.content_origin,
+        page_size = self.page_size,
     }
 
     if ok then
@@ -721,11 +722,12 @@ function Document:load()
         -- carried around: a notebook written by a newer version stays readable,
         -- and the page falls back to the notebook's.
         local template = Template.isKnown(page.template) and page.template or nil
-        self.pages[i] = { strokes = strokes, template = template }
+        self.pages[i] = { strokes = strokes, template = template, background = page.background }
     end
     if #self.pages == 0 then self.pages = { newPage() } end
 
     self.template = Template.isKnown(data.template) and data.template or Template.DEFAULT
+    self.page_size = data.page_size
     -- Absent in notebooks written before the origin was recorded; see
     -- Document:contentOrigin.
     local origin = data.content_origin

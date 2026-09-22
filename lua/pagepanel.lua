@@ -130,6 +130,11 @@ function PageTile:paintTo(bb, x, y)
     -- Clipped to the paper: a checklist's boxes hang above their line and would
     -- otherwise be drawn over the tile's border and the tile beside it.
     Template.draw(bb, self.document:templateFor(self.index), ruling, scale, paper)
+    if page.background then
+        local size=self.document.page_size or {w=self.paper_w/scale,h=self.paper_h/scale}
+        require("pdfbackground").draw(bb,page.background,
+            {x=ruling.x,y=ruling.y,w=size.w*scale,h=size.h*scale},paper)
+    end
     Renderer.drawPage(bb, page, scale, px, py)
 
     if self.current then

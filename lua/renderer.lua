@@ -253,6 +253,7 @@ length rasterised, and stamping is expensive enough that the difference is the
 difference between a rub that keeps up with the hand and one that does not.
 --]]
 function Renderer.drawStroke(bb, stroke, clip)
+    if stroke.text then return require("textobject").draw(bb,stroke,1,0,0,clip) end
     local n = stroke:count()
     if n == 0 then return end
 
@@ -266,6 +267,38 @@ function Renderer.drawStroke(bb, stroke, clip)
         target = bb:viewport(ox, oy, w, h)
     end
     local bounds = clip and { w = target:getWidth(), h = target:getHeight() }
+    -- Regular geometry is a primitive, not thousands of overlapping round
+    -- pen stamps. Scan each circle row once; rectangles need only four spans.
+    local kind = stroke.shape_kind
+    if kind == "circle" or kind == "rectangle" or kind == "square" then
+        local x0,y0 = stroke.x_min-ox,stroke.y_min-oy
+        local x1,y1 = stroke.x_max-ox,stroke.y_max-oy
+        local r = stroke.width/2
+        local color = Blitbuffer.Color8(stroke.color or 0)
+        local function span(y,a,b)
+            a,b=math.max(0,math.ceil(a)),math.min(target:getWidth()-1,math.floor(b))
+            if b>=a and y>=0 and y<target:getHeight() then target:paintRect(a,y,b-a+1,1,color) end
+        end
+        if kind == "circle" then
+            local cx,cy=(x0+x1)/2,(y0+y1)/2
+            local outer=(x1-x0)/2+r
+            local inner=math.max(0,(x1-x0)/2-r)
+            for y=math.max(0,math.ceil(cy-outer)),math.min(target:getHeight()-1,math.floor(cy+outer)) do
+                local dy=y-cy
+                local dx=math.sqrt(math.max(0,outer*outer-dy*dy))
+                if math.abs(dy)<inner then
+                    local hole=math.sqrt(inner*inner-dy*dy)
+                    span(y,cx-dx,cx-hole); span(y,cx+hole,cx+dx)
+                else span(y,cx-dx,cx+dx) end
+            end
+        else
+            for y=math.max(0,math.ceil(y0-r)),math.min(target:getHeight()-1,math.floor(y1+r)) do
+                if y<=y0+r or y>=y1-r then span(y,x0-r,x1+r)
+                else span(y,x0-r,x0+r); span(y,x1-r,x1+r) end
+            end
+        end
+        return
+    end
     local function segment(x0, y0, p0, x1, y1, p1)
         Renderer.drawSegment(target, stroke, x0 - ox, y0 - oy, p0,
             x1 - ox, y1 - oy, p1, bounds)
@@ -330,6 +363,9 @@ function Renderer.drawPage(bb, page, scale, ox, oy)
     scale = scale or 1
 
     for _, stroke in ipairs(page.strokes) do
+        if stroke.text then
+            require("textobject").draw(bb,stroke,scale,ox,oy)
+        else
         local n = stroke:count()
         if n > 0 then
             -- A stand-in carrying the scaled width; the real stroke is untouched.
@@ -352,6 +388,7 @@ function Renderer.drawPage(bb, page, scale, ox, oy)
                     px, py, pp = x, y, p
                 end
             end
+        end
         end
     end
 end

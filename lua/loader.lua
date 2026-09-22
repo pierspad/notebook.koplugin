@@ -6,7 +6,7 @@ return function(directory)
     local cache = {}
     local own = {}
     for name in ("actionmenu canvas document export gallery i18n lassomenu lasso launcherbar library " ..
-        "newnotebook notebook pagepanel papersample pressure rect renderer safe settings shape share stroke " ..
+        "newnotebook notebook pagepanel papersample pdfbackground pressure rect renderer safe settings shape share stroke textobject xopp " ..
         "template templatepicker thumbnail tuning tuningdock widgets"):gmatch("%S+") do own[name] = true end
     local function privateRequire(name)
         if not own[name] then return shared_require(name) end

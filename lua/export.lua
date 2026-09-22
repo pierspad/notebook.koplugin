@@ -278,6 +278,9 @@ function Export.toPDF(doc, out_path, opts)
                     Template.draw(bb, doc:templateFor(i),
                         { x = 0, y = 0, w = width, h = height }, 1)
                 end
+                if page.background then
+                    require("pdfbackground").draw(bb,page.background,{x=0,y=0,w=width,h=height})
+                end
                 Renderer.drawPage(bb, page, 1, -offset_x, -offset_y)
             end
 

@@ -49,6 +49,8 @@ function Stroke:new(opts)
         -- Highlighter tint; nil means the renderer's default.
         tint = opts.tint,
         shape_kind = opts.shape_kind,
+        text = opts.text,
+        font_size = opts.font_size,
         pts = {},
         n = 0,
         -- Bounding box, kept up to date as points come in so that neither
@@ -203,6 +205,7 @@ function Stroke:clone()
         color = self.color,
         tint = self.tint,
         shape_kind = self.shape_kind,
+        text = self.text, font_size = self.font_size,
     }
     local pts, spts = copy.pts, self.pts
     for i = 1, self.n * STRIDE do pts[i] = spts[i] end
@@ -409,6 +412,10 @@ end
 --- True if this stroke comes within r of anywhere on the path.
 function Stroke:hitTestPath(path, r)
     if #path < 2 then return false end
+    if self.text then
+        local x0,y0,x1,y1=pathBounds(path,r)
+        return x1>=self.x_min and x0<=self.x_max and y1>=self.y_min and y0<=self.y_max
+    end
 
     -- Two tests, because either shape can pass close to the other without any
     -- of its own recorded points being near: a long stroke crossing a short
@@ -540,6 +547,7 @@ function Stroke:serialize()
         color = self.color,
         tint = self.tint,
         shape_kind = self.shape_kind,
+        text = self.text, font_size = self.font_size,
         n = self.n,
         pts = self.pts,
     }
@@ -548,7 +556,7 @@ end
 --- Rebuilds a stroke from serialized data.
 function Stroke:deserialize(data)
     local o = Stroke:new{ tool = data.tool, width = data.width, color = data.color,
-        tint = data.tint, shape_kind = data.shape_kind }
+        tint = data.tint, shape_kind = data.shape_kind, text=data.text, font_size=data.font_size }
     o.pts = data.pts
     o.n = data.n
     -- Recompute bounds rather than trusting the file.

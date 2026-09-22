@@ -387,11 +387,18 @@ end
 function Canvas:_extendShape(x, y)
     local gesture = self.shape_gesture
     gesture.next_x, gesture.next_y = x, y
-    if not gesture.last_paint or time.to_ms(time.now()-gesture.last_paint) >= Tuning.drag_repaint_ms then
+    local spacing = Screen:scaleBySize(24)
+    local px, py = gesture.paint_x or gesture.x, gesture.paint_y or gesture.y
+    local dx, dy = x-px, y-py
+    if dx*dx+dy*dy >= spacing*spacing then
         self:_paintShape()
-    elseif not gesture.scheduled then
+    else
+        -- Trailing debounce: a slow stream of one-pixel samples must not make
+        -- us repaint a page-sized preview over and over. It still catches up
+        -- shortly after the nib pauses, and release always paints the endpoint.
+        UIManager:unschedule(self.shape_preview_cb)
         gesture.scheduled = true
-        UIManager:scheduleIn(Tuning.drag_repaint_ms / 1000, self.shape_preview_cb)
+        UIManager:scheduleIn(0.12, self.shape_preview_cb)
     end
 end
 
@@ -402,6 +409,7 @@ function Canvas:_paintShape()
     UIManager:unschedule(self.shape_preview_cb)
     gesture.scheduled = nil
     local x, y = gesture.next_x, gesture.next_y
+    gesture.paint_x, gesture.paint_y = x, y
     gesture.next_x, gesture.next_y = nil, nil
     local original = gesture.original
     local x0, y0 = gesture.x, gesture.y
@@ -470,6 +478,11 @@ function Canvas:_beginStroke(tool, x, y, p)
     --]]
     if tool ~= "lasso" and self.selected_strokes then
         self:_deselectLasso()
+    end
+
+    if tool == "text" then
+        self.text_at = {x=x, y=y}
+        return
     end
 
     if tool == "shape" then
@@ -630,6 +643,7 @@ function Canvas:_maybeDragStep()
 end
 
 function Canvas:_extendStroke(x, y, p)
+    if self.text_at then return end
     if self.shape_gesture then return self:_extendShape(x, y) end
     -- Handle dragging selected strokes
     if self.dragging_selection and self.selected_strokes then
@@ -692,6 +706,11 @@ function Canvas:_extendStroke(x, y, p)
 end
 
 function Canvas:_endStroke()
+    if self.text_at then
+        local at=self.text_at; self.text_at=nil
+        if not self.stopping and self.on_text then self:on_text(at.x,at.y) end
+        return
+    end
     if self.shape_gesture then return self:_endShape() end
     if self.dragging_selection then
         UIManager:unschedule(self.drag_step_cb)
@@ -735,11 +754,8 @@ function Canvas:_endStroke()
                 local pasted = {}
                 self.document:beginBatch()
                 for _, s in ipairs(Canvas.clipboard) do
-                    local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint, shape_kind = s.shape_kind }
-                    for i = 1, s:count() do
-                        local px, py, p = s:getPoint(i)
-                        copy:addPoint(px + dx, py + dy, p)
-                    end
+                    local copy = s:clone()
+                    copy:translate(dx,dy)
                     table.insert(pasted, copy)
                     self.document:addStroke(copy)
                 end
@@ -843,11 +859,8 @@ function Canvas:_showLassoMenu(selected)
             local pasted = {}
             self.document:beginBatch()
             for _, s in ipairs(Canvas.clipboard) do
-                local copy = Stroke:new{ tool = s.tool, width = s.width, color = s.color, tint = s.tint, shape_kind = s.shape_kind }
-                for i = 1, s:count() do
-                    local x, y, p = s:getPoint(i)
-                    copy:addPoint(x + 40, y + 40, p)
-                end
+                local copy = s:clone()
+                copy:translate(40,40)
                 table.insert(pasted, copy)
                 self.document:addStroke(copy)
             end
@@ -1172,7 +1185,7 @@ function Canvas:onStylusEvent(slot)
         -- ends a tap on the toolbar has to reach the gesture engine, or the
         -- button never completes its tap.
         local was_drawing = self.stroke ~= nil or self.erasing or self.dragging_selection
-            or self.shape_gesture ~= nil or self.dismiss_contact
+            or self.shape_gesture ~= nil or self.text_at ~= nil or self.dismiss_contact
         self.dismiss_contact = nil
         self.pen_down = false
         self.pen_left_at = time.now()
@@ -1215,6 +1228,13 @@ function Canvas:onStylusEvent(slot)
             pressure = self.pressure_sensor:read()
         end
         if pressure then p = math.max(0, math.min(1, pressure / 4095)) end
+        if self.stroke and self.stroke.tool == "pen" and self.stroke.n>0 then
+            local lx,ly,lp=self.stroke:getPoint(self.stroke.n)
+            local distance=math.sqrt((x-lx)^2+(y-ly)^2)
+            -- Smooth pressure over distance rather than sample count, keeping
+            -- the response consistent at different input rates and speeds.
+            p=lp+(p-lp)*(1-math.exp(-distance/12))
+        end
     end
 
     if self.dismiss_contact then return true end
@@ -1489,7 +1509,9 @@ area from scratch, so as long as that repaint starts with the background, rubbin
 out a word written across a ruled line leaves the line untouched.
 --]]
 function Canvas:_drawTemplate(bb, clip)
-    Template.draw(bb, self.document:templateFor(), self.content, 1, clip)
+    local background=self.document:getPage().background
+    if background then require("pdfbackground").draw(bb,background,self.content,clip)
+    else Template.draw(bb, self.document:templateFor(), self.content, 1, clip) end
 end
 
 --[[--
@@ -1598,6 +1620,7 @@ function Canvas:stop()
         if self[name] then UIManager:unschedule(self[name]) end
     end
     self:_endStroke()
+    require("pdfbackground").clear()
     self:_endErase()
     self.physical_pen_tool = nil
     self:_deselectLasso()

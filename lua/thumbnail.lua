@@ -112,7 +112,7 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
     -- the card is how you see at a glance what a notebook is for. Only a blank
     -- page with nothing on it has nothing to show.
     local template = doc:templateFor(index)
-    if #page.strokes == 0 and (not template or template == "blank") then
+    if #page.strokes == 0 and not page.background and (not template or template == "blank") then
         return nil
     end
 
@@ -127,6 +127,11 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
     local origin_x, origin_y = doc:contentOrigin()
     Template.draw(bb, doc:templateFor(index),
         { x = origin_x * scale, y = origin_y * scale, w = w, h = h }, scale)
+    if page.background then
+        local size=doc.page_size or {w=page_w-origin_x,h=page_h-origin_y}
+        require("pdfbackground").draw(bb,page.background,
+            {x=origin_x*scale,y=origin_y*scale,w=size.w*scale,h=size.h*scale})
+    end
     Renderer.drawPage(bb, page, scale)
 
     local ok = pcall(function() bb:writePNG(cache) end)

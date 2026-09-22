@@ -80,9 +80,6 @@ msgstr "Duplica"
 msgid "Eraser size"
 msgstr "Dimensione gomma"
 
-msgid "Export PDF"
-msgstr "Esporta PDF"
-
 msgid "Exported %1 notebooks."
 msgstr "Esportati %1 blocchi note."
 
@@ -307,8 +304,50 @@ msgstr "Rettangolo"
 msgid "Circle"
 msgstr "Cerchio"
 
+msgid "Annotate PDF"
+msgstr "Annota PDF"
+
+msgid "Choose a PDF file."
+msgstr "Scegli un file PDF."
+
+msgid "Could not open this PDF."
+msgstr "Impossibile aprire questo PDF."
+
+msgid "Could not save the notebook."
+msgstr "Impossibile salvare il quaderno."
+
+msgid "Small"
+msgstr "Piccolo"
+
+msgid "Medium"
+msgstr "Medio"
+
+msgid "Large"
+msgstr "Grande"
+
+msgid "Text size"
+msgstr "Dimensione testo"
+
+msgid "Insert text"
+msgstr "Inserisci testo"
+
+msgid "Insert"
+msgstr "Inserisci"
+
 msgid "Shapes"
 msgstr "Forme"
+
+msgid "Sharing format"
+msgstr "Formato di condivisione"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Export"
+msgstr "Esporta"
 
 msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
 msgstr "Notebook ha riscontrato un errore. Riavvia KOReader per riaprirlo; i dettagli sono in notebook-error.log."

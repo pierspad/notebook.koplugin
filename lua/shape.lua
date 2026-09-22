@@ -416,26 +416,26 @@ function Shape.recognize(raw_stroke, line_style)
 
     local total_len = strokeLength(points)
     if total_len < 25 then return nil end
+    local first, last = points[1], points[#points]
+    local gap = math.sqrt((last.x-first.x)^2 + (last.y-first.y)^2)
+    local open_arrow = line_style == "arrow" and gap > math.max(4,raw_stroke.width*1.5)
 
     -- 1. Try Line
     local shape_type, pts = detectLine(points, total_len)
 
     -- 2. Try Circle / Ellipse
-    if not shape_type then
+    if not shape_type and not open_arrow then
         shape_type, pts = detectCircleOrEllipse(points, total_len)
     end
 
     -- 3. Try Polygon (Triangle, Rectangle, Square)
-    if not shape_type then
+    if not shape_type and not open_arrow then
         shape_type, pts = detectPolygon(points, total_len)
     end
 
     -- In arrow mode an open curved shaft keeps its route. RDP removes hand
     -- tremor; two corner-cutting passes soften it while preserving endpoints.
-    if not shape_type and line_style == "arrow" then
-        local a, b = points[1], points[#points]
-        local chord = math.sqrt((b.x-a.x)^2 + (b.y-a.y)^2)
-        if chord >= total_len * 0.45 then
+    if not shape_type and open_arrow then
             pts = simplifyRDP(points, math.max(2, total_len * 0.008))
             for _ = 1, 2 do
                 local smooth = {pts[1]}
@@ -448,7 +448,6 @@ function Shape.recognize(raw_stroke, line_style)
                 pts = smooth
             end
             shape_type = "line"
-        end
     end
     if shape_type == "triangle" or shape_type == "ellipse" then return nil end
     if shape_type == "quadrilateral" or shape_type == "rectangle" or shape_type == "square" then

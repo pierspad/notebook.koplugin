@@ -19,8 +19,11 @@ end
 local BB = require("ffi/blitbuffer")
 local Document = require("document")
 local Notebook = require("notebook")
+local Renderer = require("renderer")
 local Stroke = require("stroke")
 local Shape = require("shape")
+local TextObject = require("textobject")
+local Xopp = require("xopp")
 local pressure = require("pressure")
 for _=1,2 do
     local sensor = assert(pressure.open(), "physical pressure unavailable")
@@ -74,11 +77,25 @@ assert(#loaded:getPage().strokes==7)
 assert(loaded:getPage().strokes[7].shape_kind=="circle")
 assert(loaded:getPage().strokes[3].color==96)
 assert(require("export").toPDF(loaded,"/tmp/notebook-audit/smoke.pdf",{width=1860,height=2480}))
+local text=TextObject.create("Testo modificabile",180,1850,700,28)
+doc:addStroke(text)
+Renderer.drawStroke(bb,text)
+assert(Stroke:deserialize(text:serialize()).text=="Testo modificabile")
+assert(Xopp.toXOPP(doc,"/tmp/notebook-audit/smoke.xopp"))
+local pdfdoc=Document:new("/tmp/notebook-audit/pdf-background.scribe")
+pdfdoc.pages={{strokes={},background={file="/tmp/notebook-audit/smoke.pdf",page=1}}}
+pdfdoc.page_size={w=1860,h=2400}
+require("pdfbackground").draw(bb,pdfdoc.pages[1].background,{x=0,y=80,w=1860,h=2400})
+pdfdoc:addPage()
+assert(pdfdoc.pages[1].background and not pdfdoc.pages[2].background,"PDF and inserted blank page differ")
 -- Exercise real blitbuffer snapshots without writing to the physical panel.
 local screen = Device.screen
 local screen_bb, fast, refresh = screen.bb, screen.refreshFast, screen.refreshUI
 screen.bb, screen.refreshFast, screen.refreshUI = bb, function() end, function() end
 local canvas = nb.canvas
+canvas.shape_kind="circle"
+canvas.pen_width=12
+local strokes_before_shape = #doc:getPage().strokes
 canvas:_beginShape(120,200)
 local started = os.clock()
 for i=1,20 do
@@ -90,7 +107,7 @@ local cache = canvas.shape_gesture.background
 assert(cache, "preview has no background cache")
 canvas.stopping = true
 canvas:_endShape()
-assert(not canvas.shape_gesture and #doc:getPage().strokes==8)
+assert(not canvas.shape_gesture and #doc:getPage().strokes==strokes_before_shape+1)
 -- Compare the old vector repaint cost for the same dirty rectangles.
 started = os.clock()
 for i=1,20 do canvas:_repaintRegion(120,200,480+i*35,500+i*40,true) end

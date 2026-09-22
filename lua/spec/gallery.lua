@@ -283,7 +283,7 @@ test("the previous cards are released when the grid is rebuilt", function()
 end)
 
 test("a PDF card's ribbon is released too", function()
-    local gallery = newGallery(4)
+    local gallery, rec = newGallery(4)
     gallery:paintTo(RectBB.new(), 0, 0)
     local ribbon
     local function find(w)
@@ -546,7 +546,7 @@ test("only what applies to the chosen things is offered", function()
     assertTrue(folder.item.is_folder, "the fixture put a notebook first")
     folder:onHold()
 
-    assertTrue(labelled(gallery.header_row, "Export PDF") == nil,
+    assertTrue(labelled(gallery.header_row, "Export") == nil,
         "offered to export a folder")
     assertTrue(labelled(gallery.header_row, "Delete") ~= nil,
         "a folder can certainly be deleted")
@@ -582,7 +582,7 @@ test("sending is not offered when there is nowhere to send", function()
 
     assertTrue(offers(gallery, "Send") == nil,
         "offered to send with no LocalSend plugin installed")
-    assertTrue(offers(gallery, "Export PDF") ~= nil,
+    assertTrue(offers(gallery, "Export") ~= nil,
         "exporting should be unaffected by any of this")
 end)
 
@@ -643,7 +643,7 @@ test("the actions keep their icons once there are a lot of them", function()
     cardWhere(gallery, function(it) return not it.is_folder end):onHold()
 
     assertTrue(withIcon(gallery.header_row, "notebook.export") ~= nil,
-        "Export PDF lost its icon")
+        "Export lost its icon")
     assertTrue(withIcon(gallery.header_row, "notebook.delete") ~= nil,
         "Delete lost its icon")
 end)
@@ -674,11 +674,11 @@ end
 test("the actions are on the second row, whatever is chosen", function()
     local gallery = newGallery(6, { on_share = function() end })
     gallery:paintTo(RectBB.new(), 0, 0)
-    assertEq(rowOf(gallery, "New notebook"), 3, "row the ordinary actions are on")
+    assertEq(rowOf(gallery, "Add"), 3, "row the ordinary actions are on")
 
     cardWhere(gallery, function(it) return not it.is_folder end):onHold()
     assertEq(rowOf(gallery, "Delete"), 3, "row the selection actions are on")
-    assertEq(rowOf(gallery, "Export PDF"), 3, "row Export PDF is on")
+    assertEq(rowOf(gallery, "Export"), 3, "row Export is on")
 end)
 
 test("ticking everything stays up beside the count", function()
@@ -723,7 +723,7 @@ test("icons sit beside the words, not above them", function()
     cardWhere(gallery, function(it) return not it.is_folder end):onHold()
 
     local button = withIcon(gallery.header_row, "notebook.export")
-    assertTrue(button ~= nil, "Export PDF has no icon at all")
+    assertTrue(button ~= nil, "Export has no icon at all")
     -- Side by side, a button is wider than it is tall; stacked it is not.
     local size = button:getSize()
     assertTrue(size.w > size.h,
@@ -1283,13 +1283,17 @@ test("the new notebook panel stays clear of the keyboard and the status bar", fu
         "the panel is flush against the top of the screen, under the status bar")
 end)
 
-test("the gallery offers both kinds of new thing outright", function()
-    local gallery = newGallery(4)
+test("the compact Add menu offers notebooks, folders and PDF annotation", function()
+    local gallery, rec = newGallery(4)
     gallery:paintTo(RectBB.new(), 0, 0)
-    assertTrue(labelled(gallery.header_row, "New notebook") ~= nil,
-        "no way to make a notebook without opening a menu first")
-    assertTrue(labelled(gallery.header_row, "New folder") ~= nil,
-        "no way to make a folder without opening a menu first")
+    local add=labelled(gallery.header_row,"Add")
+    assertTrue(add~=nil,"Add is missing")
+    add:onTap()
+    local menu=rec.shown[#rec.shown]
+    local found={}
+    for _,action in ipairs(menu.actions) do found[action.text]=true end
+    assertTrue(found["New notebook"] and found["New folder"] and found["Annotate PDF"],
+        "Add menu is incomplete")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
