@@ -8,11 +8,37 @@ function PDF.clear()
 end
 
 function PDF.count(path)
+    local count=PDF.inspect(path)
+    return count
+end
+
+-- Opens a PDF once and returns both its page count and the dimensions of every
+-- page in PDF points. Import used to open it once for the count and XOPP had
+-- to guess every page was shaped like the Scribe panel.
+function PDF.inspect(path)
     local doc = require("ffi/mupdf").openDocument(path)
     if doc:needsPassword() then doc:close(); error("Password-protected PDF") end
     local count=doc:getPages()
+    local sizes={}
+    local dc=require("ffi/drawcontext").new()
+    for i=1,count do
+        local page=doc:openPage(i)
+        local w,h=page:getSize(dc)
+        sizes[i]={w=w,h=h}
+        page:close()
+    end
     doc:close()
-    return count
+    return count,sizes
+end
+
+function PDF.size(path,page_number)
+    local doc = require("ffi/mupdf").openDocument(path)
+    if doc:needsPassword() then doc:close(); error("Password-protected PDF") end
+    local page=doc:openPage(page_number)
+    local dc=require("ffi/drawcontext").new()
+    local w,h=page:getSize(dc)
+    page:close(); doc:close()
+    return w,h
 end
 
 function PDF.draw(bb, background, area, clip)

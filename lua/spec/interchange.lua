@@ -23,7 +23,9 @@ os.remove(path)
 local pdf=os.tmpname()
 local pdf_file=assert(io.open(pdf,'wb')); pdf_file:write('%PDF-test'); pdf_file:close()
 local attached_path=os.tmpname()..'.xopp'
-local attached={pages={{strokes={},background={file=pdf,page=1}}},page_size={w=1000,h=1400},
+local overlay=Stroke:new{width=4}; overlay:addPoint(0,200); overlay:addPoint(1000,1200)
+local attached={pages={{strokes={overlay},background={file=pdf,page=1,size={w=600,h=800}}}},
+    page_size={w=1000,h=1400},contentOrigin=function() return 0,100 end,
     templateFor=function() return 'blank' end}
 local ok,companion=Xopp.toXOPP(attached,attached_path)
 assert(ok and companion==attached_path..'.bg.pdf','attached PDF companion path is wrong')
@@ -32,5 +34,9 @@ local attached_pipe=assert(io.popen('gzip -dc '..attached_path,'r'))
 local attached_xml=attached_pipe:read('*a'); attached_pipe:close()
 assert(attached_xml:match('domain="attach" filename="bg.pdf"'),
     'XOPP does not use the Xournal++ attached-PDF convention')
+assert(attached_xml:match('<page width="600%.000" height="800%.000">'),
+    'attached PDF native proportions were not preserved')
+assert(attached_xml:match('0%.000 40%.000 600%.000 640%.000'),
+    'letterbox and content origin were not removed from overlay coordinates')
 os.remove(pdf); os.remove(attached_path); os.remove(companion)
 print('interchange XOPP and editable text passed')

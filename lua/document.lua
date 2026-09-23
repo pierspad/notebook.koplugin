@@ -648,6 +648,13 @@ function Document:hasPageTemplates()
     return false
 end
 
+function Document:hasPDFBackgrounds()
+    for _,page in ipairs(self.pages) do
+        if page.background then return true end
+    end
+    return false
+end
+
 -- Persistence ----------------------------------------------------------------
 
 function Document:save()

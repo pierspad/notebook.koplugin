@@ -740,9 +740,11 @@ function Gallery:_buildHeader()
             self:onClose()
         end)
 
-        -- Notebook, folder and imported PDF share one compact Add menu.
+        -- Direct creation saves the extra tap of the old Add menu.
         local buttons = {
-            headerButton(mode, _("Add"), "notebook.page", function() self:_addMenu() end),
+            headerButton(mode, _("New notebook"), "notebook.page", function() self:_createNotebook() end),
+            headerButton(mode, _("New folder"), "notebook.folder", function() self:_createFolder() end),
+            headerButton(mode, _("Annotate PDF"), "notebook.export", function() self:_importPDF() end),
         }
 
         --[[
@@ -1169,20 +1171,6 @@ function Gallery:_askName(title, initial, commit, presets)
     dialog:onShowKeyboard()
 end
 
-function Gallery:_addMenu()
-    UIManager:show(ActionMenu:new{
-        title = _("Add"),
-        actions = {
-            { icon = "notebook.page", text = _("New notebook"),
-              callback = function() self:_createNotebook() end },
-            { icon = "notebook.folder", text = _("New folder"),
-              callback = function() self:_createFolder() end },
-            { icon = "notebook.export", text = _("Annotate PDF"),
-              callback = function() self:_importPDF() end },
-        },
-    })
-end
-
 function Gallery:_exportMenu(notebooks)
     UIManager:show(ActionMenu:new{
         title = _("Export"),
@@ -1223,7 +1211,7 @@ function Gallery:_importPDF()
         path=G_reader_settings:readSetting("notebook_pdf_folder") or "/mnt/us/documents",
         onConfirm=function(path)
             if not path:lower():match("%.pdf$") then return self:_error(_("Choose a PDF file.")) end
-            local ok,count=pcall(require("pdfbackground").count,path)
+            local ok,count,sizes=pcall(require("pdfbackground").inspect,path)
             if not ok or count<1 then return self:_error(_("Could not open this PDF.")) end
             G_reader_settings:saveSetting("notebook_pdf_folder",path:match("^(.*)/"))
             local name=Library.uniqueName(path:match("([^/]+)$"):sub(1,-5),self.folder)
@@ -1237,7 +1225,9 @@ function Gallery:_importPDF()
             if not Library.copyFile(path,source) then return self:_error(_("Could not open this PDF.")) end
             local doc=Document:new(Library.pathFor(name,self.folder))
             doc.pages={}
-            for i=1,count do doc.pages[i]={strokes={},background={file=source,page=i}} end
+            for i=1,count do
+                doc.pages[i]={strokes={},background={file=source,page=i,size=sizes[i]}}
+            end
             if not doc:save() then os.remove(source); return self:_error(_("Could not save the notebook.")) end
             self:_rebuild()
             if self.on_open then self.on_open(name,self.folder) end
@@ -1489,17 +1479,38 @@ share.lua for why, and for what does delete them.
 Rendered one per tick, like the Export action and for the same reason: a dozen
 notebooks back to back would freeze the screen for the whole run.
 --]]
-function Gallery:_shareMany(chosen)
+function Gallery:_shareMany(chosen, format, prepared)
     self:_endSelection()
+
+    -- Let LocalSend discover devices first and own the format switch in that
+    -- screen. Rendering starts only after a target and format are chosen.
+    if not format and #notebooksOnly(chosen)>0 then
+        local selected=G_reader_settings:readSetting("notebook_share_format") == "xopp" and "xopp" or "pdf"
+        return self.on_share(nil,{
+            selector_options={
+                selected=selected,
+                values={{value="pdf",text=_("PDF")},{value="xopp",text=_("XOPP")}},
+                on_change=function(value)
+                    G_reader_settings:saveSetting("notebook_share_format",value)
+                end,
+            },
+            prepare=function(value,callback)
+                G_reader_settings:saveSetting("notebook_share_format",value)
+                self:_shareMany(chosen,value,callback)
+            end,
+        })
+    end
 
     if #chosen == 1 and isExport(chosen[1])
             and not (chosen[1].is_xopp
                 and lfs.attributes(Xopp.backgroundPath(chosen[1].path), "mode") == "file") then
+        if prepared then return prepared(chosen[1].path) end
         return self.on_share(chosen[1].path)
     end
 
     local staging = Share.stagingDir()
     if not staging then
+        if prepared then return prepared(nil,_("There is nowhere to prepare the files for sending.")) end
         return UIManager:show(InfoMessage:new{
             text = _("There is nowhere to prepare the files for sending."),
             timeout = NOTICE_SECONDS,
@@ -1513,7 +1524,7 @@ function Gallery:_shareMany(chosen)
     UIManager:show(working)
 
     local i, done, failed, last_out, multiple_files = 0, 0, 0, nil, false
-    local format=G_reader_settings:readSetting("notebook_share_format") == "xopp" and "xopp" or "pdf"
+    format=format or (G_reader_settings:readSetting("notebook_share_format") == "xopp" and "xopp" or "pdf")
     local function step()
         i = i + 1
         local item = chosen[i]
@@ -1522,10 +1533,8 @@ function Gallery:_shareMany(chosen)
             UIManager:close(working)
             if done == 0 then
                 Library.deleteTree(staging)
-                return UIManager:show(InfoMessage:new{
-                    text = _("Nothing could be prepared for sending."),
-                    timeout = NOTICE_SECONDS,
-                })
+                if prepared then return prepared(nil,_("Nothing could be prepared for sending.")) end
+                return UIManager:show(InfoMessage:new{text=_("Nothing could be prepared for sending."),timeout=NOTICE_SECONDS})
             end
             if failed > 0 then
                 UIManager:show(InfoMessage:new{
@@ -1536,7 +1545,9 @@ function Gallery:_shareMany(chosen)
             -- One file staged on its own goes as a file rather than as a
             -- directory holding one thing, which is what the other device
             -- would otherwise be asked to accept.
-            return self.on_share(done == 1 and not multiple_files and last_out or staging)
+            local ready=done == 1 and not multiple_files and last_out or staging
+            if prepared then return prepared(ready) end
+            return self.on_share(ready)
         end
 
         local out = staging .. "/" .. item.name .. "." .. (item.extension or format)
@@ -1554,7 +1565,30 @@ function Gallery:_shareMany(chosen)
         else
             local doc = Document:new(item.path)
             if doc:load() then
-                if format=="xopp" then
+                local cached=Share.cachedExport(item.path,item.name,format)
+                local cached_extra=cached and Xopp.backgroundPath(cached)
+                if cached and lfs.attributes(cached,"mode")=="file"
+                        and (format~="xopp" or not doc:hasPDFBackgrounds()
+                            or lfs.attributes(cached_extra,"mode")=="file") then
+                    ok=Library.copyFile(cached,out)
+                    if ok and format=="xopp" and lfs.attributes(cached_extra,"mode")=="file" then
+                        ok=Library.copyFile(cached_extra,Xopp.backgroundPath(out))
+                        multiple_files=true
+                        if not ok then os.remove(out) end
+                    end
+                elseif cached then
+                    local extra
+                    if format=="xopp" then ok,extra=Xopp.toXOPP(doc,cached)
+                    else ok=Export.toPDF(doc,cached) end
+                    if ok then
+                        ok=Library.copyFile(cached,out)
+                        if ok and extra then
+                            ok=Library.copyFile(extra,Xopp.backgroundPath(out))
+                            multiple_files=true
+                            if not ok then os.remove(out) end
+                        end
+                    end
+                elseif format=="xopp" then
                     local extra
                     ok,extra=Xopp.toXOPP(doc,out)
                     if extra then multiple_files=true end

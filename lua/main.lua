@@ -202,8 +202,8 @@ function Scribe:openNotebook()
     this, or there is not".
     --]]
     local ui = self.ui
-    local on_share = Share.available(ui) and function(path)
-        Share.send(ui, path)
+    local on_share = Share.available(ui) and function(path, options)
+        Share.send(ui, path, options)
     end or nil
 
     local gallery

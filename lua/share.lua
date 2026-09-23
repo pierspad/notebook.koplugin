@@ -77,6 +77,7 @@ a local network and far shorter than "forever", which is what the alternative
 amounts to.
 --]]
 local SWEEP_AFTER_SECONDS = 3600
+local CACHE_SWEEP_AFTER_SECONDS = 7*24*3600
 
 function Share.sweep()
     local dir = cacheDir()
@@ -90,6 +91,19 @@ function Share.sweep()
             if attr and attr.mode == "directory"
                 and now - (attr.modification or 0) > SWEEP_AFTER_SECONDS then
                 Library.deleteTree(path)
+            end
+        end
+    end
+    local export_cache=dir.."/notebook-share-cache"
+    if lfs.attributes(export_cache,"mode")=="directory" then
+        for entry in lfs.dir(export_cache) do
+            if entry~="." and entry~=".." then
+                local path=export_cache.."/"..entry
+                local attr=lfs.attributes(path)
+                if attr and attr.mode=="directory"
+                        and now-(attr.modification or 0)>CACHE_SWEEP_AFTER_SECONDS then
+                    Library.deleteTree(path)
+                end
             end
         end
     end
@@ -134,11 +148,46 @@ Returns false if the plugin went away between the check and the call, which is
 possible in principle -- the UI is rebuilt when a book is opened -- and costs a
 line to survive.
 --]]
-function Share.send(ui, path)
+function Share.send(ui, path, options)
     local p = plugin(ui)
     if not p then return false end
-    p:showFileSendFlow(path)
+    p:showFileSendFlow(path, options)
     return true
+end
+
+-- A stable cache location for an interchange file generated from a notebook.
+-- The key includes the notebook content, so a cache hit is safe even when two
+-- atomic saves happen in the same filesystem timestamp tick.
+local function pathHash(value)
+    local hash=5381
+    for i=1,#value do hash=(hash*33+value:byte(i))%2147483647 end
+    return string.format("%08x",hash)
+end
+
+local function fileHash(path)
+    local file=io.open(path,"rb")
+    if not file then return nil end
+    local hash=5381
+    while true do
+        local chunk=file:read(65536)
+        if not chunk then break end
+        for i=1,#chunk do hash=(hash*33+chunk:byte(i))%2147483647 end
+    end
+    file:close()
+    return string.format("%08x",hash)
+end
+
+function Share.cachedExport(path,name,format)
+    local attr=lfs.attributes(path)
+    if not attr then return nil end
+    local root=cacheDir().."/notebook-share-cache"
+    if lfs.attributes(root,"mode")~="directory" and not lfs.mkdir(root) then return nil end
+    local content=fileHash(path)
+    if not content then return nil end
+    local key=pathHash(path).."-"..content.."-"..tostring(attr.size or 0)
+    local dir=root.."/"..key
+    if lfs.attributes(dir,"mode")~="directory" and not lfs.mkdir(dir) then return nil end
+    return dir.."/"..name.."."..format
 end
 
 return Share

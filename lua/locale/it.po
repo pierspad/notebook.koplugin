@@ -13,9 +13,6 @@ msgstr "%1 selezionati"
 msgid "1 selected"
 msgstr "1 selezionato"
 
-msgid "Add"
-msgstr "Aggiungi"
-
 msgid "All"
 msgstr "Tutti"
 

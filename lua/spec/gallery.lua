@@ -642,6 +642,30 @@ test("a lone PDF is sent from where it lies, not staged first", function()
     assertTrue(gallery.selection == nil, "the selection outlived the send")
 end)
 
+test("a notebook defers preparation and exposes the remembered format", function()
+    local old_settings=G_reader_settings
+    local values={notebook_share_format="xopp"}
+    G_reader_settings={
+        readSetting=function(_,key) return values[key] end,
+        saveSetting=function(_,key,value) values[key]=value end,
+    }
+    local sent_path,options
+    local gallery = newGallery(6, { on_share = function(path,flow)
+        sent_path,options=path,flow
+    end })
+    gallery:paintTo(RectBB.new(),0,0)
+    local notebook=cardWhere(gallery,function(it)
+        return not it.is_folder and not it.is_export and not it.is_pdf and not it.is_xopp
+    end)
+    gallery:_shareMany({notebook.item})
+    assertTrue(sent_path==nil,"rendered before a device was chosen")
+    assertTrue(options and options.prepare,"deferred preparation is missing")
+    assertEq(options.selector_options.selected,"xopp","remembered format")
+    assertEq(options.selector_options.values[1].value,"pdf","PDF choice")
+    assertEq(options.selector_options.values[2].value,"xopp","XOPP choice")
+    G_reader_settings=old_settings
+end)
+
 --[[
 The header gave up its icons when a sixth action was added: it fits by stepping
 down from icon-and-word buttons to plain words, and one more button was enough
@@ -685,7 +709,7 @@ end
 test("the actions are on the second row, whatever is chosen", function()
     local gallery = newGallery(6, { on_share = function() end })
     gallery:paintTo(RectBB.new(), 0, 0)
-    assertEq(rowOf(gallery, "Add"), 3, "row the ordinary actions are on")
+    assertEq(rowOf(gallery, "New notebook"), 3, "row the ordinary actions are on")
 
     cardWhere(gallery, function(it) return not it.is_folder end):onHold()
     assertEq(rowOf(gallery, "Delete"), 3, "row the selection actions are on")
@@ -1311,17 +1335,13 @@ test("the new notebook panel stays clear of the keyboard and the status bar", fu
         "the panel is flush against the top of the screen, under the status bar")
 end)
 
-test("the compact Add menu offers notebooks, folders and PDF annotation", function()
-    local gallery, rec = newGallery(4)
+test("notebook, folder and PDF creation are direct header actions", function()
+    local gallery = newGallery(4)
     gallery:paintTo(RectBB.new(), 0, 0)
-    local add=labelled(gallery.header_row,"Add")
-    assertTrue(add~=nil,"Add is missing")
-    add:onTap()
-    local menu=rec.shown[#rec.shown]
-    local found={}
-    for _,action in ipairs(menu.actions) do found[action.text]=true end
-    assertTrue(found["New notebook"] and found["New folder"] and found["Annotate PDF"],
-        "Add menu is incomplete")
+    assertTrue(labelled(gallery.header_row,"New notebook")~=nil,"New notebook is missing")
+    assertTrue(labelled(gallery.header_row,"New folder")~=nil,"New folder is missing")
+    assertTrue(labelled(gallery.header_row,"Annotate PDF")~=nil,"Annotate PDF is missing")
+    assertTrue(labelled(gallery.header_row,"Select")~=nil,"Select is missing")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
