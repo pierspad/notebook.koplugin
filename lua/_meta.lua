@@ -8,6 +8,6 @@ Write by hand with the pen: freehand strokes, highlighter, eraser and lasso,
 with undo and multiple pages. Strokes are kept as vectors, so they stay sharp at
 any zoom and can be erased or undone one at a time. Notebooks are organised in a
 gallery of thumbnails and export to PDF.]]),
-    version = "v1.2.0-dev.3",
+    version = "v1.2.0-dev.4",
     author = "pierspad",
 }
