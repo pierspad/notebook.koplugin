@@ -88,6 +88,7 @@ local LassoMenu = InputContainer:extend{
     on_copy = nil,
     on_paste = nil,
     on_delete = nil,
+    on_edit = nil,
     on_close = nil,
     has_clipboard = false,
 }
@@ -95,6 +96,17 @@ local LassoMenu = InputContainer:extend{
 function LassoMenu:init()
     local buttons = HorizontalGroup:new{ align = "center" }
     local pad = Size.padding.small
+
+    if self.on_edit then
+        table.insert(buttons, FloatingButton:new{
+            icon = "notebook.text", text = _("Edit"),
+            callback = function()
+                UIManager:close(self)
+                self.on_edit()
+            end,
+        })
+        table.insert(buttons, HorizontalSpan:new{ width = pad })
+    end
 
     -- 1. Taglia (Cut)
     table.insert(buttons, FloatingButton:new{

@@ -62,8 +62,10 @@ function Xopp.toXOPP(doc,path)
         lines[#lines+1]='<layer>'
         for _,stroke in ipairs(page.strokes) do
             if stroke.text then
-                lines[#lines+1]=string.format('<text font="Sans" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
-                    stroke.font_size*scale,stroke.x_min*scale,stroke.y_min*scale,xml(stroke.text))
+                local family=stroke.font_family=="serif" and "Serif"
+                    or (stroke.font_family=="mono" and "Monospace" or "Sans")
+                lines[#lines+1]=string.format('<text font="%s" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
+                    family,stroke.font_size*scale,stroke.x_min*scale,stroke.y_min*scale,xml(stroke.text))
             elseif stroke.n>0 then
                 local points={}
                 local pressure=0

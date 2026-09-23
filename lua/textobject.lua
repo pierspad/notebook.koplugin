@@ -1,17 +1,32 @@
 local Text = {}
 
+local FONTS = {
+    sans = { regular="NotoSans-Regular.ttf", italic="NotoSans-Italic.ttf" },
+    serif = { regular="NotoSerif-Regular.ttf", italic="NotoSerif-Italic.ttf" },
+    mono = { regular="NimbusMono-Regular.cff", italic="NimbusMono-Oblique.cff" },
+}
+
+local function faceName(stroke)
+    local family=FONTS[stroke.font_family or "sans"] or FONTS.sans
+    return stroke.text_italic and family.italic or family.regular
+end
+
 function Text.widget(stroke,scale)
     scale=scale or 1
     return require("ui/widget/textboxwidget"):new{
         text=stroke.text,
-        face=require("ui/font"):getFace("cfont",math.max(5,stroke.font_size*scale)),
+        face=require("ui/font"):getFace(faceName(stroke),math.max(5,stroke.font_size*scale)),
+        bold=stroke.text_bold or false,
         width=math.max(1,math.floor((stroke.x_max-stroke.x_min)*scale)),
         fgcolor=require("ffi/blitbuffer").Color8(stroke.color or 0),
     }
 end
 
-function Text.create(text,x,y,width,size)
-    local stroke=require("stroke"):new{tool="text",shape_kind="text",text=text,font_size=size,width=1}
+function Text.create(text,x,y,width,size,style)
+    style=style or {}
+    local stroke=require("stroke"):new{tool="text",shape_kind="text",text=text,font_size=size,width=1,
+        font_family=style.font_family or "sans", text_bold=style.text_bold,
+        text_italic=style.text_italic, text_underline=style.text_underline}
     stroke:addPoint(x,y)
     stroke:addPoint(x+width,y+size)
     local widget=Text.widget(stroke)
@@ -31,7 +46,18 @@ function Text.draw(bb,stroke,scale,ox,oy,clip)
         if not x then widget:free(); return end
         target=bb:viewport(x,y,w,h); ox,oy=ox-x,oy-y
     end
-    widget:paintTo(target,math.floor(stroke.x_min*scale+ox),math.floor(stroke.y_min*scale+oy))
+    local px,py=math.floor(stroke.x_min*scale+ox),math.floor(stroke.y_min*scale+oy)
+    widget:paintTo(target,px,py)
+    if stroke.text_underline then
+        local size=widget:getSize()
+        local line_h=widget.line_height_px or math.max(5,stroke.font_size*scale)
+        local yy=py+line_h-2
+        while yy < py+size.h do
+            target:paintRect(px,yy,size.w,math.max(1,math.floor(scale)),
+                require("ffi/blitbuffer").Color8(stroke.color or 0))
+            yy=yy+line_h
+        end
+    end
     widget:free()
 end
 

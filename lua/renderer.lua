@@ -177,7 +177,11 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
         end
         stroke.accum_len = cur_len + dist
     else
-        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.4)) or 1.0
+        -- Chisel stamps are squares two radii wide. At 0.8r consecutive
+        -- squares still overlap generously in every direction, while the old
+        -- 0.4r spacing blended most pixels several times and made a broad
+        -- marker spend CPU on work that could not change the result.
+        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.8)) or 1.0
         local steps = math.max(1, math.ceil(dist / step_dist))
 
         for i = math.max(0, math.floor(first_t * steps)), math.min(steps, math.ceil(last_t * steps)) do

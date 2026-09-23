@@ -91,6 +91,7 @@ function Notebook:init()
         on_change = function() self:_onDocumentChanged() end,
         on_page_swipe = function(delta) self:_turnPage(delta) end,
         on_text = function(_, x, y) self:_insertText(x, y) end,
+        on_edit_text = function(_, stroke) self:_editText(stroke) end,
     }
     self:_loadSettings()
     self.document.page_size={w=self.canvas.content.w,h=self.canvas.content.h}
@@ -519,27 +520,106 @@ function Notebook:_showToolOptions(index)
                 selected=self.canvas.text_size == option[1],
                 callback=function() self:_setSetting("text_size", option[1]); self:_selectTool(index) end})
         end
-        return self:_showToolMenu(index, _("Text size"), actions)
+        for _, option in ipairs({{"sans", _("Sans-serif")}, {"serif", _("Serif")}, {"mono", _("Monospace")}}) do
+            table.insert(actions, {icon="notebook.text", text=option[2],
+                selected=(self.canvas.text_font or "sans") == option[1],
+                callback=function() self:_setSetting("text_font", option[1]); self:_selectTool(index) end})
+        end
+        for _, option in ipairs({{"text_bold", _("Bold")}, {"text_italic", _("Italic")},
+                                  {"text_underline", _("Underline")}}) do
+            table.insert(actions, {icon="notebook.text", text=option[2],
+                selected=self.canvas[option[1]] == true,
+                callback=function()
+                    self:_setSetting(option[1], not self.canvas[option[1]])
+                    self:_selectTool(index)
+                end})
+        end
+        return self:_showToolMenu(index, _("Text options"), actions)
     end
 end
 
 function Notebook:_insertText(x, y)
+    self:_editText(nil, x, y)
+end
+
+function Notebook:_editText(original, x, y)
+    x, y = x or original.x_min, y or original.y_min
+    local function textOption(key, fallback)
+        if original and original[key] ~= nil then return original[key] end
+        local value=self.canvas[key]
+        return value ~= nil and value or fallback
+    end
+    local style = {
+        font_family = original and original.font_family or self.canvas.text_font or "sans",
+        text_bold = textOption("text_bold",false),
+        text_italic = textOption("text_italic",false),
+        text_underline = textOption("text_underline",false),
+    }
+    local size = original and original.font_size or self.canvas.text_size
+    local width = original and (original.x_max-original.x_min)
+        or math.max(80, math.min(Screen:scaleBySize(600), self.canvas.content.x+self.canvas.content.w-x))
+    local preview
+    self.canvas.hidden_stroke = original
+
+    local function redraw(value)
+        local dirty = nil
+        if preview then dirty=require("rect").grow(dirty, preview:getBounds()) end
+        if original then dirty=require("rect").grow(dirty, original:getBounds()) end
+        preview=require("textobject").create(value ~= "" and value or " ",x,y,width,size,style)
+        dirty=require("rect").grow(dirty,preview:getBounds())
+        self.canvas.text_preview=preview
+        self.canvas:_repaintRegion(dirty.x,dirty.y,dirty.w,dirty.h,true)
+        self.canvas:_refreshNow(dirty.x,dirty.y,dirty.w,dirty.h,"ui")
+    end
+
     local dialog
+    local function currentText() return dialog and dialog:getInputText() or (original and original.text or "") end
+    local function restyle(fn) fn(); redraw(currentText()) end
+    local families={"sans","serif","mono"}
     dialog = InputDialog:new{
-        title = _("Insert text"), input = "",
-        buttons = {{{text=_("Cancel"), id="close", callback=function() UIManager:close(dialog) end},
-            {text=_("Insert"), is_enter_default=true, callback=function()
+        title = original and _("Edit text") or _("Insert text"),
+        input = original and original.text or "", allow_newline=true,
+        input_face=Font:getFace("cfont",size),
+        edited_callback=function(edited)
+            if edited and dialog then redraw(dialog:getInputText()) end
+        end,
+        buttons = {
+            {
+                {text=_("Font"), callback=function() restyle(function()
+                    local at=1; for i,v in ipairs(families) do if v==style.font_family then at=i end end
+                    style.font_family=families[at%#families+1]
+                end) end},
+                {text=_("Bold"), callback=function() restyle(function() style.text_bold=not style.text_bold end) end},
+                {text=_("Italic"), callback=function() restyle(function() style.text_italic=not style.text_italic end) end},
+                {text=_("Underline"), callback=function() restyle(function() style.text_underline=not style.text_underline end) end},
+                {text="A−", callback=function() restyle(function() size=math.max(10,size-2) end) end},
+                {text="A+", callback=function() restyle(function() size=math.min(96,size+2) end) end},
+            },
+            {{text=_("Cancel"), id="close", callback=function()
+                UIManager:close(dialog)
+                local dirty = nil
+                if preview then dirty=require("rect").grow(dirty,preview:getBounds()) end
+                if original then dirty=require("rect").grow(dirty,original:getBounds()) end
+                self.canvas.hidden_stroke=nil; self.canvas.text_preview=nil
+                if dirty then self.canvas:_repaintRegion(dirty.x,dirty.y,dirty.w,dirty.h) end
+            end},
+            {text=original and _("Save") or _("Insert"), is_enter_default=true, callback=function()
                 local value = dialog:getInputText()
                 UIManager:close(dialog)
-                if not value or value == "" then return end
-                local stroke = require("textobject").create(value, x, y,
-                    math.max(80, math.min(Screen:scaleBySize(600), self.canvas.content.x+self.canvas.content.w-x)),
-                    self.canvas.text_size)
-                self.document:addStroke(stroke)
+                self.canvas.hidden_stroke=nil; self.canvas.text_preview=nil
+                if not value or value == "" then
+                    if preview then self.canvas:_repaintRegion(preview:getBounds()) end
+                    return
+                end
+                local stroke = require("textobject").create(value,x,y,width,size,style)
+                if original then self.document:replaceStroke(original,stroke) else self.document:addStroke(stroke) end
                 self.canvas:_repaintRegion(stroke:getBounds())
+                self.canvas:_showLassoMenu({stroke})
                 self:_onDocumentChanged()
-            end}}},
+            end}},
+        },
     }
+    redraw(original and original.text or "")
     UIManager:show(dialog)
     dialog:onShowKeyboard()
 end
@@ -572,6 +652,10 @@ function Notebook:_loadSettings()
     canvas.eraser_mode       = get("eraser_mode", canvas.eraser_mode)
     canvas.draw_with_finger  = get("draw_with_finger", canvas.draw_with_finger)
     canvas.text_size         = get("text_size", 26)
+    canvas.text_font         = get("text_font", "sans")
+    canvas.text_bold         = get("text_bold", false)
+    canvas.text_italic       = get("text_italic", false)
+    canvas.text_underline    = get("text_underline", false)
     canvas.share_format      = get("share_format", "pdf") == "xopp" and "xopp" or "pdf"
 end
 

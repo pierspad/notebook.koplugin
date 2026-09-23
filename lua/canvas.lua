@@ -411,8 +411,15 @@ function Canvas:_paintShape()
     local original = gesture.original
     local x0, y0 = gesture.x, gesture.y
     if original then x0, y0 = original.x_min, original.y_min end
-    local clean = Shape.create(gesture.kind, x0, y0, x, y,
-        original and original.width or self.pen_width, original and original.color or 0)
+    local clean
+    if original and original.text then
+        clean=require("textobject").create(original.text,x0,y0,math.max(40,x-x0),
+            original.font_size,{font_family=original.font_family,text_bold=original.text_bold,
+                text_italic=original.text_italic,text_underline=original.text_underline})
+    else
+        clean = Shape.create(gesture.kind, x0, y0, x, y,
+            original and original.width or self.pen_width, original and original.color or 0)
+    end
     local old = self.stroke
     self.stroke = nil
     if old then
@@ -840,6 +847,12 @@ function Canvas:_showLassoMenu(selected)
     self.lasso_menu = LassoMenu:new{
         bbox = bbox or { x = self.content.x + 100, y = self.content.y + 100, w = 200, h = 100 },
         has_clipboard = Canvas.clipboard ~= nil and #Canvas.clipboard > 0,
+        on_edit = #selected == 1 and selected[1].text and self.on_edit_text and function()
+            local text = selected[1]
+            self.lasso_menu = nil
+            self.selected_strokes, self.selection_bbox = nil, nil
+            self:on_edit_text(text)
+        end or nil,
         on_cut = function()
             self.lasso_menu = nil
             --[[
@@ -1108,15 +1121,26 @@ function Canvas:_repaintRegion(x, y, w, h, defer_refresh)
     if not x then return end
 
     local clip = { x = x, y = y, w = w, h = h }
-    Screen.bb:paintRect(x, y, w, h, Blitbuffer.COLOR_WHITE)
-    self:_drawTemplate(Screen.bb, clip)
+    if self.background_cache then
+        Screen.bb:blitFrom(self.background_cache,x,y,x,y,w,h)
+    else
+        Screen.bb:paintRect(x, y, w, h, Blitbuffer.COLOR_WHITE)
+        self:_drawTemplate(Screen.bb, clip)
+    end
     -- Rejected first by bounding box, then per run of points inside the stroke:
     -- a line that merely crosses this region is not rasterised end to end.
     for _, stroke in ipairs(self.document:getPage().strokes) do
         local sx, sy, sw, sh = stroke:getBounds()
-        if not (self.shape_gesture and stroke == self.shape_gesture.original)
+        if stroke ~= self.hidden_stroke
+            and not (self.shape_gesture and stroke == self.shape_gesture.original)
             and sx < x + w and sx + sw > x and sy < y + h and sy + sh > y then
             Renderer.drawStroke(Screen.bb, stroke, clip)
+        end
+    end
+    if self.text_preview then
+        local sx,sy,sw,sh=self.text_preview:getBounds()
+        if sx < x+w and sx+sw > x and sy < y+h and sy+sh > y then
+            Renderer.drawStroke(Screen.bb,self.text_preview,clip)
         end
     end
     if not defer_refresh then
@@ -1252,10 +1276,20 @@ function Canvas:onStylusEvent(slot)
         local selected = self.selected_strokes
         local shape = #selected == 1 and selected[1]
         if shape and (shape.shape_kind == "rectangle" or shape.shape_kind == "square"
-            or shape.shape_kind == "circle") and math.abs(x-shape.x_max) <= Screen:scaleBySize(24)
+            or shape.shape_kind == "circle" or shape.text) and math.abs(x-shape.x_max) <= Screen:scaleBySize(24)
             and math.abs(y-shape.y_max) <= Screen:scaleBySize(24) then
             self:_beginShape(x, y, shape)
             return true
+        end
+        if shape and shape.text and self.selection_bbox then
+            local b=self.selection_bbox
+            if x>=b.x-25 and x<=b.x+b.w+25 and y>=b.y-25 and y<=b.y+b.h+25 then
+                self.dragging_selection=true
+                self.drag_start_x,self.drag_start_y=x,y
+                self.drag_last_x,self.drag_last_y=x,y
+                if self.lasso_menu then UIManager:close(self.lasso_menu); self.lasso_menu=nil end
+                return true
+            end
         end
         if self.erased_shape_selection then
             self.erased_shape_selection = nil
@@ -1505,9 +1539,23 @@ end
 
 --- Authoritative render, straight from the vector model.
 function Canvas:paintTo(bb, x, y)
-    bb:paintRect(x, y, self.dimen.w, self.dimen.h, Blitbuffer.COLOR_WHITE)
-    self:_drawTemplate(bb)
-    Renderer.drawPage(bb, self.document:getPage())
+    local page=self.document:getPage()
+    local background=page.background
+    local cache_key=table.concat({tostring(page),self.document:templateFor() or "",
+        background and background.file or "",background and background.page or ""},"|")
+    if self.background_cache and self.background_cache_key==cache_key then
+        bb:blitFrom(self.background_cache,x,y,x,y,self.dimen.w,self.dimen.h)
+    else
+        bb:paintRect(x, y, self.dimen.w, self.dimen.h, Blitbuffer.COLOR_WHITE)
+        self:_drawTemplate(bb)
+        if self.background_cache then self.background_cache:free() end
+        self.background_cache=bb:copy()
+        self.background_cache_key=cache_key
+    end
+    for _,stroke in ipairs(self.document:getPage().strokes) do
+        if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke) end
+    end
+    if self.text_preview then Renderer.drawStroke(bb,self.text_preview) end
 end
 
 --[[--
@@ -1631,6 +1679,8 @@ function Canvas:stop()
     end
     self:_endStroke()
     require("pdfbackground").clear()
+    if self.background_cache then self.background_cache:free(); self.background_cache=nil end
+    self.background_cache_key=nil
     self:_endErase()
     self.physical_pen_tool = nil
     self:_deselectLasso()

@@ -51,6 +51,10 @@ function Stroke:new(opts)
         shape_kind = opts.shape_kind,
         text = opts.text,
         font_size = opts.font_size,
+        font_family = opts.font_family,
+        text_bold = opts.text_bold,
+        text_italic = opts.text_italic,
+        text_underline = opts.text_underline,
         pts = {},
         n = 0,
         -- Bounding box, kept up to date as points come in so that neither
@@ -206,6 +210,8 @@ function Stroke:clone()
         tint = self.tint,
         shape_kind = self.shape_kind,
         text = self.text, font_size = self.font_size,
+        font_family = self.font_family, text_bold = self.text_bold,
+        text_italic = self.text_italic, text_underline = self.text_underline,
     }
     local pts, spts = copy.pts, self.pts
     for i = 1, self.n * STRIDE do pts[i] = spts[i] end
@@ -548,6 +554,8 @@ function Stroke:serialize()
         tint = self.tint,
         shape_kind = self.shape_kind,
         text = self.text, font_size = self.font_size,
+        font_family = self.font_family, text_bold = self.text_bold,
+        text_italic = self.text_italic, text_underline = self.text_underline,
         n = self.n,
         pts = self.pts,
     }
@@ -556,7 +564,9 @@ end
 --- Rebuilds a stroke from serialized data.
 function Stroke:deserialize(data)
     local o = Stroke:new{ tool = data.tool, width = data.width, color = data.color,
-        tint = data.tint, shape_kind = data.shape_kind, text=data.text, font_size=data.font_size }
+        tint = data.tint, shape_kind = data.shape_kind, text=data.text, font_size=data.font_size,
+        font_family=data.font_family, text_bold=data.text_bold,
+        text_italic=data.text_italic, text_underline=data.text_underline }
     o.pts = data.pts
     o.n = data.n
     -- Recompute bounds rather than trusting the file.

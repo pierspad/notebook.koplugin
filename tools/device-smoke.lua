@@ -77,10 +77,13 @@ assert(#loaded:getPage().strokes==7)
 assert(loaded:getPage().strokes[7].shape_kind=="circle")
 assert(loaded:getPage().strokes[3].color==96)
 assert(require("export").toPDF(loaded,"/tmp/notebook-audit/smoke.pdf",{width=1860,height=2480}))
-local text=TextObject.create("Testo modificabile",180,1850,700,28)
+local text=TextObject.create("Testo modificabile",180,1850,700,28,
+    {font_family="serif",text_bold=true,text_italic=true,text_underline=true})
 doc:addStroke(text)
 Renderer.drawStroke(bb,text)
-assert(Stroke:deserialize(text:serialize()).text=="Testo modificabile")
+local restored_text=Stroke:deserialize(text:serialize())
+assert(restored_text.text=="Testo modificabile" and restored_text.font_family=="serif"
+    and restored_text.text_bold and restored_text.text_italic and restored_text.text_underline)
 assert(Xopp.toXOPP(doc,"/tmp/notebook-audit/smoke.xopp"))
 local pdfdoc=Document:new("/tmp/notebook-audit/pdf-background.scribe")
 pdfdoc.pages={{strokes={},background={file="/tmp/notebook-audit/smoke.pdf",page=1}}}
@@ -93,6 +96,17 @@ local screen = Device.screen
 local screen_bb, fast, refresh = screen.bb, screen.refreshFast, screen.refreshUI
 screen.bb, screen.refreshFast, screen.refreshUI = bb, function() end, function() end
 local canvas = nb.canvas
+nb:paintTo(bb,0,0)
+assert(canvas.background_cache,"page background was not cached")
+nb:_editText(nil,900,1850)
+local editor=UI._window_stack and UI._window_stack[#UI._window_stack]
+editor=editor and editor.widget
+assert(editor and editor.getInputText and canvas.text_preview,"live text editor did not open")
+UI:close(editor)
+canvas.text_preview,canvas.hidden_stroke=nil,nil
+local cached_started=os.clock()
+for i=1,20 do canvas:_repaintRegion(200+i*5,300+i*5,500,400,true) end
+local cached_ms=(os.clock()-cached_started)*1000/20
 canvas.shape_kind="circle"
 canvas.pen_width=12
 local strokes_before_shape = #doc:getPage().strokes
@@ -113,6 +127,7 @@ started = os.clock()
 for i=1,20 do canvas:_repaintRegion(120,200,480+i*35,500+i*40,true) end
 local repaint_ms = (os.clock()-started)*1000/20
 print(string.format("PREVIEW CPU: %.2f ms/frame; vector background repaint alone: %.2f ms/frame",preview_ms,repaint_ms))
+print(string.format("CACHED REDRAW CPU: %.2f ms/region",cached_ms))
 screen.bb, screen.refreshFast, screen.refreshUI = screen_bb, fast, refresh
 bb:free()
 print("DEVICE SMOKE PASS: real widgets, pen hold menu, pressure/color save-load, arrow, PDF")

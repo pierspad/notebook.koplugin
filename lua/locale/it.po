@@ -325,14 +325,41 @@ msgstr "Medio"
 msgid "Large"
 msgstr "Grande"
 
-msgid "Text size"
-msgstr "Dimensione testo"
+msgid "Text options"
+msgstr "Opzioni testo"
 
 msgid "Insert text"
 msgstr "Inserisci testo"
 
 msgid "Insert"
 msgstr "Inserisci"
+
+msgid "Edit text"
+msgstr "Modifica testo"
+
+msgid "Edit"
+msgstr "Modifica"
+
+msgid "Font"
+msgstr "Carattere"
+
+msgid "Sans-serif"
+msgstr "Senza grazie"
+
+msgid "Serif"
+msgstr "Con grazie"
+
+msgid "Monospace"
+msgstr "Monospaziato"
+
+msgid "Bold"
+msgstr "Grassetto"
+
+msgid "Italic"
+msgstr "Corsivo"
+
+msgid "Underline"
+msgstr "Sottolineato"
 
 msgid "Shapes"
 msgstr "Forme"
