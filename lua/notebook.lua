@@ -589,9 +589,12 @@ function Notebook:_editText(original, x, y)
                     local at=1; for i,v in ipairs(families) do if v==style.font_family then at=i end end
                     style.font_family=families[at%#families+1]
                 end) end},
-                {text=_("Bold"), callback=function() restyle(function() style.text_bold=not style.text_bold end) end},
-                {text=_("Italic"), callback=function() restyle(function() style.text_italic=not style.text_italic end) end},
-                {text=_("Underline"), callback=function() restyle(function() style.text_underline=not style.text_underline end) end},
+                {text=_("Bold"), checked_func=function() return style.text_bold end,
+                    callback=function() restyle(function() style.text_bold=not style.text_bold end) end},
+                {text=_("Italic"), checked_func=function() return style.text_italic end,
+                    callback=function() restyle(function() style.text_italic=not style.text_italic end) end},
+                {text=_("Underline"), checked_func=function() return style.text_underline end,
+                    callback=function() restyle(function() style.text_underline=not style.text_underline end) end},
                 {text="A−", callback=function() restyle(function() size=math.max(10,size-2) end) end},
                 {text="A+", callback=function() restyle(function() size=math.min(96,size+2) end) end},
             },

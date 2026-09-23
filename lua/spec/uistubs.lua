@@ -367,11 +367,19 @@ function stubs.install(fs)
     package.loaded["ui/widget/horizontalspan"] = leaf()
     package.loaded["ui/widget/linewidget"] = leaf()
     package.loaded["ui/widget/textwidget"] = TextWidget
+    local TextBoxWidget=leaf()
+    function TextBoxWidget:getSize()
+        return {w=self.width or 100,h=(self.face or 20)*2}
+    end
+    package.loaded["ui/widget/textboxwidget"] = TextBoxWidget
     package.loaded["ui/widget/iconwidget"] = leaf()
     package.loaded["ui/widget/imagewidget"] = leaf()
     package.loaded["ui/widget/infomessage"] = leaf()
     package.loaded["ui/widget/confirmbox"] = leaf()
-    package.loaded["ui/widget/inputdialog"] = leaf()
+    local InputDialog = leaf()
+    function InputDialog:getInputText() return self.input or "" end
+    function InputDialog:onShowKeyboard() end
+    package.loaded["ui/widget/inputdialog"] = InputDialog
     package.loaded["ui/widget/button"] = leaf()
     local ProgressWidget = leaf()
     function ProgressWidget:setPercentage(value) self.percentage = value end

@@ -189,6 +189,7 @@ test("the defaults are the numbers the modules used to hold", function()
         reconcile_delay_ms   = 2000,
         jitter_floor_sq      = 4,
         live_highlight_tint  = 100,
+        live_highlight_refresh_ms = 45,
         eraser_radius        = 12,
         erase_repaint_ms     = 70,
         drag_repaint_ms      = 60,

@@ -1,0 +1,436 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Notebook contributors
+# This file is distributed under the same license as the Notebook for KOReader package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-23 16:30+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "XOPP"
+msgstr ""
+
+msgid "PDF"
+msgstr ""
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr ""
+
+msgid "Last edited"
+msgstr ""
+
+msgid "Least recently edited"
+msgstr ""
+
+msgid "Name (A to Z)"
+msgstr ""
+
+msgid "Name (Z to A)"
+msgstr ""
+
+msgid "New notebook"
+msgstr ""
+
+msgid "New folder"
+msgstr ""
+
+msgid "Annotate PDF"
+msgstr ""
+
+msgid "Select"
+msgstr ""
+
+msgid "Notebooks"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "All"
+msgstr ""
+
+msgid "1 selected"
+msgstr ""
+
+msgid "%1 selected"
+msgstr ""
+
+msgid "Page %1 of %2"
+msgstr ""
+
+msgid "Open this XOPP file with Xournal++."
+msgstr ""
+
+msgid "The name cannot be empty."
+msgstr ""
+
+msgid "The name cannot contain slashes."
+msgstr ""
+
+msgid "Something with that name is already here."
+msgstr ""
+
+msgid "That name is too long."
+msgstr ""
+
+msgid "That name cannot be used."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+msgid "Xournal++"
+msgstr ""
+
+msgid "Choose a PDF file."
+msgstr ""
+
+msgid "Could not open this PDF."
+msgstr ""
+
+msgid "Could not save the notebook."
+msgstr ""
+
+msgid "Work"
+msgstr ""
+
+msgid "Personal"
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Move"
+msgstr ""
+
+msgid "Send"
+msgstr ""
+
+msgid "Duplicate"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid ""
+"Delete '%1'?\n"
+"\n"
+"This cannot be undone."
+msgstr ""
+
+msgid ""
+"Delete %1 items?\n"
+"\n"
+"Folders are deleted with everything in them. This cannot be undone."
+msgstr ""
+
+msgid "Sort by"
+msgstr ""
+
+msgid "Rename folder"
+msgstr ""
+
+msgid "Rename notebook"
+msgstr ""
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr ""
+
+msgid "Preparing '%1'…"
+msgstr ""
+
+msgid "Preparing %1 items…"
+msgstr ""
+
+msgid "Nothing could be prepared for sending."
+msgstr ""
+
+msgid "Sending %1; %2 could not be read."
+msgstr ""
+
+msgid "Exporting '%1'…"
+msgstr ""
+
+msgid "Exporting %1 notebooks…"
+msgstr ""
+
+msgid "Export cancelled."
+msgstr ""
+
+msgid ""
+"Xournal++ needs both files. Keep them together:\n"
+"%1\n"
+"%2"
+msgstr ""
+
+msgid ""
+"Exported to:\n"
+"%1"
+msgstr ""
+
+msgid "Exported %1 notebooks."
+msgstr ""
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr ""
+
+msgid "Notebooks (top level)"
+msgstr ""
+
+msgid "Move to"
+msgstr ""
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Cut"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Paste"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Open notebook"
+msgstr ""
+
+msgid "Notebook"
+msgstr ""
+
+msgid ""
+"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
+"error.log for details."
+msgstr ""
+
+msgid "Could not create the notebook folder."
+msgstr ""
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr ""
+
+msgid "Notebook name"
+msgstr ""
+
+msgid "Create"
+msgstr ""
+
+msgid "Fineliner"
+msgstr ""
+
+msgid "Fountain pen"
+msgstr ""
+
+msgid "Pencil"
+msgstr ""
+
+msgid "Straight line"
+msgstr ""
+
+msgid "Pause at the end of a stroke"
+msgstr ""
+
+msgid "Arrow (straight or curved)"
+msgstr ""
+
+msgid "Pen type"
+msgstr ""
+
+msgid "Marker size"
+msgstr ""
+
+msgid "Whole strokes"
+msgstr ""
+
+msgid "Part of a stroke"
+msgstr ""
+
+msgid "Eraser size"
+msgstr ""
+
+msgid "Square"
+msgstr ""
+
+msgid "Rectangle"
+msgstr ""
+
+msgid "Circle"
+msgstr ""
+
+msgid "Shapes"
+msgstr ""
+
+msgid "Small"
+msgstr ""
+
+msgid "Medium"
+msgstr ""
+
+msgid "Large"
+msgstr ""
+
+msgid "Sans-serif"
+msgstr ""
+
+msgid "Serif"
+msgstr ""
+
+msgid "Monospace"
+msgstr ""
+
+msgid "Bold"
+msgstr ""
+
+msgid "Italic"
+msgstr ""
+
+msgid "Underline"
+msgstr ""
+
+msgid "Text options"
+msgstr ""
+
+msgid "Edit text"
+msgstr ""
+
+msgid "Insert text"
+msgstr ""
+
+msgid "Font"
+msgstr ""
+
+msgid "Insert"
+msgstr ""
+
+msgid "Could not save the notebook. It has been left open."
+msgstr ""
+
+msgid "Pages (%1)"
+msgstr ""
+
+msgid "New page"
+msgstr ""
+
+msgid "Notebook background"
+msgstr ""
+
+msgid "Done"
+msgstr ""
+
+msgid "Go to this page"
+msgstr ""
+
+msgid "Insert a page after this one"
+msgstr ""
+
+msgid "Background of this page"
+msgstr ""
+
+msgid "Delete page %1 and everything on it?"
+msgstr ""
+
+msgid "Page %1"
+msgstr ""
+
+msgid "Background of page %1"
+msgstr ""
+
+msgid "Follow the notebook again"
+msgstr ""
+
+msgid "Background for every page"
+msgstr ""
+
+msgid "Some pages have their own — change those too"
+msgstr ""
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine.\n"
+"\n"
+"Details were written to:\n"
+"%1"
+msgstr ""
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine."
+msgstr ""
+
+msgid "Finger"
+msgstr ""
+
+msgid "Turns pages"
+msgstr ""
+
+msgid "Draws"
+msgstr ""
+
+msgid "Sharing format"
+msgstr ""
+
+msgid "Blank"
+msgstr ""
+
+msgid "Lined"
+msgstr ""
+
+msgid "Narrow lined"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Dot grid"
+msgstr ""
+
+msgid "Checklist"
+msgstr ""
+
+msgid "Preparing…"
+msgstr ""
+
+msgid "Cancelling…"
+msgstr ""
+
+msgid "Exporting PDF…"
+msgstr ""
+
+msgid "Rendering"
+msgstr ""
+
+msgid "Preparing image"
+msgstr ""
+
+msgid "Compressing"
+msgstr ""
+
+msgid "Page %1 of %2 — %3"
+msgstr ""

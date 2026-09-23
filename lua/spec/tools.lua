@@ -80,6 +80,15 @@ for _,i in ipairs({2,3,5}) do
     assert(menu.anchor==nb.tool_buttons[i].dimen, 'popover anchored to its tool')
     if i==5 then assert(#menu.actions==3) else assert(menu.footer) end
 end
+nb.canvas.text_bold=true
+nb:_editText(nil,120,220)
+local editor=rec.shown[#rec.shown]
+local styles={}
+for _,button in ipairs(editor.buttons[1]) do styles[button.text]=button end
+assert(styles.Bold.checked_func() and not styles.Italic.checked_func()
+    and not styles.Underline.checked_func(),'text style selection is not shown')
+styles.Italic.callback()
+assert(styles.Italic.checked_func(),'toggled text style did not remain selected')
 local n=select('#',Safe.call('nil values',function() return 1,nil,3,nil end))
 assert(n==4, 'protected calls preserve nil results')
 local selected_shape=doc:getPage().strokes[1]

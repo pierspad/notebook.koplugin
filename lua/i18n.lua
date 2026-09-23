@@ -35,6 +35,7 @@ local function parsePO(path)
     if not file then return nil end
 
     local entries = {}
+    local ids = {}
     local id, str, target
     local fuzzy, has_context = false, false
     -- Flags read from the comment lines that come *before* the entry they
@@ -43,6 +44,7 @@ local function parsePO(path)
     local next_fuzzy = false
 
     local function flush()
+        if id and id ~= "" and not has_context then ids[id] = true end
         if id and id ~= "" and str and str ~= "" and not fuzzy and not has_context then
             entries[id] = str
         end
@@ -91,7 +93,11 @@ local function parsePO(path)
         decoded[key:gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\")] =
             value:gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\")
     end
-    return decoded
+    local decoded_ids={}
+    for key in pairs(ids) do
+        decoded_ids[key:gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\")]=true
+    end
+    return decoded,decoded_ids
 end
 
 --- The language KOReader is running in, e.g. "it_IT".
@@ -137,7 +143,13 @@ if not ok then
 end
 
 --- The catalogue reader, exposed so the shipped catalogues can be checked.
-local Text = { parse = parsePO }
+local Text = {
+    parse = parsePO,
+    ids = function(path)
+        local _,ids=parsePO(path)
+        return ids
+    end,
+}
 
 return setmetatable(Text, {
     __call = function(_, text)

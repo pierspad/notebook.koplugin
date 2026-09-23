@@ -25,7 +25,7 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # glob would run those as though they were tests.
 SUITES := run pages eraser palm safe i18n gallery shape lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange
 
-.PHONY: all test lint verify package check-package ci clean install-hooks deploy version
+.PHONY: all test lint verify package check-package ci clean install-hooks deploy version translations
 
 all: verify package
 
@@ -92,6 +92,13 @@ ci: verify check-package
 
 version:
 	@echo $(VERSION)
+
+translations:
+	@files="$$(find lua -maxdepth 1 -name '*.lua' ! -name 'i18n.lua' ! -name '_meta.lua' -print)"; \
+	xgettext --language=Lua --keyword=_ --from-code=UTF-8 --no-location \
+		--package-name='Notebook for KOReader' --package-version='1.2' \
+		--copyright-holder='Notebook contributors' \
+		--output=lua/locale/notebook.pot $$files
 
 clean:
 	@rm -rf $(BUILD)

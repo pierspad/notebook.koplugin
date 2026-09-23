@@ -55,6 +55,12 @@ Tuning.spec = {
             .. "being drawn. Darker than the tint it settles to, so a pass over "
             .. "already-highlighted text is visible under the tip.",
     },
+    live_highlight_refresh_ms = {
+        default = 45, min = 20, max = 200, step = 5,
+        doc = "Minimum gap between visible highlighter updates. The marker "
+            .. "needs a grayscale waveform to remain visible while moving; "
+            .. "spacing those slower updates keeps them from queuing behind the nib.",
+    },
 
     -- Eraser ------------------------------------------------------------------
     eraser_radius = {
@@ -149,7 +155,7 @@ the same movement of the hand, so a tab is one sitting.
 Tuning.tabs = {
     { id = "ink", label = "Ink", keys = {
         "refresh_interval_ms", "idle_flush_ms", "reconcile_delay_ms",
-        "jitter_floor_sq", "live_highlight_tint",
+        "jitter_floor_sq", "live_highlight_tint", "live_highlight_refresh_ms",
     } },
     { id = "eraser", label = "Eraser", keys = {
         "eraser_radius", "erase_repaint_ms",

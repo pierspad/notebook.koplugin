@@ -16,6 +16,7 @@ package.path = "./?.lua;./spec/?.lua;" .. package.path
 local support = require("support")
 support.installStubs()
 package.loaded["i18n"] = nil
+G_reader_settings={readSetting=function(_,key) return key=="language" and "en" or nil end}
 
 local Text = require("i18n")
 
@@ -126,34 +127,47 @@ The shipped catalogues, if any.
 A build with no catalogue at all is a legitimate one -- the plugin reads in
 English -- so there is nothing to check rather than something to fail.
 --]]
-local italian = Text.parse("locale/it.po")
+local template_ids=Text.ids("locale/notebook.pot")
 
-test("the Italian catalogue covers every string in the source", function()
-    if not italian then return end
-    local entries = italian
-
-    local missing = {}
-    for _, text in ipairs(sourceStrings()) do
-        -- The source carries \n as an escape; the catalogue reader has already
-        -- turned its own into real newlines, so compare like for like.
-        local key = text:gsub("\\n", "\n")
-        if not entries[key] then table.insert(missing, text) end
+test("every interface string is valid in English fallback", function()
+    for _,text in ipairs(sourceStrings()) do
+        local key=text:gsub("\\n","\n")
+        assertEq(Text(key),key,"English: "..text)
     end
+end)
 
+test("the contributor template covers every string in the source", function()
+    local source={}
+    for _,text in ipairs(sourceStrings()) do source[text:gsub("\\n","\n")]=true end
+    local missing,stale={},{}
+    for text in pairs(source) do if not template_ids[text] then table.insert(missing,text) end end
+    for text in pairs(template_ids) do if not source[text] then table.insert(stale,text) end end
+    assertEq(#missing,0,"missing from template: "..table.concat(missing," | "))
+    assertEq(#stale,0,"stale in template: "..table.concat(stale," | "))
+end)
+
+local catalogues={}
+local listed=io.popen("ls locale/*.po 2>/dev/null")
+for path in listed:lines() do table.insert(catalogues,path) end
+listed:close()
+
+test("every shipped language translates every template entry", function()
+    local missing = {}
+    for _,path in ipairs(catalogues) do
+        local entries=Text.parse(path)
+        for text in pairs(template_ids) do
+            if not entries[text] then table.insert(missing,path..": "..text:gsub("\n","\\n")) end
+        end
+    end
     assertEq(#missing, 0, "untranslated: " .. table.concat(missing, " | "))
 end)
 
-test("the catalogue has nothing the source no longer says", function()
-    if not italian then return end
-    local entries = italian
-    local live = {}
-    for _, text in ipairs(sourceStrings()) do
-        live[text:gsub("\\n", "\n")] = true
-    end
-
+test("no shipped language contains obsolete entries", function()
     local stale = {}
-    for key in pairs(entries) do
-        if not live[key] then table.insert(stale, (key:gsub("\n", "\\n"))) end
+    for _,path in ipairs(catalogues) do
+        for key in pairs(Text.ids(path)) do
+            if not template_ids[key] then table.insert(stale,path..": "..key:gsub("\n","\\n")) end
+        end
     end
     assertEq(#stale, 0, "no longer used: " .. table.concat(stale, " | "))
 end)

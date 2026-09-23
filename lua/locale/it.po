@@ -4,7 +4,13 @@
 # translate the msgstr lines to add a language; nothing else needs changing.
 msgid ""
 msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Italian\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
 "Language: it\n"
 
 msgid "%1 selected"
@@ -363,9 +369,6 @@ msgstr "Forme"
 
 msgid "Sharing format"
 msgstr "Formato di condivisione"
-
-msgid "PDF"
-msgstr "PDF"
 
 msgid "Xournal++"
 msgstr "Xournal++"

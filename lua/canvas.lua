@@ -275,15 +275,22 @@ end
 --- Flushes now if enough time has passed, otherwise arranges for it to happen.
 function Canvas:_maybeFlush()
     local now = time.now()
+    local interval = self.stroke and self.stroke.tool == "highlighter"
+        and Tuning.live_highlight_refresh_ms or Tuning.refresh_interval_ms
+    local elapsed = self.last_refresh and time.to_ms(now - self.last_refresh) or interval
     if not self.last_refresh
-        or time.to_ms(now - self.last_refresh) >= Tuning.refresh_interval_ms then
+        or elapsed >= interval then
         self:_flush()
         return
     end
 
     if not self.idle_flush_scheduled then
         self.idle_flush_scheduled = true
-        UIManager:scheduleIn(Tuning.idle_flush_ms / 1000, self.idle_flush_cb)
+        -- Pen ink can use the ordinary idle delay. The marker must also honour
+        -- its slower grayscale cadence or repeated AUTO updates queue faster
+        -- than an e-ink panel can display them.
+        local delay=math.max(Tuning.idle_flush_ms,interval-elapsed)
+        UIManager:scheduleIn(delay / 1000, self.idle_flush_cb)
     end
 end
 
@@ -527,10 +534,11 @@ function Canvas:_beginStroke(tool, x, y, p)
         width = self:widthFor(tool),
         color = tool == "pen" and self.pen_style == "pencil" and 96 or 0,
     }
-    -- The live highlighter uses a deliberately dark tint, so the Kindle's DU
-    -- waveform can show it immediately just like pen ink. It is settled to its
-    -- true gray once on pen-up; AUTO on every segment lagged behind the nib.
-    self.refresh_mode = self.stroke.color ~= 0 and "ui" or "fast"
+    -- Grayscale marker pixels are not reliably visible through the binary DU
+    -- waveform. Use AUTO for the marker, but at its own slower cadence, so the
+    -- band follows the nib with a small bounded delay instead of disappearing
+    -- until lift-off or building an ever-growing refresh queue.
+    self.refresh_mode = (tool == "highlighter" or self.stroke.color ~= 0) and "ui" or "fast"
     -- While it is being drawn the highlighter lays down a darker tint than the
     -- one it settles to when the pen lifts; see Tuning.live_highlight_tint.
     self.stroke.tint = tool == "highlighter" and Tuning.live_highlight_tint or nil
