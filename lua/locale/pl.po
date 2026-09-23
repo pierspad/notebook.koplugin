@@ -1,0 +1,408 @@
+# Polish translations for the Scribe notebook plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Polish\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: pl\n"
+
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "Jeszcze nic tu nie ma — użyj Nowy notatnik, aby zacząć"
+
+msgid "Last edited"
+msgstr "Ostatnio edytowane"
+
+msgid "Least recently edited"
+msgstr "Najdawniej edytowane"
+
+msgid "Name (A to Z)"
+msgstr "Nazwa (od A do Z)"
+
+msgid "Name (Z to A)"
+msgstr "Nazwa (od Z do A)"
+
+msgid "New notebook"
+msgstr "Nowy notatnik"
+
+msgid "New folder"
+msgstr "Nowy folder"
+
+msgid "Annotate PDF"
+msgstr "Adnotuj PDF"
+
+msgid "Select"
+msgstr "Wybierz"
+
+msgid "Notebooks"
+msgstr "Notatniki"
+
+msgid "None"
+msgstr "Brak"
+
+msgid "All"
+msgstr "Wszystko"
+
+msgid "1 selected"
+msgstr "1 zaznaczony"
+
+msgid "%1 selected"
+msgstr "Zaznaczono %1"
+
+msgid "Page %1 of %2"
+msgstr "Strona %1 z %2"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "Otwórz ten plik XOPP za pomocą programu Xournal++."
+
+msgid "The name cannot be empty."
+msgstr "Nazwa nie może być pusta."
+
+msgid "The name cannot contain slashes."
+msgstr "Nazwa nie może zawierać ukośników."
+
+msgid "Something with that name is already here."
+msgstr "Element o tej nazwie już tutaj istnieje."
+
+msgid "That name is too long."
+msgstr "Ta nazwa jest za długa."
+
+msgid "That name cannot be used."
+msgstr "Tej nazwy nie można użyć."
+
+msgid "Cancel"
+msgstr "Anuluj"
+
+msgid "Save"
+msgstr "Zapisz"
+
+msgid "Export"
+msgstr "Eksportuj"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Choose a PDF file."
+msgstr "Wybierz plik PDF."
+
+msgid "Could not open this PDF."
+msgstr "Nie udało się otworzyć tego pliku PDF."
+
+msgid "Could not save the notebook."
+msgstr "Nie udało się zapisać notatnika."
+
+msgid "Work"
+msgstr "Praca"
+
+msgid "Personal"
+msgstr "Osobiste"
+
+msgid "Open"
+msgstr "Otwórz"
+
+msgid "Rename"
+msgstr "Zmień nazwę"
+
+msgid "Move"
+msgstr "Przenieś"
+
+msgid "Send"
+msgstr "Wyślij"
+
+msgid "Duplicate"
+msgstr "Duplikuj"
+
+msgid "Delete"
+msgstr "Usuń"
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "Usunąć „%1”?\n\nTej operacji nie można cofnąć."
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "Usunąć %1 elementów?\n\nFoldery zostaną usunięte wraz z całą zawartością. Tej operacji nie można cofnąć."
+
+msgid "Sort by"
+msgstr "Sortuj według"
+
+msgid "Rename folder"
+msgstr "Zmień nazwę folderu"
+
+msgid "Rename notebook"
+msgstr "Zmień nazwę notatnika"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "Brak miejsca na przygotowanie plików do wysłania."
+
+msgid "Preparing '%1'…"
+msgstr "Przygotowywanie „%1”…"
+
+msgid "Preparing %1 items…"
+msgstr "Przygotowywanie %1 elementów…"
+
+msgid "Nothing could be prepared for sending."
+msgstr "Nie udało się przygotować niczego do wysłania."
+
+msgid "Sending %1; %2 could not be read."
+msgstr "Wysyłanie %1; nie udało się odczytać %2."
+
+msgid "Exporting '%1'…"
+msgstr "Eksportowanie „%1”…"
+
+msgid "Exporting %1 notebooks…"
+msgstr "Eksportowanie %1 notatników…"
+
+msgid "Export cancelled."
+msgstr "Eksport anulowany."
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "Program Xournal++ wymaga obu plików. Przechowuj je razem:\n%1\n%2"
+
+msgid "Exported to:\n%1"
+msgstr "Wyeksportowano do:\n%1"
+
+msgid "Exported %1 notebooks."
+msgstr "Wyeksportowano %1 notatników."
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "Wyeksportowano %1 z %2; nie udało się odczytać %3."
+
+msgid "Notebooks (top level)"
+msgstr "Notatniki (poziom główny)"
+
+msgid "Move to"
+msgstr "Przenieś do"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "Przeniesiono %1; nie udało się przenieść tam %2."
+
+msgid "Edit"
+msgstr "Edytuj"
+
+msgid "Cut"
+msgstr "Wytnij"
+
+msgid "Copy"
+msgstr "Kopiuj"
+
+msgid "Paste"
+msgstr "Wklej"
+
+msgid "Close"
+msgstr "Zamknij"
+
+msgid "Open notebook"
+msgstr "Otwórz notatnik"
+
+msgid "Notebook"
+msgstr "Notatnik"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "Wtyczka Notatnika napotkała błąd. Uruchom ponownie KOReader, aby otworzyć ją ponownie; szczegóły w pliku notebook-error.log."
+
+msgid "Could not create the notebook folder."
+msgstr "Nie udało się utworzyć folderu notatnika."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "Nie udało się otworzyć tego notatnika; może pochodzić z nowszej wersji."
+
+msgid "Notebook name"
+msgstr "Nazwa notatnika"
+
+msgid "Create"
+msgstr "Utwórz"
+
+msgid "Fineliner"
+msgstr "Cienkopis"
+
+msgid "Fountain pen"
+msgstr "Pióro wieczne"
+
+msgid "Pencil"
+msgstr "Ołówek"
+
+msgid "Straight line"
+msgstr "Linia prosta"
+
+msgid "Pause at the end of a stroke"
+msgstr "Przytrzymaj na końcu pociągnięcia"
+
+msgid "Arrow (straight or curved)"
+msgstr "Strzałka (prosta lub zakrzywiona)"
+
+msgid "Pen type"
+msgstr "Typ pióra"
+
+msgid "Marker size"
+msgstr "Rozmiar zakreślacza"
+
+msgid "Whole strokes"
+msgstr "Całe pociągnięcia"
+
+msgid "Part of a stroke"
+msgstr "Część pociągnięcia"
+
+msgid "Eraser size"
+msgstr "Rozmiar gumki"
+
+msgid "Square"
+msgstr "Kwadrat"
+
+msgid "Rectangle"
+msgstr "Prostokąt"
+
+msgid "Circle"
+msgstr "Koło"
+
+msgid "Shapes"
+msgstr "Kształty"
+
+msgid "Small"
+msgstr "Mały"
+
+msgid "Medium"
+msgstr "Średni"
+
+msgid "Large"
+msgstr "Duży"
+
+msgid "Sans-serif"
+msgstr "Bezszeryfowy"
+
+msgid "Serif"
+msgstr "Szeryfowy"
+
+msgid "Monospace"
+msgstr "O stałej szerokości"
+
+msgid "Bold"
+msgstr "Pogrubienie"
+
+msgid "Italic"
+msgstr "Kursywa"
+
+msgid "Underline"
+msgstr "Podkreślenie"
+
+msgid "Text options"
+msgstr "Opcje tekstu"
+
+msgid "Edit text"
+msgstr "Edytuj tekst"
+
+msgid "Insert text"
+msgstr "Wstaw tekst"
+
+msgid "Font"
+msgstr "Czcionka"
+
+msgid "Insert"
+msgstr "Wstaw"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Nie udało się zapisać notatnika. Został pozostawiony otwarty."
+
+msgid "Pages (%1)"
+msgstr "Strony (%1)"
+
+msgid "New page"
+msgstr "Nowa strona"
+
+msgid "Notebook background"
+msgstr "Tło notatnika"
+
+msgid "Done"
+msgstr "Gotowe"
+
+msgid "Go to this page"
+msgstr "Przejdź do tej strony"
+
+msgid "Insert a page after this one"
+msgstr "Wstaw stronę po tej"
+
+msgid "Background of this page"
+msgstr "Tło tej strony"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Usunąć stronę %1 wraz z całą zawartością?"
+
+msgid "Page %1"
+msgstr "Strona %1"
+
+msgid "Background of page %1"
+msgstr "Tło strony %1"
+
+msgid "Follow the notebook again"
+msgstr "Przywróć styl notatnika"
+
+msgid "Background for every page"
+msgstr "Tło dla każdej strony"
+
+msgid "Some pages have their own — change those too"
+msgstr "Niektóre strony mają własne tło — zmień je również"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "Wtyczka Notatnika napotkała problem i została zamknięta.\n\nKOReader działa prawidłowo.\n\nSzczegóły zapisano w:\n%1"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "Wtyczka Notatnika napotkała problem i została zamknięta.\n\nKOReader działa prawidłowo."
+
+msgid "Finger"
+msgstr "Palec"
+
+msgid "Turns pages"
+msgstr "Przewraca strony"
+
+msgid "Draws"
+msgstr "Rysuje"
+
+msgid "Sharing format"
+msgstr "Format udostępniania"
+
+msgid "Blank"
+msgstr "Czysty"
+
+msgid "Lined"
+msgstr "W linie"
+
+msgid "Narrow lined"
+msgstr "W wąskie linie"
+
+msgid "Grid"
+msgstr "W kratkę"
+
+msgid "Dot grid"
+msgstr "W kropki"
+
+msgid "Checklist"
+msgstr "Lista zadań"
+
+msgid "Preparing…"
+msgstr "Przygotowywanie…"
+
+msgid "Cancelling…"
+msgstr "Anulowanie…"
+
+msgid "Exporting PDF…"
+msgstr "Eksportowanie PDF…"
+
+msgid "Rendering"
+msgstr "Renderowanie"
+
+msgid "Preparing image"
+msgstr "Przygotowywanie obrazu"
+
+msgid "Compressing"
+msgstr "Kompresja"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Strona %1 z %2 — %3"

@@ -1,0 +1,408 @@
+# Ukrainian translations for the Scribe notebook plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Ukrainian\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: uk\n"
+
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "Тут ще нічого немає — скористайтеся «Новий блокнот», щоб розпочати"
+
+msgid "Last edited"
+msgstr "Останнє редагування"
+
+msgid "Least recently edited"
+msgstr "Найдавніші редагування"
+
+msgid "Name (A to Z)"
+msgstr "Назва (від А до Я)"
+
+msgid "Name (Z to A)"
+msgstr "Назва (від Я до А)"
+
+msgid "New notebook"
+msgstr "Новий блокнот"
+
+msgid "New folder"
+msgstr "Нова папка"
+
+msgid "Annotate PDF"
+msgstr "Анотувати PDF"
+
+msgid "Select"
+msgstr "Вибрати"
+
+msgid "Notebooks"
+msgstr "Блокноти"
+
+msgid "None"
+msgstr "Немає"
+
+msgid "All"
+msgstr "Всі"
+
+msgid "1 selected"
+msgstr "1 вибрано"
+
+msgid "%1 selected"
+msgstr "Вибрано %1"
+
+msgid "Page %1 of %2"
+msgstr "Сторінка %1 з %2"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "Відкрийте цей файл XOPP за допомогою Xournal++."
+
+msgid "The name cannot be empty."
+msgstr "Назва не може бути порожньою."
+
+msgid "The name cannot contain slashes."
+msgstr "Назва не може містити косі риски."
+
+msgid "Something with that name is already here."
+msgstr "Елемент із такою назвою вже існує."
+
+msgid "That name is too long."
+msgstr "Ця назва занадто довга."
+
+msgid "That name cannot be used."
+msgstr "Цю назву не можна використовувати."
+
+msgid "Cancel"
+msgstr "Скасувати"
+
+msgid "Save"
+msgstr "Зберегти"
+
+msgid "Export"
+msgstr "Експорт"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Choose a PDF file."
+msgstr "Виберіть PDF-файл."
+
+msgid "Could not open this PDF."
+msgstr "Не вдалося відкрити цей PDF."
+
+msgid "Could not save the notebook."
+msgstr "Не вдалося зберегти блокнот."
+
+msgid "Work"
+msgstr "Робота"
+
+msgid "Personal"
+msgstr "Особисте"
+
+msgid "Open"
+msgstr "Відкрити"
+
+msgid "Rename"
+msgstr "Перейменувати"
+
+msgid "Move"
+msgstr "Перемістити"
+
+msgid "Send"
+msgstr "Надіслати"
+
+msgid "Duplicate"
+msgstr "Дублювати"
+
+msgid "Delete"
+msgstr "Видалити"
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "Видалити «%1»?\n\nЦю дію не можна скасувати."
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "Видалити %1 елементів?\n\nПапки видаляються разом із усім вмістом. Цю дію не можна скасувати."
+
+msgid "Sort by"
+msgstr "Сортувати за"
+
+msgid "Rename folder"
+msgstr "Перейменувати папку"
+
+msgid "Rename notebook"
+msgstr "Перейменувати блокнот"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "Немає місця для підготовки файлів до надсилання."
+
+msgid "Preparing '%1'…"
+msgstr "Підготовка «%1»…"
+
+msgid "Preparing %1 items…"
+msgstr "Підготовка %1 елементів…"
+
+msgid "Nothing could be prepared for sending."
+msgstr "Нічого не вдалося підготувати до надсилання."
+
+msgid "Sending %1; %2 could not be read."
+msgstr "Надсилання %1; не вдалося прочитати %2."
+
+msgid "Exporting '%1'…"
+msgstr "Експорт «%1»…"
+
+msgid "Exporting %1 notebooks…"
+msgstr "Експорт %1 блокнотів…"
+
+msgid "Export cancelled."
+msgstr "Експорт скасовано."
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "Для Xournal++ потрібні обидва файли. Зберігайте їх разом:\n%1\n%2"
+
+msgid "Exported to:\n%1"
+msgstr "Експортовано до:\n%1"
+
+msgid "Exported %1 notebooks."
+msgstr "Експортовано %1 блокнотів."
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "Експортовано %1 з %2; не вдалося прочитати %3."
+
+msgid "Notebooks (top level)"
+msgstr "Блокноти (верхній рівень)"
+
+msgid "Move to"
+msgstr "Перемістити до"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "Переміщено: %1; не вдалося перемістити туди %2."
+
+msgid "Edit"
+msgstr "Редагувати"
+
+msgid "Cut"
+msgstr "Вирізати"
+
+msgid "Copy"
+msgstr "Копіювати"
+
+msgid "Paste"
+msgstr "Вставити"
+
+msgid "Close"
+msgstr "Закрити"
+
+msgid "Open notebook"
+msgstr "Відкрити блокнот"
+
+msgid "Notebook"
+msgstr "Блокнот"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "У додатку «Блокнот» сталася помилка. Перезапустіть KOReader, щоб відкрити його знову; подробиці у notebook-error.log."
+
+msgid "Could not create the notebook folder."
+msgstr "Не вдалося створити папку блокнотів."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "Не вдалося відкрити цей блокнот; можливо, він створений у новішій версії."
+
+msgid "Notebook name"
+msgstr "Назва блокнота"
+
+msgid "Create"
+msgstr "Створити"
+
+msgid "Fineliner"
+msgstr "Лінер"
+
+msgid "Fountain pen"
+msgstr "Перова ручка"
+
+msgid "Pencil"
+msgstr "Олівець"
+
+msgid "Straight line"
+msgstr "Пряма лінія"
+
+msgid "Pause at the end of a stroke"
+msgstr "Затримати в кінці штриха"
+
+msgid "Arrow (straight or curved)"
+msgstr "Стрілка (пряма або зігнута)"
+
+msgid "Pen type"
+msgstr "Тип пера"
+
+msgid "Marker size"
+msgstr "Розмір маркера"
+
+msgid "Whole strokes"
+msgstr "Цілі штрихи"
+
+msgid "Part of a stroke"
+msgstr "Частина штриха"
+
+msgid "Eraser size"
+msgstr "Розмір гумки"
+
+msgid "Square"
+msgstr "Квадрат"
+
+msgid "Rectangle"
+msgstr "Прямокутник"
+
+msgid "Circle"
+msgstr "Коло"
+
+msgid "Shapes"
+msgstr "Фігури"
+
+msgid "Small"
+msgstr "Малий"
+
+msgid "Medium"
+msgstr "Середній"
+
+msgid "Large"
+msgstr "Великий"
+
+msgid "Sans-serif"
+msgstr "Без зарубок"
+
+msgid "Serif"
+msgstr "Із зарубками"
+
+msgid "Monospace"
+msgstr "Моноширинний"
+
+msgid "Bold"
+msgstr "Напівжирний"
+
+msgid "Italic"
+msgstr "Курсив"
+
+msgid "Underline"
+msgstr "Підкреслений"
+
+msgid "Text options"
+msgstr "Параметри тексту"
+
+msgid "Edit text"
+msgstr "Редагувати текст"
+
+msgid "Insert text"
+msgstr "Вставити текст"
+
+msgid "Font"
+msgstr "Шрифт"
+
+msgid "Insert"
+msgstr "Вставити"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Не вдалося зберегти блокнот. Його залишено відкритим."
+
+msgid "Pages (%1)"
+msgstr "Сторінки (%1)"
+
+msgid "New page"
+msgstr "Нова сторінка"
+
+msgid "Notebook background"
+msgstr "Фон блокнота"
+
+msgid "Done"
+msgstr "Готово"
+
+msgid "Go to this page"
+msgstr "Перейти до цієї сторінки"
+
+msgid "Insert a page after this one"
+msgstr "Вставити сторінку після цієї"
+
+msgid "Background of this page"
+msgstr "Фон цієї сторінки"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Видалити сторінку %1 і весь її вміст?"
+
+msgid "Page %1"
+msgstr "Сторінка %1"
+
+msgid "Background of page %1"
+msgstr "Фон сторінки %1"
+
+msgid "Follow the notebook again"
+msgstr "Знову наслідувати блокнот"
+
+msgid "Background for every page"
+msgstr "Фон для всіх сторінок"
+
+msgid "Some pages have their own — change those too"
+msgstr "Деякі сторінки мають власний фон — змінити й їх"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "У додатку «Блокнот» сталася помилка, і його було закрито.\n\nKOReader працює належним чином.\n\nПодробиці записано до:\n%1"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "У додатку «Блокнот» сталася помилка, і його було закрито.\n\nKOReader працює належним чином."
+
+msgid "Finger"
+msgstr "Палець"
+
+msgid "Turns pages"
+msgstr "Гортає сторінки"
+
+msgid "Draws"
+msgstr "Малює"
+
+msgid "Sharing format"
+msgstr "Формат надсилання"
+
+msgid "Blank"
+msgstr "Порожній"
+
+msgid "Lined"
+msgstr "В лінію"
+
+msgid "Narrow lined"
+msgstr "У вузьку лінію"
+
+msgid "Grid"
+msgstr "У клітинку"
+
+msgid "Dot grid"
+msgstr "У крапку"
+
+msgid "Checklist"
+msgstr "Список завдань"
+
+msgid "Preparing…"
+msgstr "Підготовка…"
+
+msgid "Cancelling…"
+msgstr "Скасування…"
+
+msgid "Exporting PDF…"
+msgstr "Експорт PDF…"
+
+msgid "Rendering"
+msgstr "Рендеринг"
+
+msgid "Preparing image"
+msgstr "Підготовка зображення"
+
+msgid "Compressing"
+msgstr "Стиснення"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Сторінка %1 з %2 — %3"

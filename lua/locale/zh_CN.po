@@ -1,0 +1,408 @@
+# Simplified Chinese translations for the Scribe notebook plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Simplified Chinese\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: zh_CN\n"
+
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "这里暂无内容 — 使用「新建笔记本」开始"
+
+msgid "Last edited"
+msgstr "最近编辑"
+
+msgid "Least recently edited"
+msgstr "最早编辑"
+
+msgid "Name (A to Z)"
+msgstr "名称 (A 到 Z)"
+
+msgid "Name (Z to A)"
+msgstr "名称 (Z 到 A)"
+
+msgid "New notebook"
+msgstr "新建笔记本"
+
+msgid "New folder"
+msgstr "新建文件夹"
+
+msgid "Annotate PDF"
+msgstr "批注 PDF"
+
+msgid "Select"
+msgstr "选择"
+
+msgid "Notebooks"
+msgstr "笔记本"
+
+msgid "None"
+msgstr "无"
+
+msgid "All"
+msgstr "全部"
+
+msgid "1 selected"
+msgstr "已选择 1 项"
+
+msgid "%1 selected"
+msgstr "已选择 %1 项"
+
+msgid "Page %1 of %2"
+msgstr "第 %1 页，共 %2 页"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "使用 Xournal++ 打开此 XOPP 文件。"
+
+msgid "The name cannot be empty."
+msgstr "名称不能为空。"
+
+msgid "The name cannot contain slashes."
+msgstr "名称不能包含斜杠。"
+
+msgid "Something with that name is already here."
+msgstr "已存在同名项目。"
+
+msgid "That name is too long."
+msgstr "该名称过长。"
+
+msgid "That name cannot be used."
+msgstr "无法使用该名称。"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Export"
+msgstr "导出"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Choose a PDF file."
+msgstr "选择一个 PDF 文件。"
+
+msgid "Could not open this PDF."
+msgstr "无法打开此 PDF。"
+
+msgid "Could not save the notebook."
+msgstr "无法保存笔记本。"
+
+msgid "Work"
+msgstr "工作"
+
+msgid "Personal"
+msgstr "个人"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Rename"
+msgstr "重命名"
+
+msgid "Move"
+msgstr "移动"
+
+msgid "Send"
+msgstr "发送"
+
+msgid "Duplicate"
+msgstr "创建副本"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "删除“%1”？\n\n此操作无法撤销。"
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "删除 %1 个项目？\n\n文件夹及其所有内容都将被删除。此操作无法撤销。"
+
+msgid "Sort by"
+msgstr "排序方式"
+
+msgid "Rename folder"
+msgstr "重命名文件夹"
+
+msgid "Rename notebook"
+msgstr "重命名笔记本"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "没有用于准备发送文件的空间。"
+
+msgid "Preparing '%1'…"
+msgstr "正在准备“%1”…"
+
+msgid "Preparing %1 items…"
+msgstr "正在准备 %1 个项目…"
+
+msgid "Nothing could be prepared for sending."
+msgstr "无法准备任何用于发送的文件。"
+
+msgid "Sending %1; %2 could not be read."
+msgstr "正在发送 %1；无法读取 %2。"
+
+msgid "Exporting '%1'…"
+msgstr "正在导出“%1”…"
+
+msgid "Exporting %1 notebooks…"
+msgstr "正在导出 %1 本笔记本…"
+
+msgid "Export cancelled."
+msgstr "导出已取消。"
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "Xournal++ 需要这两个文件。请将它们保存在一起：\n%1\n%2"
+
+msgid "Exported to:\n%1"
+msgstr "已导出至：\n%1"
+
+msgid "Exported %1 notebooks."
+msgstr "已导出 %1 本笔记本。"
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "已导出 %1 / %2；无法读取 %3。"
+
+msgid "Notebooks (top level)"
+msgstr "笔记本 (顶级)"
+
+msgid "Move to"
+msgstr "移动到"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "已移动 %1；无法将 %2 移动到此处。"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Cut"
+msgstr "剪切"
+
+msgid "Copy"
+msgstr "复制"
+
+msgid "Paste"
+msgstr "粘贴"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Open notebook"
+msgstr "打开笔记本"
+
+msgid "Notebook"
+msgstr "笔记本"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "笔记本插件遇到错误。请重启 KOReader 重新打开；详情请见 notebook-error.log。"
+
+msgid "Could not create the notebook folder."
+msgstr "无法创建笔记本文件夹。"
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "无法打开此笔记本；它可能来自更新的版本。"
+
+msgid "Notebook name"
+msgstr "笔记本名称"
+
+msgid "Create"
+msgstr "创建"
+
+msgid "Fineliner"
+msgstr "针管笔"
+
+msgid "Fountain pen"
+msgstr "钢笔"
+
+msgid "Pencil"
+msgstr "铅笔"
+
+msgid "Straight line"
+msgstr "直线"
+
+msgid "Pause at the end of a stroke"
+msgstr "笔画结束时停顿"
+
+msgid "Arrow (straight or curved)"
+msgstr "箭头 (直线或曲线)"
+
+msgid "Pen type"
+msgstr "笔类型"
+
+msgid "Marker size"
+msgstr "荧光笔粗细"
+
+msgid "Whole strokes"
+msgstr "整个笔画"
+
+msgid "Part of a stroke"
+msgstr "笔画的一部分"
+
+msgid "Eraser size"
+msgstr "橡皮擦大小"
+
+msgid "Square"
+msgstr "正方形"
+
+msgid "Rectangle"
+msgstr "矩形"
+
+msgid "Circle"
+msgstr "圆形"
+
+msgid "Shapes"
+msgstr "图形"
+
+msgid "Small"
+msgstr "小"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "Large"
+msgstr "大"
+
+msgid "Sans-serif"
+msgstr "无衬线"
+
+msgid "Serif"
+msgstr "衬线"
+
+msgid "Monospace"
+msgstr "等宽"
+
+msgid "Bold"
+msgstr "粗体"
+
+msgid "Italic"
+msgstr "斜体"
+
+msgid "Underline"
+msgstr "下划线"
+
+msgid "Text options"
+msgstr "文本选项"
+
+msgid "Edit text"
+msgstr "编辑文本"
+
+msgid "Insert text"
+msgstr "插入文本"
+
+msgid "Font"
+msgstr "字体"
+
+msgid "Insert"
+msgstr "插入"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "无法保存笔记本。笔记本仍保持打开状态。"
+
+msgid "Pages (%1)"
+msgstr "页面 (%1)"
+
+msgid "New page"
+msgstr "新建页面"
+
+msgid "Notebook background"
+msgstr "笔记本背景"
+
+msgid "Done"
+msgstr "完成"
+
+msgid "Go to this page"
+msgstr "跳转至此页"
+
+msgid "Insert a page after this one"
+msgstr "在此页后插入页面"
+
+msgid "Background of this page"
+msgstr "当前页背景"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "删除第 %1 页及其所有内容？"
+
+msgid "Page %1"
+msgstr "第 %1 页"
+
+msgid "Background of page %1"
+msgstr "第 %1 页背景"
+
+msgid "Follow the notebook again"
+msgstr "恢复跟随笔记本"
+
+msgid "Background for every page"
+msgstr "所有页面的背景"
+
+msgid "Some pages have their own — change those too"
+msgstr "部分页面有独立背景 — 一并更改"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "笔记本插件遇到问题已关闭。\n\nKOReader 运行正常。\n\n详细信息已写入：\n%1"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "笔记本插件遇到问题已关闭。\n\nKOReader 运行正常。"
+
+msgid "Finger"
+msgstr "手指"
+
+msgid "Turns pages"
+msgstr "翻页"
+
+msgid "Draws"
+msgstr "绘画"
+
+msgid "Sharing format"
+msgstr "分享格式"
+
+msgid "Blank"
+msgstr "空白"
+
+msgid "Lined"
+msgstr "横线"
+
+msgid "Narrow lined"
+msgstr "窄横线"
+
+msgid "Grid"
+msgstr "网格"
+
+msgid "Dot grid"
+msgstr "点阵"
+
+msgid "Checklist"
+msgstr "清单"
+
+msgid "Preparing…"
+msgstr "正在准备…"
+
+msgid "Cancelling…"
+msgstr "正在取消…"
+
+msgid "Exporting PDF…"
+msgstr "正在导出 PDF…"
+
+msgid "Rendering"
+msgstr "渲染中"
+
+msgid "Preparing image"
+msgstr "正在准备图像"
+
+msgid "Compressing"
+msgstr "压缩中"
+
+msgid "Page %1 of %2 — %3"
+msgstr "第 %1 页，共 %2 页 — %3"

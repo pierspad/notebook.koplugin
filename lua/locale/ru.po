@@ -1,0 +1,408 @@
+# Russian translations for the Scribe notebook plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Russian\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: ru\n"
+
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "Здесь пока ничего нет — используйте «Новый блокнот», чтобы начать"
+
+msgid "Last edited"
+msgstr "Последнее изменение"
+
+msgid "Least recently edited"
+msgstr "Давно не изменявшиеся"
+
+msgid "Name (A to Z)"
+msgstr "Имя (А–Я)"
+
+msgid "Name (Z to A)"
+msgstr "Имя (Я–А)"
+
+msgid "New notebook"
+msgstr "Новый блокнот"
+
+msgid "New folder"
+msgstr "Новая папка"
+
+msgid "Annotate PDF"
+msgstr "Аннотировать PDF"
+
+msgid "Select"
+msgstr "Выбрать"
+
+msgid "Notebooks"
+msgstr "Блокноты"
+
+msgid "None"
+msgstr "Нет"
+
+msgid "All"
+msgstr "Все"
+
+msgid "1 selected"
+msgstr "Выбран 1"
+
+msgid "%1 selected"
+msgstr "Выбрано: %1"
+
+msgid "Page %1 of %2"
+msgstr "Страница %1 из %2"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "Откройте этот файл XOPP с помощью Xournal++."
+
+msgid "The name cannot be empty."
+msgstr "Имя не может быть пустым."
+
+msgid "The name cannot contain slashes."
+msgstr "Имя не может содержать косые черты."
+
+msgid "Something with that name is already here."
+msgstr "Элемент с таким именем уже существует."
+
+msgid "That name is too long."
+msgstr "Это имя слишком длинное."
+
+msgid "That name cannot be used."
+msgstr "Это имя нельзя использовать."
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "Save"
+msgstr "Сохранить"
+
+msgid "Export"
+msgstr "Экспорт"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Choose a PDF file."
+msgstr "Выберите PDF-файл."
+
+msgid "Could not open this PDF."
+msgstr "Не удалось открыть этот PDF."
+
+msgid "Could not save the notebook."
+msgstr "Не удалось сохранить блокнот."
+
+msgid "Work"
+msgstr "Работа"
+
+msgid "Personal"
+msgstr "Личное"
+
+msgid "Open"
+msgstr "Открыть"
+
+msgid "Rename"
+msgstr "Переименовать"
+
+msgid "Move"
+msgstr "Переместить"
+
+msgid "Send"
+msgstr "Отправить"
+
+msgid "Duplicate"
+msgstr "Дублировать"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "Удалить «%1»?\n\nЭто действие нельзя отменить."
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "Удалить элементы (%1)?\n\nПапки удаляются вместе со всем содержимым. Это действие нельзя отменить."
+
+msgid "Sort by"
+msgstr "Сортировка"
+
+msgid "Rename folder"
+msgstr "Переименовать папку"
+
+msgid "Rename notebook"
+msgstr "Переименовать блокнот"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "Нет места для подготовки файлов к отправке."
+
+msgid "Preparing '%1'…"
+msgstr "Подготовка «%1»…"
+
+msgid "Preparing %1 items…"
+msgstr "Подготовка %1 элементов…"
+
+msgid "Nothing could be prepared for sending."
+msgstr "Ничего не удалось подготовить к отправке."
+
+msgid "Sending %1; %2 could not be read."
+msgstr "Отправка %1; %2 не удалось прочитать."
+
+msgid "Exporting '%1'…"
+msgstr "Экспорт «%1»…"
+
+msgid "Exporting %1 notebooks…"
+msgstr "Экспорт %1 блокнотов…"
+
+msgid "Export cancelled."
+msgstr "Экспорт отменён."
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "Xournal++ требуются оба файла. Храните их вместе:\n%1\n%2"
+
+msgid "Exported to:\n%1"
+msgstr "Экспортировано в:\n%1"
+
+msgid "Exported %1 notebooks."
+msgstr "Экспортировано блокнотов: %1."
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "Экспортировано %1 из %2; %3 не удалось прочитать."
+
+msgid "Notebooks (top level)"
+msgstr "Блокноты (верхний уровень)"
+
+msgid "Move to"
+msgstr "Переместить в"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "Перемещено: %1; %2 не удалось туда переместить."
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Cut"
+msgstr "Вырезать"
+
+msgid "Copy"
+msgstr "Копировать"
+
+msgid "Paste"
+msgstr "Вставить"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Open notebook"
+msgstr "Открыть блокнот"
+
+msgid "Notebook"
+msgstr "Блокнот"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "В плагине «Блокнот» произошла ошибка. Перезапустите KOReader, чтобы открыть его снова; подробности см. в notebook-error.log."
+
+msgid "Could not create the notebook folder."
+msgstr "Не удалось создать папку блокнотов."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "Не удалось открыть этот блокнот; возможно, он создан в более новой версии."
+
+msgid "Notebook name"
+msgstr "Название блокнота"
+
+msgid "Create"
+msgstr "Создать"
+
+msgid "Fineliner"
+msgstr "Капиллярная ручка"
+
+msgid "Fountain pen"
+msgstr "Перьевая ручка"
+
+msgid "Pencil"
+msgstr "Карандаш"
+
+msgid "Straight line"
+msgstr "Прямая линия"
+
+msgid "Pause at the end of a stroke"
+msgstr "Пауза в конце штриха"
+
+msgid "Arrow (straight or curved)"
+msgstr "Стрелка (прямая или изогнутая)"
+
+msgid "Pen type"
+msgstr "Тип пера"
+
+msgid "Marker size"
+msgstr "Размер маркера"
+
+msgid "Whole strokes"
+msgstr "Штрихи целиком"
+
+msgid "Part of a stroke"
+msgstr "Часть штриха"
+
+msgid "Eraser size"
+msgstr "Размер ластика"
+
+msgid "Square"
+msgstr "Квадрат"
+
+msgid "Rectangle"
+msgstr "Прямоугольник"
+
+msgid "Circle"
+msgstr "Круг"
+
+msgid "Shapes"
+msgstr "Фигуры"
+
+msgid "Small"
+msgstr "Маленький"
+
+msgid "Medium"
+msgstr "Средний"
+
+msgid "Large"
+msgstr "Большой"
+
+msgid "Sans-serif"
+msgstr "Без засечек"
+
+msgid "Serif"
+msgstr "С засечками"
+
+msgid "Monospace"
+msgstr "Моноширинный"
+
+msgid "Bold"
+msgstr "Полужирный"
+
+msgid "Italic"
+msgstr "Курсив"
+
+msgid "Underline"
+msgstr "Подчёркнутый"
+
+msgid "Text options"
+msgstr "Параметры текста"
+
+msgid "Edit text"
+msgstr "Изменить текст"
+
+msgid "Insert text"
+msgstr "Вставить текст"
+
+msgid "Font"
+msgstr "Шрифт"
+
+msgid "Insert"
+msgstr "Вставить"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Не удалось сохранить блокнот. Он оставлен открытым."
+
+msgid "Pages (%1)"
+msgstr "Страницы (%1)"
+
+msgid "New page"
+msgstr "Новая страница"
+
+msgid "Notebook background"
+msgstr "Фон блокнота"
+
+msgid "Done"
+msgstr "Готово"
+
+msgid "Go to this page"
+msgstr "Перейти на эту страницу"
+
+msgid "Insert a page after this one"
+msgstr "Вставить страницу после этой"
+
+msgid "Background of this page"
+msgstr "Фон этой страницы"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Удалить страницу %1 и всё её содержимое?"
+
+msgid "Page %1"
+msgstr "Страница %1"
+
+msgid "Background of page %1"
+msgstr "Фон страницы %1"
+
+msgid "Follow the notebook again"
+msgstr "Снова следовать блокноту"
+
+msgid "Background for every page"
+msgstr "Фон для всех страниц"
+
+msgid "Some pages have their own — change those too"
+msgstr "У некоторых страниц свой фон — изменить и их"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "В работе плагина «Блокнот» произошла ошибка, и он был закрыт.\n\nСам KOReader работает нормально.\n\nПодробности записаны в:\n%1"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "В работе плагина «Блокнот» произошла ошибка, и он был закрыт.\n\nСам KOReader работает нормально."
+
+msgid "Finger"
+msgstr "Палец"
+
+msgid "Turns pages"
+msgstr "Перелистывает страницы"
+
+msgid "Draws"
+msgstr "Рисует"
+
+msgid "Sharing format"
+msgstr "Формат отправки"
+
+msgid "Blank"
+msgstr "Чистый лист"
+
+msgid "Lined"
+msgstr "В линейку"
+
+msgid "Narrow lined"
+msgstr "В узкую линейку"
+
+msgid "Grid"
+msgstr "В клетку"
+
+msgid "Dot grid"
+msgstr "Точечная сетка"
+
+msgid "Checklist"
+msgstr "Список задач"
+
+msgid "Preparing…"
+msgstr "Подготовка…"
+
+msgid "Cancelling…"
+msgstr "Отмена…"
+
+msgid "Exporting PDF…"
+msgstr "Экспорт PDF…"
+
+msgid "Rendering"
+msgstr "Отрисовка"
+
+msgid "Preparing image"
+msgstr "Подготовка изображения"
+
+msgid "Compressing"
+msgstr "Сжатие"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Страница %1 из %2 — %3"

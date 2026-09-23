@@ -1,0 +1,408 @@
+# Japanese translations for the Scribe notebook plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Japanese\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: ja\n"
+
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "まだ何もありません —「新規ノート」で始めましょう"
+
+msgid "Last edited"
+msgstr "最終編集日時"
+
+msgid "Least recently edited"
+msgstr "最も過去に編集"
+
+msgid "Name (A to Z)"
+msgstr "名前 (昇順)"
+
+msgid "Name (Z to A)"
+msgstr "名前 (降順)"
+
+msgid "New notebook"
+msgstr "新規ノート"
+
+msgid "New folder"
+msgstr "新規フォルダー"
+
+msgid "Annotate PDF"
+msgstr "PDFに注釈"
+
+msgid "Select"
+msgstr "選択"
+
+msgid "Notebooks"
+msgstr "ノート"
+
+msgid "None"
+msgstr "なし"
+
+msgid "All"
+msgstr "すべて"
+
+msgid "1 selected"
+msgstr "1件選択中"
+
+msgid "%1 selected"
+msgstr "%1件選択中"
+
+msgid "Page %1 of %2"
+msgstr "ページ %1 / %2"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "このXOPPファイルをXournal++で開きます。"
+
+msgid "The name cannot be empty."
+msgstr "名前を入力してください。"
+
+msgid "The name cannot contain slashes."
+msgstr "名前にスラッシュを含めることはできません。"
+
+msgid "Something with that name is already here."
+msgstr "その名前の項目が既に存在します。"
+
+msgid "That name is too long."
+msgstr "名前が長すぎます。"
+
+msgid "That name cannot be used."
+msgstr "その名前は使用できません。"
+
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Export"
+msgstr "エクスポート"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Choose a PDF file."
+msgstr "PDFファイルを選択してください。"
+
+msgid "Could not open this PDF."
+msgstr "このPDFを開けませんでした。"
+
+msgid "Could not save the notebook."
+msgstr "ノートを保存できませんでした。"
+
+msgid "Work"
+msgstr "仕事"
+
+msgid "Personal"
+msgstr "プライベート"
+
+msgid "Open"
+msgstr "開く"
+
+msgid "Rename"
+msgstr "名前の変更"
+
+msgid "Move"
+msgstr "移動"
+
+msgid "Send"
+msgstr "送信"
+
+msgid "Duplicate"
+msgstr "複製"
+
+msgid "Delete"
+msgstr "削除"
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "「%1」を削除しますか？\n\nこの操作は取り消せません。"
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "%1件の項目を削除しますか？\n\nフォルダー内のすべての内容も削除されます。この操作は取り消せません。"
+
+msgid "Sort by"
+msgstr "並べ替え"
+
+msgid "Rename folder"
+msgstr "フォルダー名の変更"
+
+msgid "Rename notebook"
+msgstr "ノート名の変更"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "送信ファイルを準備する場所がありません。"
+
+msgid "Preparing '%1'…"
+msgstr "「%1」を準備中…"
+
+msgid "Preparing %1 items…"
+msgstr "%1件の項目を準備中…"
+
+msgid "Nothing could be prepared for sending."
+msgstr "送信用のファイルを準備できませんでした。"
+
+msgid "Sending %1; %2 could not be read."
+msgstr "%1 を送信中。%2 は読み込めませんでした。"
+
+msgid "Exporting '%1'…"
+msgstr "「%1」をエクスポート中…"
+
+msgid "Exporting %1 notebooks…"
+msgstr "%1冊のノートをエクスポート中…"
+
+msgid "Export cancelled."
+msgstr "エクスポートがキャンセルされました。"
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "Xournal++には両方のファイルが必要です。同じ場所に保管してください:\n%1\n%2"
+
+msgid "Exported to:\n%1"
+msgstr "エクスポート先:\n%1"
+
+msgid "Exported %1 notebooks."
+msgstr "%1冊のノートをエクスポートしました。"
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "%1 / %2 冊をエクスポートしました（%3 冊は読み込めませんでした）。"
+
+msgid "Notebooks (top level)"
+msgstr "ノート (最上位)"
+
+msgid "Move to"
+msgstr "移動先"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "%1件を移動しました（%2件は移動できませんでした）。"
+
+msgid "Edit"
+msgstr "編集"
+
+msgid "Cut"
+msgstr "切り取り"
+
+msgid "Copy"
+msgstr "コピー"
+
+msgid "Paste"
+msgstr "貼り付け"
+
+msgid "Close"
+msgstr "閉じる"
+
+msgid "Open notebook"
+msgstr "ノートを開く"
+
+msgid "Notebook"
+msgstr "ノート"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "ノートプラグインでエラーが発生しました。再起動してください。詳細は notebook-error.log を参照してください。"
+
+msgid "Could not create the notebook folder."
+msgstr "ノートフォルダーを作成できませんでした。"
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "このノートを開けませんでした。より新しいバージョンで作成された可能性があります。"
+
+msgid "Notebook name"
+msgstr "ノート名"
+
+msgid "Create"
+msgstr "作成"
+
+msgid "Fineliner"
+msgstr "ミリペン"
+
+msgid "Fountain pen"
+msgstr "万年筆"
+
+msgid "Pencil"
+msgstr "鉛筆"
+
+msgid "Straight line"
+msgstr "直線"
+
+msgid "Pause at the end of a stroke"
+msgstr "描画終了時に静止"
+
+msgid "Arrow (straight or curved)"
+msgstr "矢印 (直線または曲線)"
+
+msgid "Pen type"
+msgstr "ペンの種類"
+
+msgid "Marker size"
+msgstr "マーカーのサイズ"
+
+msgid "Whole strokes"
+msgstr "ストローク全体"
+
+msgid "Part of a stroke"
+msgstr "ストロークの一部"
+
+msgid "Eraser size"
+msgstr "消しゴムのサイズ"
+
+msgid "Square"
+msgstr "正方形"
+
+msgid "Rectangle"
+msgstr "長方形"
+
+msgid "Circle"
+msgstr "円"
+
+msgid "Shapes"
+msgstr "図形"
+
+msgid "Small"
+msgstr "小"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "Large"
+msgstr "大"
+
+msgid "Sans-serif"
+msgstr "ゴシック体 (サンセリフ)"
+
+msgid "Serif"
+msgstr "明朝体 (セリフ)"
+
+msgid "Monospace"
+msgstr "等幅"
+
+msgid "Bold"
+msgstr "太字"
+
+msgid "Italic"
+msgstr "斜体"
+
+msgid "Underline"
+msgstr "下線"
+
+msgid "Text options"
+msgstr "テキスト設定"
+
+msgid "Edit text"
+msgstr "テキストを編集"
+
+msgid "Insert text"
+msgstr "テキストを挿入"
+
+msgid "Font"
+msgstr "フォント"
+
+msgid "Insert"
+msgstr "挿入"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "ノートを保存できませんでした。開いたままになっています。"
+
+msgid "Pages (%1)"
+msgstr "ページ (%1)"
+
+msgid "New page"
+msgstr "新規ページ"
+
+msgid "Notebook background"
+msgstr "ノートの背景"
+
+msgid "Done"
+msgstr "完了"
+
+msgid "Go to this page"
+msgstr "このページへ移動"
+
+msgid "Insert a page after this one"
+msgstr "この後にページを挿入"
+
+msgid "Background of this page"
+msgstr "このページの背景"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "ページ %1 とそのすべての内容を削除しますか？"
+
+msgid "Page %1"
+msgstr "ページ %1"
+
+msgid "Background of page %1"
+msgstr "ページ %1 の背景"
+
+msgid "Follow the notebook again"
+msgstr "ノートのデフォルト設定に従う"
+
+msgid "Background for every page"
+msgstr "すべてのページの背景"
+
+msgid "Some pages have their own — change those too"
+msgstr "独自設定のページもあります — それらも変更する"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "ノートプラグインに問題が発生したため終了しました。\n\nKOReader自体は正常です。\n\n詳細は以下に記録されました:\n%1"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "ノートプラグインに問題が発生したため終了しました。\n\nKOReader自体は正常です。"
+
+msgid "Finger"
+msgstr "指"
+
+msgid "Turns pages"
+msgstr "ページめくり"
+
+msgid "Draws"
+msgstr "描画"
+
+msgid "Sharing format"
+msgstr "共有形式"
+
+msgid "Blank"
+msgstr "白紙"
+
+msgid "Lined"
+msgstr "横罫"
+
+msgid "Narrow lined"
+msgstr "細横罫"
+
+msgid "Grid"
+msgstr "方眼"
+
+msgid "Dot grid"
+msgstr "ドット方眼"
+
+msgid "Checklist"
+msgstr "チェックリスト"
+
+msgid "Preparing…"
+msgstr "準備中…"
+
+msgid "Cancelling…"
+msgstr "キャンセル中…"
+
+msgid "Exporting PDF…"
+msgstr "PDFをエクスポート中…"
+
+msgid "Rendering"
+msgstr "レンダリング中"
+
+msgid "Preparing image"
+msgstr "画像を準備中"
+
+msgid "Compressing"
+msgstr "圧縮中"
+
+msgid "Page %1 of %2 — %3"
+msgstr "ページ %1 / %2 — %3"

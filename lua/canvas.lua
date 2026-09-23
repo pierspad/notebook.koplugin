@@ -260,11 +260,12 @@ function Canvas:_flush()
     --  * refreshPartial (grayscale/REAGL) is forced to UPDATE_MODE_FULL by the
     --    driver, and full updates are fenced, so every segment blocks on the
     --    previous one and the ink crawls behind the nib.
-    --  * refreshFast (DU) is binary. The highlighter therefore uses its darker
-    --    live tint while the nib is down, then is redrawn once in gray on lift.
+    --  * refreshFast (DU) is binary, so it cannot reveal grayscale marker ink.
+    --    The highlighter uses refreshUI at a separately throttled cadence and
+    --    is redrawn at its lighter resting tint on lift.
     --
-    -- refreshUI (AUTO) remains for pencil gray; using it for every highlighter
-    -- segment was visibly behind the nib on a Scribe.
+    -- refreshUI (AUTO) also remains necessary for pencil gray. Calling it for
+    -- every raw sample queues work; _maybeFlush coalesces marker samples.
     if self.refresh_mode == "ui" then
         Screen:refreshUI(x, y, w, h)
     else

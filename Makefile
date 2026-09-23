@@ -81,6 +81,11 @@ check-package: package
 	    || { echo "$(ZIP) has no _meta.lua in it" >&2; exit 1; }; \
 	grep -q '$(PLUGIN)/locale/' $(BUILD)/contents.txt \
 	    || { echo "$(ZIP) has no translations in it" >&2; exit 1; }; \
+	for catalogue in lua/locale/*.po; do \
+	    entry='$(PLUGIN)/locale/'"$${catalogue##*/}"; \
+	    grep -Fxq "$$entry" $(BUILD)/contents.txt \
+	        || { echo "$(ZIP) is missing $$entry" >&2; exit 1; }; \
+	done; \
 	! grep -q '$(PLUGIN)/spec/' $(BUILD)/contents.txt \
 	    || { echo "$(ZIP) carries the test bench" >&2; exit 1; }; \
 	echo "$(ZIP) checks out"

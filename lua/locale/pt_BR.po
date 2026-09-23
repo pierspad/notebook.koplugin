@@ -1,0 +1,408 @@
+# Portuguese (Brazil) translations for the Scribe notebook plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Notebook for KOReader 1.2\n"
+"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"Last-Translator: Notebook contributors\n"
+"Language-Team: Portuguese (Brazil)\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: pt_BR\n"
+
+msgid "XOPP"
+msgstr "XOPP"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Nothing here yet — use New notebook to start one"
+msgstr "Ainda não há nada aqui — use Novo caderno para começar um"
+
+msgid "Last edited"
+msgstr "Última modificação"
+
+msgid "Least recently edited"
+msgstr "Modificado há mais tempo"
+
+msgid "Name (A to Z)"
+msgstr "Nome (A a Z)"
+
+msgid "Name (Z to A)"
+msgstr "Nome (Z a A)"
+
+msgid "New notebook"
+msgstr "Novo caderno"
+
+msgid "New folder"
+msgstr "Nova pasta"
+
+msgid "Annotate PDF"
+msgstr "Anotar PDF"
+
+msgid "Select"
+msgstr "Selecionar"
+
+msgid "Notebooks"
+msgstr "Cadernos"
+
+msgid "None"
+msgstr "Nenhum"
+
+msgid "All"
+msgstr "Todos"
+
+msgid "1 selected"
+msgstr "1 selecionado"
+
+msgid "%1 selected"
+msgstr "%1 selecionados"
+
+msgid "Page %1 of %2"
+msgstr "Página %1 de %2"
+
+msgid "Open this XOPP file with Xournal++."
+msgstr "Abra este arquivo XOPP com o Xournal++."
+
+msgid "The name cannot be empty."
+msgstr "O nome não pode estar vazio."
+
+msgid "The name cannot contain slashes."
+msgstr "O nome não pode conter barras."
+
+msgid "Something with that name is already here."
+msgstr "Já existe um item com esse nome aqui."
+
+msgid "That name is too long."
+msgstr "Esse nome é muito longo."
+
+msgid "That name cannot be used."
+msgstr "Esse nome não pode ser usado."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Save"
+msgstr "Salvar"
+
+msgid "Export"
+msgstr "Exportar"
+
+msgid "Xournal++"
+msgstr "Xournal++"
+
+msgid "Choose a PDF file."
+msgstr "Escolha um arquivo PDF."
+
+msgid "Could not open this PDF."
+msgstr "Não foi possível abrir este PDF."
+
+msgid "Could not save the notebook."
+msgstr "Não foi possível salvar o caderno."
+
+msgid "Work"
+msgstr "Trabalho"
+
+msgid "Personal"
+msgstr "Pessoal"
+
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Rename"
+msgstr "Renomear"
+
+msgid "Move"
+msgstr "Mover"
+
+msgid "Send"
+msgstr "Enviar"
+
+msgid "Duplicate"
+msgstr "Duplicar"
+
+msgid "Delete"
+msgstr "Excluir"
+
+msgid "Delete '%1'?\n\nThis cannot be undone."
+msgstr "Excluir «%1»?\n\nEsta ação não pode ser desfeita."
+
+msgid "Delete %1 items?\n\nFolders are deleted with everything in them. This cannot be undone."
+msgstr "Excluir %1 itens?\n\nAs pastas serão excluídas com todo o seu conteúdo. Esta ação não pode ser desfeita."
+
+msgid "Sort by"
+msgstr "Ordenar por"
+
+msgid "Rename folder"
+msgstr "Renomear pasta"
+
+msgid "Rename notebook"
+msgstr "Renomear caderno"
+
+msgid "There is nowhere to prepare the files for sending."
+msgstr "Não há espaço onde preparar os arquivos para envio."
+
+msgid "Preparing '%1'…"
+msgstr "Preparando «%1»…"
+
+msgid "Preparing %1 items…"
+msgstr "Preparando %1 itens…"
+
+msgid "Nothing could be prepared for sending."
+msgstr "Nada pôde ser preparado para envio."
+
+msgid "Sending %1; %2 could not be read."
+msgstr "Enviando %1; %2 não puderam ser lidos."
+
+msgid "Exporting '%1'…"
+msgstr "Exportando «%1»…"
+
+msgid "Exporting %1 notebooks…"
+msgstr "Exportando %1 cadernos…"
+
+msgid "Export cancelled."
+msgstr "Exportação cancelada."
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "O Xournal++ precisa de ambos os arquivos. Mantenha-os juntos:\n%1\n%2"
+
+msgid "Exported to:\n%1"
+msgstr "Exportado para:\n%1"
+
+msgid "Exported %1 notebooks."
+msgstr "%1 cadernos exportados."
+
+msgid "Exported %1 of %2; %3 could not be read."
+msgstr "Exportados %1 de %2; %3 não puderam ser lidos."
+
+msgid "Notebooks (top level)"
+msgstr "Cadernos (nível superior)"
+
+msgid "Move to"
+msgstr "Mover para"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "%1 movidos; %2 não puderam ser movidos para lá."
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Cut"
+msgstr "Recortar"
+
+msgid "Copy"
+msgstr "Copiar"
+
+msgid "Paste"
+msgstr "Colar"
+
+msgid "Close"
+msgstr "Fechar"
+
+msgid "Open notebook"
+msgstr "Abrir caderno"
+
+msgid "Notebook"
+msgstr "Caderno"
+
+msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
+msgstr "O plugin do Caderno encontrou um erro. Reinicie o KOReader para reabri-lo; consulte notebook-error.log para detalhes."
+
+msgid "Could not create the notebook folder."
+msgstr "Não foi possível criar a pasta dos cadernos."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "Não foi possível abrir este caderno; ele pode ser de uma versão mais recente."
+
+msgid "Notebook name"
+msgstr "Nome do caderno"
+
+msgid "Create"
+msgstr "Criar"
+
+msgid "Fineliner"
+msgstr "Caneta de ponta fina"
+
+msgid "Fountain pen"
+msgstr "Caneta-tinteiro"
+
+msgid "Pencil"
+msgstr "Lápis"
+
+msgid "Straight line"
+msgstr "Linha reta"
+
+msgid "Pause at the end of a stroke"
+msgstr "Pausar no final do traço"
+
+msgid "Arrow (straight or curved)"
+msgstr "Seta (reta ou curva)"
+
+msgid "Pen type"
+msgstr "Tipo de caneta"
+
+msgid "Marker size"
+msgstr "Tamanho do marcador"
+
+msgid "Whole strokes"
+msgstr "Traços inteiros"
+
+msgid "Part of a stroke"
+msgstr "Parte de um traço"
+
+msgid "Eraser size"
+msgstr "Tamanho da borracha"
+
+msgid "Square"
+msgstr "Quadrado"
+
+msgid "Rectangle"
+msgstr "Retângulo"
+
+msgid "Circle"
+msgstr "Círculo"
+
+msgid "Shapes"
+msgstr "Formas"
+
+msgid "Small"
+msgstr "Pequeno"
+
+msgid "Medium"
+msgstr "Médio"
+
+msgid "Large"
+msgstr "Grande"
+
+msgid "Sans-serif"
+msgstr "Sem serifa"
+
+msgid "Serif"
+msgstr "Com serifa"
+
+msgid "Monospace"
+msgstr "Monoespaçado"
+
+msgid "Bold"
+msgstr "Negrito"
+
+msgid "Italic"
+msgstr "Itálico"
+
+msgid "Underline"
+msgstr "Sublinhado"
+
+msgid "Text options"
+msgstr "Opções de texto"
+
+msgid "Edit text"
+msgstr "Editar texto"
+
+msgid "Insert text"
+msgstr "Inserir texto"
+
+msgid "Font"
+msgstr "Fonte"
+
+msgid "Insert"
+msgstr "Inserir"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Não foi possível salvar o caderno. Ele foi deixado aberto."
+
+msgid "Pages (%1)"
+msgstr "Páginas (%1)"
+
+msgid "New page"
+msgstr "Nova página"
+
+msgid "Notebook background"
+msgstr "Fundo do caderno"
+
+msgid "Done"
+msgstr "Concluído"
+
+msgid "Go to this page"
+msgstr "Ir para esta página"
+
+msgid "Insert a page after this one"
+msgstr "Inserir uma página após esta"
+
+msgid "Background of this page"
+msgstr "Fundo desta página"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Excluir a página %1 e todo o seu conteúdo?"
+
+msgid "Page %1"
+msgstr "Página %1"
+
+msgid "Background of page %1"
+msgstr "Fundo da página %1"
+
+msgid "Follow the notebook again"
+msgstr "Seguir o caderno novamente"
+
+msgid "Background for every page"
+msgstr "Fundo para todas as páginas"
+
+msgid "Some pages have their own — change those too"
+msgstr "Algumas páginas têm o seu próprio fundo — alterar essas também"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine.\n\nDetails were written to:\n%1"
+msgstr "O plugin do Caderno encontrou um problema e foi encerrado.\n\nO KOReader está funcionando normalmente.\n\nOs detalhes foram gravados em:\n%1"
+
+msgid "The notebook plugin hit a problem and has closed.\n\nKOReader itself is fine."
+msgstr "O plugin do Caderno encontrou um problema e foi encerrado.\n\nO KOReader está funcionando normalmente."
+
+msgid "Finger"
+msgstr "Dedo"
+
+msgid "Turns pages"
+msgstr "Vira páginas"
+
+msgid "Draws"
+msgstr "Desenha"
+
+msgid "Sharing format"
+msgstr "Formato de compartilhamento"
+
+msgid "Blank"
+msgstr "Em branco"
+
+msgid "Lined"
+msgstr "Pautado"
+
+msgid "Narrow lined"
+msgstr "Pautado estreito"
+
+msgid "Grid"
+msgstr "Quadriculado"
+
+msgid "Dot grid"
+msgstr "Pontilhado"
+
+msgid "Checklist"
+msgstr "Lista de verificação"
+
+msgid "Preparing…"
+msgstr "Preparando…"
+
+msgid "Cancelling…"
+msgstr "Cancelando…"
+
+msgid "Exporting PDF…"
+msgstr "Exportando PDF…"
+
+msgid "Rendering"
+msgstr "Renderizando"
+
+msgid "Preparing image"
+msgstr "Preparando imagem"
+
+msgid "Compressing"
+msgstr "Compactando"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Página %1 de %2 — %3"

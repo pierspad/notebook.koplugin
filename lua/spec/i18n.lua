@@ -172,5 +172,58 @@ test("no shipped language contains obsolete entries", function()
     assertEq(#stale, 0, "no longer used: " .. table.concat(stale, " | "))
 end)
 
+test("translations preserve numbered substitution fields", function()
+    local broken={}
+    local function fields(text)
+        local out={}
+        for field in text:gmatch("%%[0-9]+") do out[field]=(out[field] or 0)+1 end
+        return out
+    end
+    local function same(a,b)
+        for key,value in pairs(a) do if b[key]~=value then return false end end
+        for key,value in pairs(b) do if a[key]~=value then return false end end
+        return true
+    end
+    for _,path in ipairs(catalogues) do
+        for id,value in pairs(Text.parse(path)) do
+            if not same(fields(id),fields(value)) then
+                table.insert(broken,path..": "..id:gsub("\n","\\n"))
+            end
+        end
+    end
+    assertEq(#broken,0,"changed substitution fields: "..table.concat(broken," | "))
+end)
+
+test("KOReader language settings activate every shipped catalogue", function()
+    local original=G_reader_settings
+    for _,path in ipairs(catalogues) do
+        local language=path:match("/([^/]+)%.po$")
+        local entries=Text.parse(path)
+        G_reader_settings={readSetting=function(_,key)
+            return key=="language" and language or nil
+        end}
+        package.loaded["i18n"]=nil
+        local localized=require("i18n")
+        for id,value in pairs(entries) do
+            assertEq(localized(id),value,language..": "..id)
+        end
+    end
+    -- These are real variants from KOReader's language menu. They deliberately
+    -- share a base catalogue instead of duplicating 132 strings per region.
+    local aliases={it_IT="it",pt_PT="pt",pl_PL="pl",["zh_TW.Big5"]="zh_TW"}
+    for setting,catalogue_name in pairs(aliases) do
+        G_reader_settings={readSetting=function(_,key)
+            return key=="language" and setting or nil
+        end}
+        package.loaded["i18n"]=nil
+        local regional=require("i18n")
+        local expected=Text.parse("locale/"..catalogue_name..".po")
+        assertEq(regional("New notebook"),expected["New notebook"],
+            setting.." regional language fallback")
+    end
+    G_reader_settings=original
+    package.loaded["i18n"]=nil
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

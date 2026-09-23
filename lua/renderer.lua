@@ -29,6 +29,11 @@ local HIGHLIGHT_TINT = 160
 local COLOR_BLACK = Blitbuffer.Color8(0)
 local COLOR_HIGHLIGHT_DEFAULT = Blitbuffer.Color8(HIGHLIGHT_TINT)
 
+local function grayOfColor(value)
+    if type(value) == "number" then return value end
+    return value.getColor8 and value:getColor8().a or value.a or 0
+end
+
 --- Returns the half-width, in pixels, a stroke should have at a given pressure.
 function Renderer.radiusFor(stroke, pressure)
     local p = pressure or 1
@@ -57,12 +62,17 @@ past it. That makes highlighting idempotent -- over blank paper it gives gray,
 over black ink it leaves the ink alone, and over an existing highlight it changes
 nothing at all.
 --]]
-local function stampHighlight(bb, x, y, r, color)
+local function stampHighlight(bb, x, y, r, color, edge_color)
     local x0 = math.floor(x - r + 0.5)
     local y0 = math.floor(y - r + 0.5)
     local s = math.floor(r * 2 + 0.5)
     if s < 1 then s = 1 end
     local x1, y1 = x0 + s - 1, y0 + s - 1
+    local core_x0, core_y0, core_x1, core_y1 = x0, y0, x1, y1
+    -- A one-pixel intermediate fringe takes the staircase off diagonal marker
+    -- edges. It uses the same minimum blend as the core, so overlapping stamps
+    -- and repeated passes remain idempotent instead of growing darker.
+    x0, y0, x1, y1 = x0 - 1, y0 - 1, x1 + 1, y1 + 1
 
     --[[
     A Color8 is FFI cdata on a device, and a plain number only in the tests.
@@ -75,12 +85,7 @@ local function stampHighlight(bb, x, y, r, color)
     are darker than the tint, they are meant to be left alone, and highlighting
     over them washed them out.
     --]]
-    local tint
-    if type(color) == "number" then
-        tint = color
-    else
-        tint = color.getColor8 and color:getColor8().a or color.a or 0
-    end
+    local tint, edge_tint = grayOfColor(color), grayOfColor(edge_color)
 
     --[[
     Clipped to the buffer, because getPixel and setPixel are not.
@@ -107,9 +112,12 @@ local function stampHighlight(bb, x, y, r, color)
             local px = bb:getPixel(i, j)
             if px then
                 local gray = px.getColor8 and px:getColor8().a or px.a
+                local inside = i >= core_x0 and i <= core_x1
+                    and j >= core_y0 and j <= core_y1
+                local target = inside and tint or edge_tint
                 -- Only ever darken *towards* the tint, never past it.
-                if gray and gray > tint then
-                    bb:setPixel(i, j, color)
+                if gray and gray > target then
+                    bb:setPixel(i, j, inside and color or edge_color)
                 end
             end
         end
@@ -177,12 +185,12 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
         end
         stroke.accum_len = cur_len + dist
     else
-        -- Chisel stamps are squares two radii wide. At 0.8r consecutive
-        -- squares still overlap generously in every direction, while the old
-        -- 0.4r spacing blended most pixels several times and made a broad
-        -- marker spend CPU on work that could not change the result.
-        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.8)) or 1.0
+        -- Chisel stamps are squares two radii wide. A 0.4r grid keeps diagonal
+        -- edges smooth without falling back to one expensive stamp per pixel.
+        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.4)) or 1.0
         local steps = math.max(1, math.ceil(dist / step_dist))
+        local edge_color = is_highlight
+            and Blitbuffer.Color8(math.floor(((stroke.tint or HIGHLIGHT_TINT) + 255) / 2 + 0.5))
 
         for i = math.max(0, math.floor(first_t * steps)), math.min(steps, math.ceil(last_t * steps)) do
             local t = i / steps
@@ -190,7 +198,7 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
             local y = y0 + dy * t
             local r = r0 + (r1 - r0) * t
             if is_highlight then
-                stampHighlight(bb, x, y, r, color)
+                stampHighlight(bb, x, y, r, color, edge_color)
             else
                 stamp(bb, x, y, r, color)
             end
@@ -332,8 +340,10 @@ function Renderer.drawStroke(bb, stroke, clip)
         local x, y, p = stroke:getPoint(1)
         local r = Renderer.radiusFor(stroke, p)
         if stroke.tool == "highlighter" then
+            local tint = stroke.tint or HIGHLIGHT_TINT
             stampHighlight(target, x - ox, y - oy, r,
-                Blitbuffer.Color8(stroke.tint or HIGHLIGHT_TINT))
+                Blitbuffer.Color8(tint),
+                Blitbuffer.Color8(math.floor((tint + 255) / 2 + 0.5)))
         else
             stamp(target, x - ox, y - oy, r, Blitbuffer.Color8(stroke.color))
         end

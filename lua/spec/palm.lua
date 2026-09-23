@@ -43,6 +43,7 @@ Device.input = {
 }
 
 local Canvas = require("canvas")
+local Tuning = require("tuning")
 local Document = require("document")
 local Stroke = require("stroke")
 
@@ -175,7 +176,9 @@ test("the moving marker uses visible throttled grayscale refreshes", function()
     assertEq(canvas.refresh_mode,"ui","marker waveform")
     for i=1,12 do after(5); canvas:_extendStroke(100+i*8,180,1) end
     assertTrue(ui>=1,"the live marker was never shown")
-    assertTrue(ui<=3,"grayscale refreshes were not throttled")
+    -- One immediate update, then no more than one per configured interval.
+    local maximum=1+math.ceil(60/Tuning.live_highlight_refresh_ms)
+    assertTrue(ui<=maximum,"grayscale refreshes were not throttled")
     assertEq(fast,0,"marker used the binary waveform")
     canvas:_endStroke()
 end)

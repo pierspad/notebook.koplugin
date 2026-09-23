@@ -176,20 +176,18 @@ test("dump with nothing changed says so instead of returning nothing", function(
     assertTrue(#Tuning.dump() > 0, "empty dump")
 end)
 
-io.write("equivalence with the constants that were replaced\n")
+io.write("guarded defaults\n")
 
-test("the defaults are the numbers the modules used to hold", function()
-    -- The whole risk of moving these out of the modules is changing one of
-    -- them by accident on the way, and the symptom would be the pen feeling
-    -- different for a reason nobody could name. This is the guard: the values
-    -- transcribed here are read off the commit that removed the constants.
+test("every tuning default is intentional and accounted for", function()
+    -- A changed number changes how the pen feels. Keep the complete expected
+    -- set here so additions and accidental default changes are both explicit.
     local was = {
         refresh_interval_ms  = 20,
         idle_flush_ms        = 35,
         reconcile_delay_ms   = 2000,
         jitter_floor_sq      = 4,
         live_highlight_tint  = 100,
-        live_highlight_refresh_ms = 45,
+        live_highlight_refresh_ms = 20,
         eraser_radius        = 12,
         erase_repaint_ms     = 70,
         drag_repaint_ms      = 60,

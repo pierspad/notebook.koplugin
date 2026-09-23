@@ -56,10 +56,11 @@ Tuning.spec = {
             .. "already-highlighted text is visible under the tip.",
     },
     live_highlight_refresh_ms = {
-        default = 45, min = 20, max = 200, step = 5,
+        default = 20, min = 8, max = 200, step = 2,
         doc = "Minimum gap between visible highlighter updates. The marker "
             .. "needs a grayscale waveform to remain visible while moving; "
-            .. "spacing those slower updates keeps them from queuing behind the nib.",
+            .. "spacing those slower updates keeps them from queuing behind the nib. "
+            .. "Values below the panel's update time may add queueing rather than speed.",
     },
 
     -- Eraser ------------------------------------------------------------------

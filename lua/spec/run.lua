@@ -447,6 +447,19 @@ test("highlighter tints without obliterating what is underneath", function()
     assertTrue(beside < 255 and beside > 0, "blank paper becomes gray, not black")
 end)
 
+test("highlighter has a one-pixel antialiased edge", function()
+    local bb = support.FakeBB.new(60, 60)
+    local hl = Stroke:new{ tool = "highlighter", width = 20 }
+    Renderer.drawSegment(bb, hl, 15, 30, 1, 45, 30, 1)
+
+    local core = bb:get(30, 30)
+    local edge = bb:get(30, 40)
+    local paper = bb:get(30, 41)
+    assertTrue(core < edge, "edge is lighter than the marker core")
+    assertTrue(edge < paper, "edge is darker than untouched paper")
+    assertEq(paper, 255, "AA fringe is exactly one pixel")
+end)
+
 test("highlighter leaves alone anything already darker than the tint", function()
     --[[
     The blend darkens a pixel *to* the tint and never past it, which is what
