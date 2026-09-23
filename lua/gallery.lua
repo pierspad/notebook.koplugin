@@ -16,6 +16,7 @@ local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local Document = require("document")
 local Export = require("export")
+local ExportProgress = require("exportprogress")
 local Xopp = require("xopp")
 local Font = require("ui/font")
 local FrameContainer = require("ui/widget/container/framecontainer")
@@ -1491,7 +1492,9 @@ notebooks back to back would freeze the screen for the whole run.
 function Gallery:_shareMany(chosen)
     self:_endSelection()
 
-    if #chosen == 1 and isExport(chosen[1]) then
+    if #chosen == 1 and isExport(chosen[1])
+            and not (chosen[1].is_xopp
+                and lfs.attributes(Xopp.backgroundPath(chosen[1].path), "mode") == "file") then
         return self.on_share(chosen[1].path)
     end
 
@@ -1540,6 +1543,14 @@ function Gallery:_shareMany(chosen)
         local ok
         if isExport(item) then
             ok = Library.copyFile(item.path, out)
+            if ok and item.is_xopp then
+                local background = Xopp.backgroundPath(item.path)
+                if lfs.attributes(background, "mode") == "file" then
+                    ok = Library.copyFile(background, Xopp.backgroundPath(out))
+                    multiple_files = true
+                    if not ok then os.remove(out) end
+                end
+            end
         else
             local doc = Document:new(item.path)
             if doc:load() then
@@ -1588,40 +1599,88 @@ function Gallery:_exportMany(notebooks, format)
     self:_endSelection()
     format=format or "pdf"
 
-    local working = InfoMessage:new{
-        text = #notebooks == 1 and T(_("Exporting '%1'…"), notebooks[1].name)
-                                or T(_("Exporting %1 notebooks…"), #notebooks),
-    }
-    UIManager:show(working)
+    local working
+    if format ~= "pdf" then
+        working = InfoMessage:new{
+            text = #notebooks == 1 and T(_("Exporting '%1'…"), notebooks[1].name)
+                                    or T(_("Exporting %1 notebooks…"), #notebooks),
+        }
+        UIManager:show(working)
+    end
 
-    local i, done, failed, last_path = 0, 0, 0, nil
-    local function step()
-        i = i + 1
-        local item = notebooks[i]
-        if not item then
-            UIManager:close(working)
-            self:_rebuild()
-            local text
-            if failed == 0 and done == 1 then
-                text = T(_("Exported to:\n%1"), last_path)
-            elseif failed == 0 then
-                text = T(_("Exported %1 notebooks."), done)
-            else
-                text = T(_("Exported %1 of %2; %3 could not be read."),
-                    done, #notebooks, failed)
-            end
+    local i, done, failed, last_path, last_extra, cancelled = 0, 0, 0, nil, nil, false
+    local progress
+    local function finish()
+        if working then UIManager:close(working) end
+        if progress then progress:close(); progress = nil end
+        self:_rebuild()
+        if cancelled then
             return UIManager:show(InfoMessage:new{
-                text = text,
+                text = _("Export cancelled."),
                 timeout = NOTICE_SECONDS,
             })
         end
+        local text
+        if failed == 0 and done == 1 and last_extra then
+            text = T(_("Xournal++ needs both files. Keep them together:\n%1\n%2"),
+                last_path, last_extra)
+        elseif failed == 0 and done == 1 then
+            text = T(_("Exported to:\n%1"), last_path)
+        elseif failed == 0 then
+            text = T(_("Exported %1 notebooks."), done)
+        else
+            text = T(_("Exported %1 of %2; %3 could not be read."),
+                done, #notebooks, failed)
+        end
+        UIManager:show(InfoMessage:new{text=text,timeout=NOTICE_SECONDS})
+    end
+
+    local function step()
+        i = i + 1
+        local item = notebooks[i]
+        if not item then return finish() end
 
         local doc = Document:new(item.path)
         if doc:load() then
             local out = Library.abs(self.folder) .. "/" .. item.name .. "." .. format
-            local ok = format=="xopp" and Xopp.toXOPP(doc,out) or Export.toPDF(doc,out)
+            if format == "pdf" then
+                local job = Export.beginPDF(doc, out)
+                if not job then
+                    failed = failed + 1
+                    return Safe.later("gallery:export", step)
+                end
+                progress = ExportProgress:new{
+                    title = T(_("Exporting '%1'…"), item.name),
+                    total = job.total,
+                    on_cancel = function() job:cancel() end,
+                }
+                progress:show()
+                progress:update(job.page, job.page_count, job.phase,
+                    job.completed, job.total)
+                local function pageStep()
+                    local state = job:step()
+                    if state == "working" then
+                        progress:update(job.page, job.page_count, job.phase,
+                            job.completed, job.total)
+                        return Safe.later("gallery:export-page", pageStep)
+                    end
+                    progress:close()
+                    progress = nil
+                    if state == "done" then
+                        done, last_path = done + 1, out
+                    elseif state == "cancelled" then
+                        cancelled = true
+                        return finish()
+                    else
+                        failed = failed + 1
+                    end
+                    Safe.later("gallery:export", step)
+                end
+                return Safe.later("gallery:export-page", pageStep)
+            end
+            local ok,extra = Xopp.toXOPP(doc,out)
             if ok then
-                done, last_path = done + 1, out
+                done, last_path, last_extra = done + 1, out, extra
             else
                 failed = failed + 1
             end

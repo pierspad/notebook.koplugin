@@ -373,6 +373,9 @@ function stubs.install(fs)
     package.loaded["ui/widget/confirmbox"] = leaf()
     package.loaded["ui/widget/inputdialog"] = leaf()
     package.loaded["ui/widget/button"] = leaf()
+    local ProgressWidget = leaf()
+    function ProgressWidget:setPercentage(value) self.percentage = value end
+    package.loaded["ui/widget/progresswidget"] = ProgressWidget
 
     package.loaded["ui/font"] = {
         getFace = function(_, _, size) return size or 20 end,

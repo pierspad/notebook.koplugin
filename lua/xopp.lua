@@ -2,6 +2,10 @@
 -- uses uncompressed DEFLATE blocks so it needs no external process or binding.
 local Xopp = {}
 
+function Xopp.backgroundPath(path)
+    return path .. ".bg.pdf"
+end
+
 local function xml(value)
     return tostring(value or ""):gsub("&","&amp;"):gsub("<","&lt;")
         :gsub(">","&gt;"):gsub('"',"&quot;"):gsub("'","&apos;")
@@ -91,12 +95,29 @@ function Xopp.toXOPP(doc,path)
     if not ok then os.remove(temporary); return false,write_err end
     if pdf_source then
         local source=io.open(pdf_source,"rb")
-        local target=source and io.open(path..".bg.pdf","wb")
+        local background=Xopp.backgroundPath(path)
+        local background_tmp=background..".tmp"
+        local target=source and io.open(background_tmp,"wb")
         if not target then if source then source:close() end; os.remove(path); return false,"cannot copy PDF background" end
-        while true do local chunk=source:read(65536); if not chunk then break end; target:write(chunk) end
-        source:close(); target:close()
+        while true do
+            local chunk=source:read(65536)
+            if not chunk then break end
+            ok,write_err=target:write(chunk)
+            if not ok then break end
+        end
+        source:close()
+        local closed,close_err=target:close()
+        if not ok or not closed then
+            os.remove(background_tmp); os.remove(path)
+            return false,write_err or close_err or "cannot copy PDF background"
+        end
+        ok,write_err=os.rename(background_tmp,background)
+        if not ok then
+            os.remove(background_tmp); os.remove(path)
+            return false,write_err or "cannot finish PDF background"
+        end
     end
-    return true,pdf_source and path..".bg.pdf" or nil
+    return true,pdf_source and Xopp.backgroundPath(path) or nil
 end
 
 return Xopp

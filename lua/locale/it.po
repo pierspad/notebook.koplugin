@@ -384,3 +384,30 @@ msgstr "Esporta"
 
 msgid "Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."
 msgstr "Notebook ha riscontrato un errore. Riavvia KOReader per riaprirlo; i dettagli sono in notebook-error.log."
+
+msgid "Exporting PDF…"
+msgstr "Esportazione PDF…"
+
+msgid "Preparing…"
+msgstr "Preparazione…"
+
+msgid "Cancelling…"
+msgstr "Annullamento…"
+
+msgid "Rendering"
+msgstr "Disegno pagina"
+
+msgid "Preparing image"
+msgstr "Preparazione immagine"
+
+msgid "Compressing"
+msgstr "Compressione"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Pagina %1 di %2 — %3"
+
+msgid "Export cancelled."
+msgstr "Esportazione annullata."
+
+msgid "Xournal++ needs both files. Keep them together:\n%1\n%2"
+msgstr "Xournal++ richiede entrambi i file. Tienili insieme:\n%1\n%2"

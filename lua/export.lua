@@ -58,42 +58,37 @@ function Export.encodeRLE(data)
     local out = {}
     local len = #data
     local i = 1
-    local literals = {}
-
-    local function flushLiterals()
-        local count = #literals
-        if count > 0 then
-            table.insert(out, string.char(count - 1))
-            table.insert(out, table.concat(literals))
-            literals = {}
-        end
-    end
+    local bytes = ffi.cast("const uint8_t*", data)
 
     while i <= len do
-        local b = data:byte(i)
+        local b = bytes[i - 1]
         -- Peak lookahead is capped at 128 to match PDF RLE maximum chunk length.
         local run_len = 1
-        while i + run_len <= len and data:byte(i + run_len) == b and run_len < 128 do
+        while i + run_len <= len and bytes[i + run_len - 1] == b and run_len < 128 do
             run_len = run_len + 1
         end
 
         if run_len >= 2 then
-            -- A run of 2 or more identical bytes is more compact or equal to literal encoding.
-            flushLiterals()
-            table.insert(out, string.char(257 - run_len, b))
+            out[#out + 1] = string.char(257 - run_len, b)
             i = i + run_len
         else
-            table.insert(literals, string.char(b))
-            if #literals == 128 then
-                flushLiterals()
-            end
+            -- Find the whole literal span and copy it as one substring. The
+            -- previous implementation allocated one Lua string per literal
+            -- pixel; a dense Scribe page can contain millions of them.
+            local first = i
             i = i + 1
+            while i <= len and i - first < 128 do
+                if i < len and bytes[i - 1] == bytes[i] then break end
+                i = i + 1
+            end
+            local count = i - first
+            out[#out + 1] = string.char(count - 1)
+            out[#out + 1] = data:sub(first, i - 1)
         end
     end
 
-    flushLiterals()
     -- PDF RunLengthDecode filter requires byte 128 as the explicit EOD marker.
-    table.insert(out, string.char(128))
+    out[#out + 1] = string.char(128)
     return table.concat(out)
 end
 
@@ -153,190 +148,165 @@ Exports a document to a PDF file at out_path.
 @tparam[opt] table opts configuration table (width, height)
 @treturn boolean, string true on success, or false and an error description
 --]]
-function Export.toPDF(doc, out_path, opts)
-    if not doc then
-        return false, "no document provided"
-    end
-    if type(doc.pageCount) ~= "function" then
-        return false, "invalid document: pageCount method missing"
-    end
-    local page_count = doc:pageCount()
-    if page_count == 0 then
-        return false, "document has no pages"
-    end
-    if not out_path or out_path == "" then
-        return false, "no output path provided"
-    end
+local function validate(doc, out_path, opts)
+    if not doc then return nil, "no document provided" end
+    if type(doc.pageCount) ~= "function" then return nil, "invalid document: pageCount method missing" end
+    local page_count=doc:pageCount()
+    if page_count==0 then return nil, "document has no pages" end
+    if not out_path or out_path=="" then return nil, "no output path provided" end
+    opts=opts or {}
+    local area=opts.content_area
+    local ox,oy=0,0
+    if area then ox,oy=area.x or 0,area.y or 0
+    elseif type(doc.contentOrigin)=="function" then ox,oy=doc:contentOrigin() end
+    local width=area and area.w or (opts.width or DEFAULT_WIDTH)-ox
+    local height=area and area.h or (opts.height or DEFAULT_HEIGHT)-oy
+    local dpi=opts.dpi or DEFAULT_DPI
+    if width<=0 or height<=0 or dpi<=0 then return nil,"invalid page dimensions" end
+    return {doc=doc,out_path=out_path,page_count=page_count,width=width,height=height,
+        offset_x=ox,offset_y=oy,dpi=dpi}
+end
 
-    opts = opts or {}
-    local content_area = opts.content_area
-    local offset_x, offset_y = 0, 0
-    if content_area then
-        offset_x, offset_y = content_area.x or 0, content_area.y or 0
-    elseif type(doc.contentOrigin) == "function" then
-        offset_x, offset_y = doc:contentOrigin()
-    end
-    local width = content_area and content_area.w or (opts.width or DEFAULT_WIDTH) - offset_x
-    local height = content_area and content_area.h or (opts.height or DEFAULT_HEIGHT) - offset_y
-    local dpi = opts.dpi or DEFAULT_DPI
-    if width <= 0 or height <= 0 or dpi <= 0 then return false, "invalid page dimensions" end
+--[[--
+Starts an incremental PDF export. Each `step()` performs one bounded phase:
+render, pack, or compress/write. The caller can yield to KOReader between steps,
+update progress, and cancel without leaving a partial PDF behind.
+--]]
+function Export.beginPDF(doc,out_path,opts)
+    local cfg,err=validate(doc,out_path,opts)
+    if not cfg then return nil,err end
+    local temporary=out_path..".tmp"
+    local file
+    file,err=io.open(temporary,"wb")
+    if not file then return nil,"cannot open output file: "..tostring(err) end
+    local bb=Blitbuffer.new(cfg.width,cfg.height,Blitbuffer.TYPE_BB8)
+    if not bb then file:close(); os.remove(temporary); return nil,"failed to allocate blitbuffer" end
 
-    local page_w = width * POINTS_PER_INCH / dpi
-    local page_h = height * POINTS_PER_INCH / dpi
-
-    local temporary = out_path .. ".tmp"
-    local file, err = io.open(temporary, "wb")
-    if not file then
-        return false, "cannot open output file: " .. tostring(err)
-    end
-
-    -- Reusing a single blitbuffer keeps memory consumption flat across multi-page notebooks.
-    local bb = Blitbuffer.new(width, height, Blitbuffer.TYPE_BB8)
-    if not bb then
-        file:close()
-        os.remove(temporary)
-        return false, "failed to allocate blitbuffer"
-    end
-
-    local current_offset = 0
-    local offsets = {}
-
+    local job={page=1,phase=1,total=cfg.page_count*3,completed=0,cancelled=false,
+        page_count=cfg.page_count,out_path=out_path}
+    local current_offset,offsets=0,{}
+    local raw_bitmap
+    local closed=false
     local function write(data)
-        local written, write_error = file:write(data)
+        local written,write_error=file:write(data)
         if not written then error(write_error or "PDF write failed") end
-        current_offset = current_offset + #data
+        current_offset=current_offset+#data
+    end
+    local function startObj(num) offsets[num]=current_offset; write(string.format("%d 0 obj\n",num)) end
+    local function endObj() write("endobj\n") end
+    local function cleanup(remove)
+        if not closed then pcall(function() file:close() end); closed=true end
+        if bb then if bb.free then bb:free() end; bb=nil end
+        raw_bitmap=nil
+        if remove then os.remove(temporary) end
+    end
+    local function fail(message) cleanup(true); job.error=tostring(message); return "error",job.error end
+    local function finish()
+        local total_objs=2+cfg.page_count*3
+        local xref_offset=current_offset
+        write(string.format("xref\n0 %d\n",total_objs+1))
+        write("0000000000 65535 f \n")
+        for num=1,total_objs do write(string.format("%010d 00000 n \n",offsets[num])) end
+        write(string.format("trailer\n<<\n  /Size %d\n  /Root 1 0 R\n>>\nstartxref\n%d\n%%%%EOF\n",
+            total_objs+1,xref_offset))
+        local ok,close_error=file:close(); closed=true
+        if not ok then error(close_error or "PDF close failed") end
+        if bb and bb.free then bb:free() end; bb=nil
+        local renamed,rename_error=os.rename(temporary,out_path)
+        if not renamed then os.remove(temporary); error(rename_error or "PDF rename failed") end
     end
 
-    local function startObj(num)
-        offsets[num] = current_offset
-        write(string.format("%d 0 obj\n", num))
-    end
-
-    local function endObj()
-        write("endobj\n")
-    end
-
-    local ok, write_err = pcall(function()
+    local initialized,init_error=pcall(function()
         write("%PDF-1.4\n")
-
-        -- Catalog dictionary (Object 1).
-        startObj(1)
-        write("<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>\n")
-        endObj()
-
-        -- Page tree root (Object 2).
-        local kids = {}
-        for i = 1, page_count do
-            local page_obj = 3 + (i - 1) * 3
-            table.insert(kids, string.format("%d 0 R", page_obj))
-        end
+        startObj(1); write("<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>\n"); endObj()
+        local kids={}
+        for i=1,cfg.page_count do kids[#kids+1]=string.format("%d 0 R",3+(i-1)*3) end
         startObj(2)
         write(string.format("<<\n  /Type /Pages\n  /Count %d\n  /Kids [ %s ]\n>>\n",
-            page_count, table.concat(kids, " ")))
+            cfg.page_count,table.concat(kids," ")))
         endObj()
-
-        -- Emit each page's Page object, Content stream, and Image XObject sequentially.
-        for i = 1, page_count do
-            local page_obj = 3 + (i - 1) * 3
-            local content_obj = page_obj + 1
-            local image_obj = page_obj + 2
-
-            -- Page object referencing its dedicated content stream and image resource.
-            startObj(page_obj)
-            write(string.format("<<\n" ..
-                "  /Type /Page\n" ..
-                "  /Parent 2 0 R\n" ..
-                "  /MediaBox [ 0 0 %.2f %.2f ]\n" ..
-                "  /Contents %d 0 R\n" ..
-                "  /Resources <<\n" ..
-                "    /XObject <<\n" ..
-                "      /Im1 %d 0 R\n" ..
-                "    >>\n" ..
-                "  >>\n" ..
-                ">>\n",
-                page_w, page_h, content_obj, image_obj))
-            endObj()
-
-            -- Position and scale the image onto the page box, in points.
-            local content_stream = string.format("q\n%.2f 0 0 %.2f 0 0 cm\n/Im1 Do\nQ\n",
-                page_w, page_h)
-            startObj(content_obj)
-            write(string.format("<<\n  /Length %d\n>>\nstream\n%s\nendstream\n",
-                #content_stream, content_stream))
-            endObj()
-
-            -- Render page strokes into blitbuffer, pack to 8-bit rows, and RLE compress.
-            bb:fill(Blitbuffer.COLOR_WHITE)
-            local page = doc.pages and doc.pages[i]
-            if page then
-                -- The background belongs in the export as much as on the panel:
-                -- ruled notes read as ruled notes on paper too.
-                -- Strokes are written into this buffer at their page
-                -- coordinates, unscaled, so the background is drawn at the same
-                -- scale to stay registered with them.
-                if doc.templateFor then
-                    Template.draw(bb, doc:templateFor(i),
-                        { x = 0, y = 0, w = width, h = height }, 1)
-                end
-                if page.background then
-                    require("pdfbackground").draw(bb,page.background,{x=0,y=0,w=width,h=height})
-                end
-                Renderer.drawPage(bb, page, 1, -offset_x, -offset_y)
-            end
-
-            local raw_bitmap = Export.packPage(bb, width, height)
-            local rle_data = Export.encodeRLE(raw_bitmap)
-
-            -- 8-bit DeviceGray Image XObject.
-            startObj(image_obj)
-            write(string.format("<<\n" ..
-                "  /Type /XObject\n" ..
-                "  /Subtype /Image\n" ..
-                "  /Width %d\n" ..
-                "  /Height %d\n" ..
-                "  /ColorSpace /DeviceGray\n" ..
-                "  /BitsPerComponent 8\n" ..
-                "  /Filter /RunLengthDecode\n" ..
-                "  /Length %d\n" ..
-                ">>\nstream\n",
-                width, height, #rle_data))
-            write(rle_data)
-            write("\nendstream\n")
-            endObj()
-        end
-
-        -- PDF cross-reference table. Each entry is formatted to exactly 20 bytes.
-        local total_objs = 2 + page_count * 3
-        local xref_offset = current_offset
-
-        write(string.format("xref\n0 %d\n", total_objs + 1))
-        write("0000000000 65535 f \n")
-        for num = 1, total_objs do
-            write(string.format("%010d 00000 n \n", offsets[num]))
-        end
-
-        -- Trailer dictionary pointing to the Catalog and start of xref.
-        write(string.format("trailer\n<<\n  /Size %d\n  /Root 1 0 R\n>>\nstartxref\n%d\n%%%%EOF\n",
-            total_objs + 1, xref_offset))
     end)
+    if not initialized then cleanup(true); return nil,tostring(init_error) end
 
-    local closed, close_error = file:close()
-    if not closed and ok then ok, write_err = false, close_error or "PDF close failed" end
-
-    -- A page buffer is several megabytes of off-heap memory; on a device this
-    -- tight, waiting for the collector to notice is not good enough.
-    if bb.free then bb:free() end
-
-    if not ok then
-        os.remove(temporary)
-        return false, tostring(write_err)
+    function job:cancel() self.cancelled=true end
+    function job:step()
+        if self.cancelled then cleanup(true); return "cancelled" end
+        if self.error then return "error",self.error end
+        local ok,result=pcall(function()
+            local i=self.page
+            if self.phase==1 then
+                local page_obj=3+(i-1)*3
+                local content_obj,image_obj=page_obj+1,page_obj+2
+                local page_w=cfg.width*POINTS_PER_INCH/cfg.dpi
+                local page_h=cfg.height*POINTS_PER_INCH/cfg.dpi
+                startObj(page_obj)
+                write(string.format([[<<
+  /Type /Page
+  /Parent 2 0 R
+  /MediaBox [ 0 0 %.2f %.2f ]
+  /Contents %d 0 R
+  /Resources <<
+    /XObject <<
+      /Im1 %d 0 R
+    >>
+  >>
+>>
+]],
+                    page_w,page_h,content_obj,image_obj)); endObj()
+                local stream=string.format("q\n%.2f 0 0 %.2f 0 0 cm\n/Im1 Do\nQ\n",page_w,page_h)
+                startObj(content_obj)
+                write(string.format("<<\n  /Length %d\n>>\nstream\n%s\nendstream\n",#stream,stream)); endObj()
+                bb:fill(Blitbuffer.COLOR_WHITE)
+                local page=cfg.doc.pages and cfg.doc.pages[i]
+                if page then
+                    if cfg.doc.templateFor then Template.draw(bb,cfg.doc:templateFor(i),
+                        {x=0,y=0,w=cfg.width,h=cfg.height},1) end
+                    if page.background then require("pdfbackground").draw(bb,page.background,
+                        {x=0,y=0,w=cfg.width,h=cfg.height}) end
+                    Renderer.drawPage(bb,page,1,-cfg.offset_x,-cfg.offset_y)
+                end
+                self.phase=2
+            elseif self.phase==2 then
+                raw_bitmap=Export.packPage(bb,cfg.width,cfg.height)
+                self.phase=3
+            else
+                local rle=Export.encodeRLE(raw_bitmap); raw_bitmap=nil
+                local image_obj=3+(i-1)*3+2
+                startObj(image_obj)
+                write(string.format([[<<
+  /Type /XObject
+  /Subtype /Image
+  /Width %d
+  /Height %d
+  /ColorSpace /DeviceGray
+  /BitsPerComponent 8
+  /Filter /RunLengthDecode
+  /Length %d
+>>
+stream
+]],
+                    cfg.width,cfg.height,#rle))
+                write(rle); write("\nendstream\n"); endObj()
+                if i==cfg.page_count then finish(); self.completed=self.total; return "done" end
+                self.page=i+1; self.phase=1
+            end
+            self.completed=self.completed+1
+            return "working"
+        end)
+        if not ok then return fail(result) end
+        return result
     end
-    local renamed, rename_error = os.rename(temporary, out_path)
-    if not renamed then
-        os.remove(temporary)
-        return false, tostring(rename_error)
+    return job
+end
+
+function Export.toPDF(doc,out_path,opts)
+    local job,err=Export.beginPDF(doc,out_path,opts)
+    if not job then return false,err end
+    while true do
+        local state,reason=job:step()
+        if state=="done" then return true end
+        if state=="error" or state=="cancelled" then return false,reason or state end
     end
-    return true
 end
 
 return Export

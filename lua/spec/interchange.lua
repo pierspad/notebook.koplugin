@@ -20,4 +20,17 @@ assert(xml:match('font="Monospace"'),'XOPP text family missing')
 assert(xml:match('A &lt; B &amp; C'),'XOPP text is not escaped')
 assert(xml:match('style="graph"'),'page template not exported')
 os.remove(path)
+local pdf=os.tmpname()
+local pdf_file=assert(io.open(pdf,'wb')); pdf_file:write('%PDF-test'); pdf_file:close()
+local attached_path=os.tmpname()..'.xopp'
+local attached={pages={{strokes={},background={file=pdf,page=1}}},page_size={w=1000,h=1400},
+    templateFor=function() return 'blank' end}
+local ok,companion=Xopp.toXOPP(attached,attached_path)
+assert(ok and companion==attached_path..'.bg.pdf','attached PDF companion path is wrong')
+assert(io.open(companion,'rb'):read('*a')=='%PDF-test','attached PDF was not copied')
+local attached_pipe=assert(io.popen('gzip -dc '..attached_path,'r'))
+local attached_xml=attached_pipe:read('*a'); attached_pipe:close()
+assert(attached_xml:match('domain="attach" filename="bg.pdf"'),
+    'XOPP does not use the Xournal++ attached-PDF convention')
+os.remove(pdf); os.remove(attached_path); os.remove(companion)
 print('interchange XOPP and editable text passed')

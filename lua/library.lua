@@ -278,6 +278,12 @@ function Library.list(folder, sort)
                     modified = attr.modification or 0,
                 })
             elseif attr and attr.mode == "file" then
+                local owner = entry:match("^(.+%.xopp)%.bg%.pdf$")
+                if owner and lfs.attributes(dir .. "/" .. owner, "mode") == "file" then
+                    attr = nil
+                end
+            end
+            if attr and attr.mode == "file" then
                 local name = entry:match("^(.+)%" .. EXT .. "$")
                 local pdf_name = not name and entry:match("^(.+)%.pdf$") or nil
                 local xopp_name = not name and not pdf_name and entry:match("^(.+)%.xopp$") or nil
@@ -445,6 +451,7 @@ cannot see it, it is because there is nothing left for it to belong to.
 function Library.deletePath(path)
     local gone = os.remove(path) and true or false
     if gone then
+        if path:match("%.xopp$") then os.remove(path .. ".bg.pdf") end
         local sidecar = sidecarOf(path)
         if lfs.attributes(sidecar, "mode") == "directory" then
             Library.deleteTree(sidecar)
@@ -567,6 +574,9 @@ function Library.moveTo(item_rel, target_rel)
     -- to be taken along by hand.
     if mode ~= "directory" then
         moveSidecar(source, dest)
+        if source:match("%.xopp$") and lfs.attributes(source .. ".bg.pdf", "mode") == "file" then
+            os.rename(source .. ".bg.pdf", dest .. ".bg.pdf")
+        end
     end
     return dest_rel
 end

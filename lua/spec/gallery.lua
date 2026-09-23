@@ -888,6 +888,23 @@ test("a document with no sidecar moves without inventing one", function()
     assertEq(rec.fs[ROOT .. "/Trip/note2.sdr"], nil, "a sidecar appeared from nowhere")
 end)
 
+test("an XOPP PDF companion stays hidden and follows its document", function()
+    local gallery, rec = newGallery(4)
+    local Library = require("library")
+    rec.fs[ROOT .. "/notes.xopp"] = { mode = "file", modification = 8, size = 10 }
+    rec.fs[ROOT .. "/notes.xopp.bg.pdf"] = { mode = "file", modification = 8, size = 20 }
+    gallery:_rebuild()
+    local visible = 0
+    for _, item in ipairs(gallery.items) do
+        if item.name:match("^notes") then visible = visible + 1 end
+    end
+    assertEq(visible, 1, "the implementation detail appeared as a second document")
+    assertTrue(Library.moveTo("notes.xopp", "Trip") ~= nil, "the XOPP did not move")
+    assertTrue(rec.fs[ROOT .. "/Trip/notes.xopp.bg.pdf"] ~= nil,
+        "the PDF background did not follow the XOPP")
+    assertEq(rec.fs[ROOT .. "/notes.xopp.bg.pdf"], nil, "the old PDF background was left behind")
+end)
+
 -- Smoke ------------------------------------------------------------------------------
 
 io.write("new screens load and build\n")
