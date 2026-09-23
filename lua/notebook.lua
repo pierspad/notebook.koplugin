@@ -26,6 +26,7 @@ local PagePanel = require("pagepanel")
 local InfoMessage = require("ui/widget/infomessage")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local InputDialog = require("ui/widget/inputdialog")
+local InputText = require("ui/widget/inputtext")
 local SettingsDialog = require("settings")
 local Tuning = require("tuning")
 local TuningDock = require("tuningdock")
@@ -36,6 +37,16 @@ local _ = require("i18n")
 local Safe = require("safe")
 
 local Screen = Device.screen
+
+-- InputDialog still owns keyboard input and cursor movement, but its ordinary
+-- textbox would duplicate the live text already painted on the page. Keep the
+-- editor functional while making that redundant copy invisible.
+local CanvasTextInput = InputText:extend{
+    skip_paint = true,
+    bordersize = 0,
+    padding = 0,
+    margin = 0,
+}
 
 -- Height left clear at the top of the screen (0 to maximize space at the top).
 local TOP_INSET = 0
@@ -559,70 +570,96 @@ function Notebook:_editText(original, x, y)
     local width = original and (original.x_max-original.x_min)
         or math.max(80, math.min(Screen:scaleBySize(600), self.canvas.content.x+self.canvas.content.w-x))
     local preview
+    local dialog
     self.canvas.hidden_stroke = original
 
     local function redraw(value)
         local dirty = nil
         if preview then dirty=require("rect").grow(dirty, preview:getBounds()) end
         if original then dirty=require("rect").grow(dirty, original:getBounds()) end
-        preview=require("textobject").create(value ~= "" and value or " ",x,y,width,size,style)
+        -- The page is the editor preview. Mirror the real Unicode cursor from
+        -- the hidden input widget so arrow-key edits remain understandable.
+        local shown=value
+        local input=dialog and dialog._input_widget
+        if input and input.charlist and input.charpos then
+            local before,after={},{}
+            for i=1,input.charpos-1 do before[#before+1]=input.charlist[i] end
+            for i=input.charpos,#input.charlist do after[#after+1]=input.charlist[i] end
+            shown=table.concat(before).."│"..table.concat(after)
+        elseif shown=="" then
+            shown="│"
+        end
+        preview=require("textobject").create(shown,x,y,width,size,style)
         dirty=require("rect").grow(dirty,preview:getBounds())
         self.canvas.text_preview=preview
         self.canvas:_repaintRegion(dirty.x,dirty.y,dirty.w,dirty.h,true)
         self.canvas:_refreshNow(dirty.x,dirty.y,dirty.w,dirty.h,"ui")
     end
 
-    local dialog
     local function currentText() return dialog and dialog:getInputText() or (original and original.text or "") end
     local function restyle(fn) fn(); redraw(currentText()) end
     local families={"sans","serif","mono"}
+    local function cancel()
+        UIManager:close(dialog)
+        local dirty = nil
+        if preview then dirty=require("rect").grow(dirty,preview:getBounds()) end
+        if original then dirty=require("rect").grow(dirty,original:getBounds()) end
+        self.canvas.hidden_stroke=nil; self.canvas.text_preview=nil
+        if dirty then self.canvas:_repaintRegion(dirty.x,dirty.y,dirty.w,dirty.h) end
+    end
+    local function commit()
+        local value = dialog:getInputText()
+        UIManager:close(dialog)
+        self.canvas.hidden_stroke=nil; self.canvas.text_preview=nil
+        if not value or value == "" then
+            if preview then self.canvas:_repaintRegion(preview:getBounds()) end
+            return
+        end
+        local stroke = require("textobject").create(value,x,y,width,size,style)
+        if original then self.document:replaceStroke(original,stroke) else self.document:addStroke(stroke) end
+        self.canvas:_repaintRegion(stroke:getBounds())
+        self.canvas:_showLassoMenu({stroke})
+        self:_onDocumentChanged()
+    end
     dialog = InputDialog:new{
         title = original and _("Edit text") or _("Insert text"),
         input = original and original.text or "", allow_newline=true,
+        inputtext_class=CanvasTextInput,
+        condensed=true, text_height=1, input_padding=0, input_margin=0,
+        width=math.floor(Screen:getWidth()*0.96), button_padding=0,
         input_face=Font:getFace("cfont",size),
-        edited_callback=function(edited)
-            if edited and dialog then redraw(dialog:getInputText()) end
+        strike_callback=function()
+            if dialog then redraw(dialog:getInputText()) end
         end,
         buttons = {
             {
-                {text=_("Font"), callback=function() restyle(function()
+                {text="✕", callback=cancel},
+                {text="Aa", text_font_bold=false, callback=function() restyle(function()
                     local at=1; for i,v in ipairs(families) do if v==style.font_family then at=i end end
                     style.font_family=families[at%#families+1]
                 end) end},
-                {text=_("Bold"), checked_func=function() return style.text_bold end,
+                {text="B", text_font_bold=true,
+                    checked_func=function() return style.text_bold end,
                     callback=function() restyle(function() style.text_bold=not style.text_bold end) end},
-                {text=_("Italic"), checked_func=function() return style.text_italic end,
+                {text="I", text_font_face="NotoSans-Italic.ttf", text_font_bold=false,
+                    checked_func=function() return style.text_italic end,
                     callback=function() restyle(function() style.text_italic=not style.text_italic end) end},
-                {text=_("Underline"), checked_func=function() return style.text_underline end,
+                {text="U̲", text_font_bold=false,
+                    checked_func=function() return style.text_underline end,
                     callback=function() restyle(function() style.text_underline=not style.text_underline end) end},
                 {text="A−", callback=function() restyle(function() size=math.max(10,size-2) end) end},
                 {text="A+", callback=function() restyle(function() size=math.min(96,size+2) end) end},
+                {text="✓", is_enter_default=true, callback=commit},
             },
-            {{text=_("Cancel"), id="close", callback=function()
-                UIManager:close(dialog)
-                local dirty = nil
-                if preview then dirty=require("rect").grow(dirty,preview:getBounds()) end
-                if original then dirty=require("rect").grow(dirty,original:getBounds()) end
-                self.canvas.hidden_stroke=nil; self.canvas.text_preview=nil
-                if dirty then self.canvas:_repaintRegion(dirty.x,dirty.y,dirty.w,dirty.h) end
-            end},
-            {text=original and _("Save") or _("Insert"), is_enter_default=true, callback=function()
-                local value = dialog:getInputText()
-                UIManager:close(dialog)
-                self.canvas.hidden_stroke=nil; self.canvas.text_preview=nil
-                if not value or value == "" then
-                    if preview then self.canvas:_repaintRegion(preview:getBounds()) end
-                    return
-                end
-                local stroke = require("textobject").create(value,x,y,width,size,style)
-                if original then self.document:replaceStroke(original,stroke) else self.document:addStroke(stroke) end
-                self.canvas:_repaintRegion(stroke:getBounds())
-                self.canvas:_showLassoMenu({stroke})
-                self:_onDocumentChanged()
-            end}},
         },
     }
     redraw(original and original.text or "")
+    if dialog.movable then
+        dialog.movable.anchor=function()
+            local px,py,pw,ph=preview:getBounds()
+            return Geom:new{x=px,y=py,w=pw,h=ph}
+        end
+    end
     UIManager:show(dialog)
     dialog:onShowKeyboard()
 end

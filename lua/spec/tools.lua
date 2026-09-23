@@ -85,10 +85,22 @@ nb:_editText(nil,120,220)
 local editor=rec.shown[#rec.shown]
 local styles={}
 for _,button in ipairs(editor.buttons[1]) do styles[button.text]=button end
-assert(styles.Bold.checked_func() and not styles.Italic.checked_func()
-    and not styles.Underline.checked_func(),'text style selection is not shown')
-styles.Italic.callback()
-assert(styles.Italic.checked_func(),'toggled text style did not remain selected')
+assert(#editor.buttons==1 and editor.text_height==1 and editor.inputtext_class.skip_paint,
+    'text editor is not the compact page-preview variant')
+local anchor=editor.movable.anchor()
+assert(math.abs(anchor.x-120)<=2 and math.abs(anchor.y-220)<=2 and anchor.w>0 and anchor.h>0,
+    'compact controls are not anchored to avoid the edited text')
+assert(styles.B.checked_func() and not styles.I.checked_func()
+    and not styles['U̲'].checked_func(),'text style selection is not shown')
+styles.I.callback()
+assert(styles.I.checked_func(),'toggled text style did not remain selected')
+editor.input='Live on page'; editor.strike_callback()
+assert(nb.canvas.text_preview.text=='Live on page','typed text is not previewed on the page')
+editor.input='ab'; editor._input_widget={charlist={'a','b'},charpos=2}; editor.strike_callback()
+assert(nb.canvas.text_preview.text=='a│b','page preview does not mirror the input cursor')
+styles['✕'].callback()
+assert(not nb.canvas.text_preview and #doc:getPage().strokes==1,
+    'cancelling compact text input did not restore the page')
 local n=select('#',Safe.call('nil values',function() return 1,nil,3,nil end))
 assert(n==4, 'protected calls preserve nil results')
 local selected_shape=doc:getPage().strokes[1]

@@ -377,6 +377,7 @@ function stubs.install(fs)
     package.loaded["ui/widget/infomessage"] = leaf()
     package.loaded["ui/widget/confirmbox"] = leaf()
     local InputDialog = leaf()
+    function InputDialog:init() self.movable={} end
     function InputDialog:getInputText() return self.input or "" end
     function InputDialog:onShowKeyboard() end
     package.loaded["ui/widget/inputdialog"] = InputDialog
