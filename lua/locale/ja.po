@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Japanese\n"
@@ -12,6 +12,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "切り取り"
+
+msgid "Paste"
+msgstr "貼り付け"
+
+msgid "Copy"
+msgstr "コピー"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -212,15 +221,6 @@ msgstr "%1件を移動しました（%2件は移動できませんでした）�
 msgid "Edit"
 msgstr "編集"
 
-msgid "Cut"
-msgstr "切り取り"
-
-msgid "Copy"
-msgstr "コピー"
-
-msgid "Paste"
-msgstr "貼り付け"
-
 msgid "Close"
 msgstr "閉じる"
 
@@ -268,6 +268,15 @@ msgstr "描画終了時に静止"
 
 msgid "Arrow (straight or curved)"
 msgstr "矢印 (直線または曲線)"
+
+msgid "Black"
+msgstr "黒"
+
+msgid "White"
+msgstr "白"
+
+msgid "Color"
+msgstr "色"
 
 msgid "Pen type"
 msgstr "ペンの種類"
@@ -322,6 +331,12 @@ msgstr "斜体"
 
 msgid "Underline"
 msgstr "下線"
+
+msgid "Background"
+msgstr "背景"
+
+msgid "Transparent"
+msgstr "透明"
 
 msgid "Text options"
 msgstr "テキスト設定"
@@ -398,6 +413,9 @@ msgstr ""
 "\n"
 "KOReader自体は正常です。"
 
+msgid "Sharing format"
+msgstr "共有形式"
+
 msgid "Finger"
 msgstr "指"
 
@@ -406,9 +424,6 @@ msgstr "ページめくり"
 
 msgid "Draws"
 msgstr "描画"
-
-msgid "Sharing format"
-msgstr "共有形式"
 
 msgid "Blank"
 msgstr "白紙"
@@ -427,6 +442,33 @@ msgstr "ドット方眼"
 
 msgid "Checklist"
 msgstr "チェックリスト"
+
+msgid "Ink"
+msgstr "インク"
+
+msgid "Eraser"
+msgstr "消しゴム"
+
+msgid "Lasso"
+msgstr "投げ縄"
+
+msgid "Input"
+msgstr "入力"
+
+msgid "Tuning written to the log"
+msgstr "調整値をログに書き込みました"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "テスト用ノート — 調整しない場合は名前を変更してください"
+
+msgid "Reset tab"
+msgstr "タブをリセット"
+
+msgid "Reset all"
+msgstr "すべてリセット"
+
+msgid "Write to log"
+msgstr "ログに書き込む"
 
 msgid "Preparing…"
 msgstr "準備中…"
@@ -448,3 +490,6 @@ msgstr "圧縮中"
 
 msgid "Page %1 of %2 — %3"
 msgstr "ページ %1 / %2 — %3"
+
+#~ msgid "White background"
+#~ msgstr "白い背景"

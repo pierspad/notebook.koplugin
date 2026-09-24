@@ -150,6 +150,18 @@ if [ -z "$SRC" ] || [ ! -f "$SRC/main.lua" ]; then
     exit 1
 fi
 
+# Keep the release's architecture-specific backend, but install the current
+# LocalSend Lua integration from the sibling checkout when it is available.
+# Notebook's format selector is a backwards-compatible extension of the send
+# flow API and older published archives otherwise ignore it and open a generic
+# file picker instead.
+LOCAL_LUA="$SCRIPT_DIR/../localsend.koplugin/lua"
+if [ -d "$LOCAL_LUA" ]; then
+    echo "==> overlaying current LocalSend Lua integration"
+    cp -r "$LOCAL_LUA/." "$SRC/"
+    rm -rf "$SRC/spec"
+fi
+
 # Installing -------------------------------------------------------------------
 
 deploy_mounted() {

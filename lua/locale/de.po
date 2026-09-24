@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: German\n"
@@ -12,6 +12,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "Ausschneiden"
+
+msgid "Paste"
+msgstr "Einfügen"
+
+msgid "Copy"
+msgstr "Kopieren"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -215,15 +224,6 @@ msgstr "%1 verschoben; %2 konnte nicht dorthin verschoben werden."
 msgid "Edit"
 msgstr "Bearbeiten"
 
-msgid "Cut"
-msgstr "Ausschneiden"
-
-msgid "Copy"
-msgstr "Kopieren"
-
-msgid "Paste"
-msgstr "Einfügen"
-
 msgid "Close"
 msgstr "Schließen"
 
@@ -271,6 +271,15 @@ msgstr "Am Strichende anhalten"
 
 msgid "Arrow (straight or curved)"
 msgstr "Pfeil (gerade oder gebogen)"
+
+msgid "Black"
+msgstr "Schwarz"
+
+msgid "White"
+msgstr "Weiß"
+
+msgid "Color"
+msgstr "Farbe"
 
 msgid "Pen type"
 msgstr "Stifttyp"
@@ -325,6 +334,12 @@ msgstr "Kursiv"
 
 msgid "Underline"
 msgstr "Unterstrichen"
+
+msgid "Background"
+msgstr "Hintergrund"
+
+msgid "Transparent"
+msgstr "Transparent"
 
 msgid "Text options"
 msgstr "Textoptionen"
@@ -401,6 +416,9 @@ msgstr ""
 "\n"
 "KOReader funktioniert einwandfrei."
 
+msgid "Sharing format"
+msgstr "Freigabeformat"
+
 msgid "Finger"
 msgstr "Finger"
 
@@ -409,9 +427,6 @@ msgstr "Seiten umblättern"
 
 msgid "Draws"
 msgstr "Zeichnet"
-
-msgid "Sharing format"
-msgstr "Freigabeformat"
 
 msgid "Blank"
 msgstr "Blanko"
@@ -430,6 +445,33 @@ msgstr "Punktraster"
 
 msgid "Checklist"
 msgstr "Checkliste"
+
+msgid "Ink"
+msgstr "Tinte"
+
+msgid "Eraser"
+msgstr "Radierer"
+
+msgid "Lasso"
+msgstr "Lasso"
+
+msgid "Input"
+msgstr "Eingabe"
+
+msgid "Tuning written to the log"
+msgstr "Abstimmung ins Protokoll geschrieben"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "Testnotizbuch – umbenennen, wenn keine Abstimmung erfolgt"
+
+msgid "Reset tab"
+msgstr "Register zurücksetzen"
+
+msgid "Reset all"
+msgstr "Alles zurücksetzen"
+
+msgid "Write to log"
+msgstr "Ins Protokoll schreiben"
 
 msgid "Preparing…"
 msgstr "Vorbereitung…"
@@ -451,3 +493,6 @@ msgstr "Komprimieren"
 
 msgid "Page %1 of %2 — %3"
 msgstr "Seite %1 von %2 — %3"
+
+#~ msgid "White background"
+#~ msgstr "Weißer Hintergrund"

@@ -26,7 +26,8 @@ function Text.create(text,x,y,width,size,style)
     style=style or {}
     local stroke=require("stroke"):new{tool="text",shape_kind="text",text=text,font_size=size,width=1,
         font_family=style.font_family or "sans", text_bold=style.text_bold,
-        text_italic=style.text_italic, text_underline=style.text_underline}
+        text_italic=style.text_italic, text_underline=style.text_underline,
+        text_background=style.text_background == true}
     stroke:addPoint(x,y)
     stroke:addPoint(x+width,y+size)
     local widget=Text.widget(stroke)
@@ -47,7 +48,24 @@ function Text.draw(bb,stroke,scale,ox,oy,clip)
         target=bb:viewport(x,y,w,h); ox,oy=ox-x,oy-y
     end
     local px,py=math.floor(stroke.x_min*scale+ox),math.floor(stroke.y_min*scale+oy)
-    widget:paintTo(target,px,py)
+    if stroke.text_background then
+        widget:paintTo(target,px,py)
+    else
+        -- TextBoxWidget renders into an opaque white scratch buffer. Use its
+        -- inverse as an alpha mask so only glyph pixels reach the page; this
+        -- preserves anti-aliasing without covering a PDF/grid underneath.
+        local mask = widget._bb
+        if mask and target.colorblitFrom then
+            mask:invert()
+            target:colorblitFrom(mask, px, py, 0, 0, mask:getWidth(), mask:getHeight(),
+                require("ffi/blitbuffer").Color8(stroke.color or 0))
+            mask:invert()
+        else
+            -- Lightweight test doubles do not allocate TextBoxWidget's
+            -- scratch buffer; the real KOReader widget always does.
+            widget:paintTo(target,px,py)
+        end
+    end
     if stroke.text_underline then
         local size=widget:getSize()
         local line_h=widget.line_height_px or math.max(5,stroke.font_size*scale)

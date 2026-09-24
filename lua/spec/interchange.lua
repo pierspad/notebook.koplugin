@@ -3,12 +3,12 @@ local support=require('support'); support.installStubs()
 local Stroke=require('stroke')
 local Xopp=require('xopp')
 local text=Stroke:new{tool='text',shape_kind='text',text='A < B & C',font_size=26,
-    font_family='mono',text_bold=true,text_italic=true,text_underline=true}
+    font_family='mono',text_bold=true,text_italic=true,text_underline=true,text_background=true}
 text:addPoint(100,150); text:addPoint(500,210)
 local ink=Stroke:new{width=8}; ink:addPoint(100,300,.2); ink:addPoint(500,350,.8)
 local clone=Stroke:deserialize(text:serialize())
 assert(clone.text==text.text and clone.font_size==26 and clone.font_family=='mono'
-    and clone.text_bold and clone.text_italic and clone.text_underline,
+    and clone.text_bold and clone.text_italic and clone.text_underline and clone.text_background,
     'text metadata did not round trip')
 local doc={pages={{strokes={text,ink}}},page_size={w=1000,h=1400},templateFor=function() return 'grid' end}
 local path=os.tmpname()..'.xopp'

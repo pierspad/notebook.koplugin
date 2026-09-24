@@ -74,12 +74,89 @@ nb:paintTo(Device.screen.bb,0,0)
 nb:_showToolOptions(1)
 local menu=rec.shown[#rec.shown]
 assert(menu.footer and menu.anchor==nb.tool_buttons[1].dimen, 'pen sizes anchored to pen')
-for _,i in ipairs({2,3,5}) do
+local selected_rows=0
+for _,item in ipairs(menu.action_rows) do
+    if item.row.selected then selected_rows=selected_rows+1 end
+end
+assert(selected_rows==3, 'pen menu marks unselected rows as selected')
+assert(nb.ges_events == nil or nb.disable_double_tap == false, 'notebook does not enable double tap')
+assert(nb.tool_buttons[1].ges_events.DoubleTap, 'tool has no double-tap option gesture')
+assert(menu.disable_double_tap == false, 'open menu disables double tap')
+local widths={2,5,9,14,22}
+for i,choice in ipairs(menu.footer.choices) do
+    assert(choice.value==widths[i], 'pen width progression is wrong at '..i)
+end
+local closed_before=#rec.closed
+menu.footer.choices[4]:onTap()
+assert(nb.canvas.pen_width==14 and #rec.closed==closed_before,
+    'choosing a width closed the menu or did not apply')
+menu.action_rows[2].row:onTap()
+assert(#rec.closed==closed_before, 'choosing a pen style closed the menu')
+assert(menu.actions[6].swatch=='black' and menu.actions[7].swatch=='white',
+    'pen colors are not rendered as background-independent swatches')
+assert(menu.footer:getSize().w==menu.width,
+    'size choices do not fill the menu width')
+
+-- A tool menu must not turn the first contact on the page into a sacrificial
+-- "close" tap. The same pen/finger gesture that dismisses it starts drawing.
+local outside_doc=Document:new('/tmp/notebook-menu-draw.scribe')
+local outside_nb=require('notebook'):new{document=outside_doc}
+outside_nb:paintTo(Device.screen.bb,0,0)
+outside_nb:_showToolOptions(1)
+local outside_menu=rec.shown[#rec.shown]
+outside_menu:paintTo(Device.screen.bb,0,0)
+UI.getTopmostVisibleWidget=function() return outside_menu end
+local close_count=#rec.closed
+outside_nb.canvas:onStylusEvent{slot=15,tool=1,id=1,x=1700,y=2200}
+assert(#rec.closed==close_count+1 and outside_nb.canvas.stroke,
+    string.format('pen contact outside an open tool menu was discarded (closed %d→%d, stroke %s, panel %d,%d %dx%d, content %d,%d %dx%d)',
+        close_count,#rec.closed,tostring(outside_nb.canvas.stroke~=nil),
+        outside_menu.panel.dimen.x,outside_menu.panel.dimen.y,outside_menu.panel.dimen.w,outside_menu.panel.dimen.h,
+        outside_nb.canvas.content.x,outside_nb.canvas.content.y,outside_nb.canvas.content.w,outside_nb.canvas.content.h))
+UI.getTopmostVisibleWidget=function() return outside_nb end
+outside_nb.canvas:onStylusEvent{slot=15,tool=1,id=-1,x=1720,y=2200}
+assert(#outside_doc:getPage().strokes==1,
+    'pen stroke that dismissed the menu was not recorded')
+
+outside_nb:_showToolOptions(1)
+outside_menu=rec.shown[#rec.shown]
+outside_menu:paintTo(Device.screen.bb,0,0)
+outside_nb.canvas.draw_with_finger=true
+outside_nb.canvas.pen_down=false
+outside_nb.canvas.pen_left_at=nil
+close_count=#rec.closed
+outside_menu:onDrawOutside(nil,{pos={x=1650,y=2100}})
+outside_nb.canvas:onTouchPan(nil,{pos={x=1700,y=2100}})
+outside_nb.canvas:onTouchRelease(nil,{pos={x=1700,y=2100}})
+assert(#rec.closed==close_count+1 and #outside_doc:getPage().strokes==2,
+    'finger stroke outside an open tool menu was discarded')
+UI.getTopmostVisibleWidget=function() return nil end
+
+local eraser=nb.tool_buttons[3].dimen
+menu:onToolHold(nil,{pos={x=eraser.x+1,y=eraser.y+1}})
+local switched=rec.shown[#rec.shown]
+assert(switched~=menu and switched.anchor==eraser,
+    'holding another tool did not replace the open menu')
+assert(nb.canvas.tool=='eraser' and nb.tool_buttons[3].selected and not nb.tool_buttons[1].selected,
+    'opening another tool menu did not select that tool')
+for _,i in ipairs({2,3,5,6}) do
     nb:_showToolOptions(i)
     menu=rec.shown[#rec.shown]
     assert(menu.anchor==nb.tool_buttons[i].dimen, 'popover anchored to its tool')
-    if i==5 then assert(#menu.actions==3) else assert(menu.footer) end
+    if i==5 then assert(#menu.actions==3)
+    elseif i==6 then assert(#menu.actions==11)
+    else assert(menu.footer) end
 end
+local text_menu=menu
+local expected_icons={'a','A','A','E','E','M','B','I','U̲'}
+for i,expected in ipairs(expected_icons) do
+    assert(text_menu.actions[i].icon_text==expected,
+        'text option '..i..' has no specific icon')
+end
+assert(text_menu.actions[10].section=='Background'
+    and text_menu.actions[10].text=='White'
+    and text_menu.actions[11].text=='Transparent',
+    'text background is not an explicit two-choice section')
 nb.canvas.text_bold=true
 nb:_editText(nil,120,220)
 local editor=rec.shown[#rec.shown]
@@ -96,11 +173,64 @@ styles.I.callback()
 assert(styles.I.checked_func(),'toggled text style did not remain selected')
 editor.input='Live on page'; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='Live on page','typed text is not previewed on the page')
+assert(nb.canvas.text_preview.text_background,
+    'live text preview does not use the efficient opaque work surface')
 editor.input='ab'; editor._input_widget={charlist={'a','b'},charpos=2}; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='a│b','page preview does not mirror the input cursor')
 styles['✕'].callback()
 assert(not nb.canvas.text_preview and #doc:getPage().strokes==1,
     'cancelling compact text input did not restore the page')
+nb.canvas.tool='text'
+nb.canvas.draw_with_finger=true
+nb.canvas.pen_down=nil
+nb.canvas.pen_left_at=nil
+nb.canvas.selected_strokes=nil
+nb.canvas.selection_bbox=nil
+local shown_before_touch=#rec.shown
+nb.canvas:onTouchStart(nil,{pos={x=160,y=260}})
+nb.canvas:onTouchRelease(nil,{pos={x=160,y=260}})
+local touch_editor
+for i=shown_before_touch+1,#rec.shown do
+    if rec.shown[i].getInputText then touch_editor=rec.shown[i]; break end
+end
+assert(touch_editor and touch_editor.getInputText,
+    'finger text placement did not open the editor on release')
+local function validTransparentTree(widget)
+    if type(widget)~='table' then return true end
+    assert(not (widget.style=='solid' and widget.background==nil),
+        'transparent text controls left a paintable separator with no color')
+    for _,child in ipairs(widget) do validTransparentTree(child) end
+end
+if touch_editor.button_table then
+    validTransparentTree(touch_editor.button_table.container)
+end
+touch_editor.buttons[1][1].callback()
+local drag_text=require('textobject').create('Move',100,100,240,26,{text_background=false})
+nb.canvas.selected_strokes={drag_text}
+nb.canvas:_useOpaqueTextDuringDrag()
+assert(drag_text.text_background==true,
+    'transparent text is not made opaque during drag')
+nb.canvas:_restoreTextAfterDrag()
+assert(drag_text.text_background==false,
+    'text background style was not restored after drag')
+nb.canvas.selected_strokes=nil
+local ticks_before=#rec.ticks
+local dirty_before=#rec.dirty
+nb:onShow()
+assert(nb.clock_tick and #rec.ticks>ticks_before and #rec.dirty>dirty_before,
+    'notebook clock was not initialized and scheduled')
+local scheduled_before=#rec.ticks
+nb.clock_tick()
+assert(#rec.ticks>scheduled_before,
+    'notebook clock did not schedule its next minute update')
+Canvas.clipboard={ink:clone()}
+local before_tap=#doc:getPage().strokes
+local tap_lasso=Stroke:new{tool='lasso',width=2}
+tap_lasso:addPoint(450,500,1)
+c.stroke=tap_lasso
+c:_endStroke()
+assert(#doc:getPage().strokes==before_tap,
+    'a lasso tap pasted clipboard content without an explicit Paste action')
 local n=select('#',Safe.call('nil values',function() return 1,nil,3,nil end))
 assert(n==4, 'protected calls preserve nil results')
 local selected_shape=doc:getPage().strokes[1]

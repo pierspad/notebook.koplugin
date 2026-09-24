@@ -153,20 +153,20 @@ The grouping is by the gesture that tests it: everything on a tab is tried with
 the same movement of the hand, so a tab is one sitting.
 --]]
 Tuning.tabs = {
-    { id = "ink", label = "Ink", keys = {
+    { id = "ink", keys = {
         "refresh_interval_ms", "idle_flush_ms", "reconcile_delay_ms",
         "jitter_floor_sq", "live_highlight_tint", "live_highlight_refresh_ms",
     } },
-    { id = "eraser", label = "Eraser", keys = {
+    { id = "eraser", keys = {
         "eraser_radius", "erase_repaint_ms",
     } },
-    { id = "lasso", label = "Lasso", keys = {
+    { id = "lasso", keys = {
         "drag_repaint_ms", "lasso_sample_spacing", "frame_margin",
     } },
-    { id = "shapes", label = "Shapes", keys = {
+    { id = "shapes", keys = {
         "hold_travel_sq", "hold_delay_ms", "rect_angle_tolerance",
     } },
-    { id = "input", label = "Input", keys = {
+    { id = "input", keys = {
         "palm_grace_ms", "max_pen_speed", "jump_base", "max_jump_gap_ms",
         "outlier_limit",
     } },

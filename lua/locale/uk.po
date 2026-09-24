@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Ukrainian\n"
@@ -12,6 +12,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "Вирізати"
+
+msgid "Paste"
+msgstr "Вставити"
+
+msgid "Copy"
+msgstr "Копіювати"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -212,15 +221,6 @@ msgstr "Переміщено: %1; не вдалося перемістити т�
 msgid "Edit"
 msgstr "Редагувати"
 
-msgid "Cut"
-msgstr "Вирізати"
-
-msgid "Copy"
-msgstr "Копіювати"
-
-msgid "Paste"
-msgstr "Вставити"
-
 msgid "Close"
 msgstr "Закрити"
 
@@ -267,6 +267,15 @@ msgstr "Затримати в кінці штриха"
 
 msgid "Arrow (straight or curved)"
 msgstr "Стрілка (пряма або зігнута)"
+
+msgid "Black"
+msgstr "Чорний"
+
+msgid "White"
+msgstr "Білий"
+
+msgid "Color"
+msgstr "Колір"
 
 msgid "Pen type"
 msgstr "Тип пера"
@@ -321,6 +330,12 @@ msgstr "Курсив"
 
 msgid "Underline"
 msgstr "Підкреслений"
+
+msgid "Background"
+msgstr "Тло"
+
+msgid "Transparent"
+msgstr "Прозорий"
 
 msgid "Text options"
 msgstr "Параметри тексту"
@@ -397,6 +412,9 @@ msgstr ""
 "\n"
 "KOReader працює належним чином."
 
+msgid "Sharing format"
+msgstr "Формат надсилання"
+
 msgid "Finger"
 msgstr "Палець"
 
@@ -405,9 +423,6 @@ msgstr "Гортає сторінки"
 
 msgid "Draws"
 msgstr "Малює"
-
-msgid "Sharing format"
-msgstr "Формат надсилання"
 
 msgid "Blank"
 msgstr "Порожній"
@@ -426,6 +441,33 @@ msgstr "У крапку"
 
 msgid "Checklist"
 msgstr "Список завдань"
+
+msgid "Ink"
+msgstr "Чорнило"
+
+msgid "Eraser"
+msgstr "Гумка"
+
+msgid "Lasso"
+msgstr "Ласо"
+
+msgid "Input"
+msgstr "Введення"
+
+msgid "Tuning written to the log"
+msgstr "Налаштування записано до журналу"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "Тестовий нотатник — перейменуйте, якщо не виконуєте налаштування"
+
+msgid "Reset tab"
+msgstr "Скинути вкладку"
+
+msgid "Reset all"
+msgstr "Скинути все"
+
+msgid "Write to log"
+msgstr "Записати до журналу"
 
 msgid "Preparing…"
 msgstr "Підготовка…"
@@ -447,3 +489,6 @@ msgstr "Стиснення"
 
 msgid "Page %1 of %2 — %3"
 msgstr "Сторінка %1 з %2 — %3"
+
+#~ msgid "White background"
+#~ msgstr "Білий фон"

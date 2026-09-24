@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Italian\n"
@@ -14,6 +14,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "Taglia"
+
+msgid "Paste"
+msgstr "Incolla"
+
+msgid "Copy"
+msgstr "Copia"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -215,15 +224,6 @@ msgstr "Spostati %1; %2 non potevano andare lì."
 msgid "Edit"
 msgstr "Modifica"
 
-msgid "Cut"
-msgstr "Taglia"
-
-msgid "Copy"
-msgstr "Copia"
-
-msgid "Paste"
-msgstr "Incolla"
-
 msgid "Close"
 msgstr "Chiudi"
 
@@ -271,6 +271,15 @@ msgstr "Fermandoti alla fine del tratto"
 
 msgid "Arrow (straight or curved)"
 msgstr "Freccia retta o curva"
+
+msgid "Black"
+msgstr "Nero"
+
+msgid "White"
+msgstr "Bianco"
+
+msgid "Color"
+msgstr "Colore"
 
 msgid "Pen type"
 msgstr "Tipo di penna"
@@ -325,6 +334,12 @@ msgstr "Corsivo"
 
 msgid "Underline"
 msgstr "Sottolineato"
+
+msgid "Background"
+msgstr "Sfondo"
+
+msgid "Transparent"
+msgstr "Trasparente"
 
 msgid "Text options"
 msgstr "Opzioni testo"
@@ -401,6 +416,9 @@ msgstr ""
 "\n"
 "KOReader sta bene."
 
+msgid "Sharing format"
+msgstr "Formato di condivisione"
+
 msgid "Finger"
 msgstr "Dito"
 
@@ -409,9 +427,6 @@ msgstr "Gira pagina"
 
 msgid "Draws"
 msgstr "Disegna"
-
-msgid "Sharing format"
-msgstr "Formato di condivisione"
 
 msgid "Blank"
 msgstr "Bianco"
@@ -430,6 +445,33 @@ msgstr "Puntini"
 
 msgid "Checklist"
 msgstr "Elenco"
+
+msgid "Ink"
+msgstr "Inchiostro"
+
+msgid "Eraser"
+msgstr "Gomma"
+
+msgid "Lasso"
+msgstr "Lazo"
+
+msgid "Input"
+msgstr "Input"
+
+msgid "Tuning written to the log"
+msgstr "Regolazioni scritte nel registro"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "Quaderno di prova: rinominalo se non stai eseguendo regolazioni"
+
+msgid "Reset tab"
+msgstr "Ripristina scheda"
+
+msgid "Reset all"
+msgstr "Ripristina tutto"
+
+msgid "Write to log"
+msgstr "Scrivi nel registro"
 
 msgid "Preparing…"
 msgstr "Preparazione…"
@@ -451,3 +493,6 @@ msgstr "Compressione"
 
 msgid "Page %1 of %2 — %3"
 msgstr "Pagina %1 di %2 — %3"
+
+#~ msgid "White background"
+#~ msgstr "Sfondo bianco"

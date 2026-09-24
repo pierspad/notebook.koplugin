@@ -26,12 +26,49 @@ local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
+local Widget = require("ui/widget/widget")
 local Safe = require("safe")
 
 local Screen = Device.screen
 
 local ROW_H = Screen:scaleBySize(52)
 local ICON_SZ = Screen:scaleBySize(26)
+
+local function actionIsSelected(action)
+    if type(action.selected) == "function" then
+        -- Do not use Lua's `condition and value or fallback` idiom here:
+        -- `false` is a meaningful result, and that idiom would replace it with
+        -- the (truthy) function itself, making every selectable row look on.
+        return action.selected() == true
+    end
+    return action.selected == true
+end
+
+-- Colour samples are painted directly. Rasterising a white SVG on some
+-- Kindle/KOReader combinations flattens its transparent canvas to white, which
+-- is why a selected circular swatch used to appear as a square.
+local ColorSwatch = Widget:extend{
+    color = "black",
+    selected = false,
+}
+
+function ColorSwatch:init()
+    self.dimen = Geom:new{ w = ICON_SZ, h = ICON_SZ }
+end
+
+function ColorSwatch:paintTo(bb, x, y)
+    local cx, cy = x + math.floor(ICON_SZ / 2), y + math.floor(ICON_SZ / 2)
+    local outer, inner = math.floor(ICON_SZ * 0.36), math.floor(ICON_SZ * 0.27)
+    if self.color == "black" then
+        if self.selected then bb:paintCircle(cx, cy, outer, Blitbuffer.COLOR_WHITE) end
+        bb:paintCircle(cx, cy, self.selected and inner or outer, Blitbuffer.COLOR_BLACK)
+    elseif self.selected then
+        bb:paintCircle(cx, cy, outer, Blitbuffer.COLOR_WHITE)
+    else
+        bb:paintCircle(cx, cy, outer, Blitbuffer.COLOR_BLACK)
+        bb:paintCircle(cx, cy, inner, Blitbuffer.COLOR_WHITE)
+    end
+end
 
 -- One row -------------------------------------------------------------------------
 
@@ -40,10 +77,25 @@ local Row = InputContainer:extend{
     text = nil,
     width = nil,
     callback = nil,
+    icon_selected = nil,
+    swatch = nil,
+    icon_text = nil,
 }
 
 function Row:init()
     local pad = Size.padding.large
+    self:_buildIcon()
+    self.icon_holder = CenterContainer:new{
+        dimen = Geom:new{ w = ICON_SZ, h = ROW_H },
+        self.icon_widget,
+    }
+    self.label = TextWidget:new{
+        text = self.text,
+        bold = self.selected,
+        fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
+        face = Font:getFace("cfont", 19),
+        max_width = self.width - ICON_SZ - 3 * pad,
+    }
 
     self.frame = FrameContainer:new{
         background = self.selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE,
@@ -53,22 +105,13 @@ function Row:init()
         HorizontalGroup:new{
             align = "center",
             HorizontalSpan:new{ width = pad },
-            CenterContainer:new{
-                dimen = Geom:new{ w = ICON_SZ, h = ROW_H },
-                IconWidget:new{ icon = self.icon, width = ICON_SZ, height = ICON_SZ, invert = self.selected },
-            },
+            self.icon_holder,
             HorizontalSpan:new{ width = pad },
             LeftContainer:new{
                 -- Left-aligned: a column of centred labels of different lengths
                 -- reads as ragged, and the eye has no edge to run down.
                 dimen = Geom:new{ w = self.width - ICON_SZ - 3 * pad, h = ROW_H },
-                TextWidget:new{
-                    text = self.text,
-                    bold = self.selected,
-                    fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
-                    face = Font:getFace("cfont", 19),
-                    max_width = self.width - ICON_SZ - 3 * pad,
-                },
+                self.label,
             },
             HorizontalSpan:new{ width = pad },
         },
@@ -78,6 +121,36 @@ function Row:init()
     self.ges_events = {
         Tap = { GestureRange:new{ ges = "tap", range = self.dimen } },
     }
+end
+
+function Row:_buildIcon()
+    if self.swatch then
+        self.icon_widget = ColorSwatch:new{ color = self.swatch, selected = self.selected }
+    elseif self.icon_text then
+        self.icon_widget = TextWidget:new{
+            text = self.icon_text,
+            face = Font:getFace(self.icon_font or "cfont", self.icon_size or 21),
+            bold = self.icon_bold,
+            fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
+            max_width = ICON_SZ,
+        }
+    else
+        self.icon_widget = IconWidget:new{
+            icon = self.selected and self.icon_selected or self.icon,
+            width = ICON_SZ, height = ICON_SZ,
+            invert = self.selected and not self.icon_selected,
+        }
+    end
+end
+
+function Row:setSelected(selected)
+    if self.selected == selected then return end
+    self.selected = selected
+    self.frame.background = selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
+    self.label.fgcolor = selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
+    self.label.bold = selected
+    self:_buildIcon()
+    self.icon_holder[1] = self.icon_widget
 end
 
 function Row:onTap()
@@ -91,6 +164,10 @@ local ActionMenu = InputContainer:extend{
     title = nil,
     -- { { icon = "...", text = "...", callback = function() end }, ... }
     actions = nil,
+    disable_double_tap = false,
+    -- Optional canvas behind a tool popover. Starting a stroke on the page
+    -- dismisses the popover without throwing away that first contact.
+    draw_target = nil,
 }
 
 function ActionMenu:init()
@@ -98,6 +175,7 @@ function ActionMenu:init()
 
     local width = self.width or math.floor(Screen:getWidth() * 0.62)
     local content = VerticalGroup:new{ align = "left" }
+    self.action_rows = {}
 
     if self.title then
         table.insert(content, CenterContainer:new{
@@ -127,16 +205,24 @@ function ActionMenu:init()
                 background = Blitbuffer.COLOR_LIGHT_GRAY,
             })
         end
-        table.insert(content, Row:new{
+        local row = Row:new{
             icon = action.icon,
+            icon_selected = action.icon_selected,
+            swatch = action.swatch,
+            icon_text = action.icon_text,
+            icon_font = action.icon_font,
+            icon_size = action.icon_size,
+            icon_bold = action.icon_bold,
             text = action.text,
-            selected = action.selected,
+            selected = actionIsSelected(action),
             width = width,
             callback = function()
-                UIManager:close(self)
                 action.callback()
+                self:_refreshRows()
             end,
-        })
+        }
+        self.action_rows[#self.action_rows + 1] = { row = row, action = action }
+        table.insert(content, row)
     end
 
     if self.footer then table.insert(content, self.footer) end
@@ -158,6 +244,80 @@ function ActionMenu:init()
     self.ges_events = {
         TapClose = { GestureRange:new{ ges = "tap", range = self.dimen } },
     }
+    if self.draw_target then
+        self.ges_events.DrawOutside = {
+            GestureRange:new{ ges = "touch", range = self.dimen },
+        }
+    end
+    if self.tool_buttons then
+        self.ges_events.ToolHold = {}
+        self.ges_events.ToolDoubleTap = { event = "ToolDoubleTap" }
+        for _, button in ipairs(self.tool_buttons) do
+            self.ges_events.ToolHold[#self.ges_events.ToolHold + 1] =
+                GestureRange:new{ ges = "hold", range = button.dimen }
+            self.ges_events.ToolDoubleTap[#self.ges_events.ToolDoubleTap + 1] =
+                GestureRange:new{ ges = "double_tap", range = button.dimen }
+        end
+    end
+end
+
+function ActionMenu:_isDrawableOutside(pos)
+    if not self.draw_target or not pos then return false end
+    local d = self.panel.dimen
+    if d and pos.x >= d.x and pos.x <= d.x + d.w
+        and pos.y >= d.y and pos.y <= d.y + d.h then
+        return false
+    end
+    return self.draw_target:_withinContent(pos.x, pos.y,
+        self.draw_target:widthFor(self.draw_target.tool))
+end
+
+-- Called directly by the canvas's raw stylus path, before KOReader turns the
+-- contact into a gesture. Returning true lets that same sample become the
+-- first point of the stroke after the menu has closed.
+function ActionMenu:dismissForDrawing(slot)
+    if not slot or slot.id == -1 then return false end
+    local pos = slot.x and slot.y and { x = slot.x, y = slot.y }
+    if not self:_isDrawableOutside(pos) then return false end
+    UIManager:close(self)
+    return true
+end
+
+-- Finger input already arrives as a gesture, so explicitly seed the canvas
+-- with the touch that dismissed the menu. Pan and release events then reach
+-- the canvas normally because the modal popover is gone.
+function ActionMenu:onDrawOutside(_, ges)
+    if not ges or not self:_isDrawableOutside(ges.pos) then return false end
+    UIManager:close(self)
+    self.draw_target:onTouchStart(nil, ges)
+    return true
+end
+
+function ActionMenu:_refreshRows()
+    for _, item in ipairs(self.action_rows) do
+        item.row:setSelected(actionIsSelected(item.action))
+    end
+    UIManager:setDirty(self, "ui", self.panel.dimen)
+end
+
+function ActionMenu:_toolAt(pos)
+    if not pos then return end
+    for i, button in ipairs(self.tool_buttons or {}) do
+        local d = button.dimen
+        if pos.x >= d.x and pos.x <= d.x + d.w and pos.y >= d.y and pos.y <= d.y + d.h then
+            return i
+        end
+    end
+end
+
+function ActionMenu:onToolHold(_, ges)
+    local index = self:_toolAt(ges and ges.pos)
+    if index and self.on_tool_options then self.on_tool_options(index) end
+    return index ~= nil
+end
+
+function ActionMenu:onToolDoubleTap(_, ges)
+    return self:onToolHold(nil, ges)
 end
 
 function ActionMenu:paintTo(bb, x, y)

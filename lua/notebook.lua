@@ -32,6 +32,7 @@ local Tuning = require("tuning")
 local TuningDock = require("tuningdock")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
+local VerticalSpan = require("ui/widget/verticalspan")
 local UIManager = require("ui/uimanager")
 local _ = require("i18n")
 local Safe = require("safe")
@@ -47,6 +48,46 @@ local CanvasTextInput = InputText:extend{
     padding = 0,
     margin = 0,
 }
+
+-- The page itself is the text editor. Keep InputDialog's keyboard/focus logic
+-- and formatting buttons, but remove its title and opaque full-width panel.
+local CanvasTextDialog = InputDialog:extend{}
+function CanvasTextDialog:init()
+    InputDialog.init(self)
+    if self.dialog_frame then
+        self.dialog_frame.background = nil
+        self.dialog_frame.bordersize = 0
+    end
+    if self.vgroup then
+        self.vgroup[1] = VerticalSpan:new{ width = 0 }
+        self.vgroup:resetLayout()
+    end
+    -- ButtonTable normally paints one white slab (plus separators) across the
+    -- page. Make only its button frames transparent and disable its LineWidget
+    -- separators. Clearing every `background` recursively is unsafe: a
+    -- LineWidget still calls paintRect and a nil colour crashes on the device.
+    if self.button_table then
+        for _, row in ipairs(self.button_table.buttons_layout or {}) do
+            for _, button in ipairs(row) do
+                if button.frame then
+                    -- Controls need a stable surface over arbitrary PDF
+                    -- artwork. Keep each key white and outlined, while the
+                    -- dialog and text preview themselves remain transparent.
+                    button.frame.background = Blitbuffer.COLOR_WHITE
+                    button.frame.bordersize = Size.border.thin
+                end
+            end
+        end
+        local function hideSeparators(widget)
+            if type(widget) ~= "table" then return end
+            if widget.style == "solid" and widget.dimen and not widget.frame then
+                widget.style = "none"
+            end
+            for _, child in ipairs(widget) do hideSeparators(child) end
+        end
+        hideSeparators(self.button_table.container)
+    end
+end
 
 -- Height left clear at the top of the screen (0 to maximize space at the top).
 local TOP_INSET = 0
@@ -70,6 +111,7 @@ local TUNING_TITLE = "_tuning_"
 local Notebook = InputContainer:extend{
     document = nil,
     title = nil,
+    disable_double_tap = false,
 }
 
 function Notebook:init()
@@ -200,10 +242,16 @@ function ToolButton:init()
     self.ges_events = {
         Tap = { GestureRange:new{ ges = "tap", range = self.dimen } },
         Hold = { GestureRange:new{ ges = "hold", range = self.dimen } },
+        DoubleTap = { GestureRange:new{ ges = "double_tap", range = self.dimen } },
     }
 end
 
 function ToolButton:onHold()
+    if self.hold_callback then self.hold_callback() end
+    return true
+end
+
+function ToolButton:onDoubleTap()
     if self.hold_callback then self.hold_callback() end
     return true
 end
@@ -331,8 +379,8 @@ function Notebook:_buildToolbar()
 
     self.clock_text = TextWidget:new{text=os.date("%H:%M"), face=Font:getFace("cfont", 18)}
     local clock_w = self.clock_text:getSize().w + gap
-    -- Back + four tools + undo/redo/refresh + previous/next + settings.
-    local n_cells = #TOOLS + 7
+    -- Back + tools + undo/redo/refresh + paste + previous/next + settings.
+    local n_cells = #TOOLS + 8
     local cell_overhead = 2 * (Size.border.thin + Size.padding.button)
     local avail = self.dimen.w - 2 * Size.padding.small
     local flexible = avail - n_gaps * gap - page_text_w - clock_w - n_cells * cell_overhead
@@ -351,7 +399,7 @@ function Notebook:_buildToolbar()
             icon_size = icon_size,
             selected = i == 1,
             callback = function() self:_selectTool(i) end,
-            hold_callback = function() self:_showToolOptions(i) end,
+            hold_callback = function() self:_openToolOptions(i) end,
         }
         self.tool_buttons[i] = btn
         table.insert(tool_group, btn)
@@ -378,9 +426,21 @@ function Notebook:_buildToolbar()
         icon = "chevron.right", icon_size = icon_size, width = unit,
         callback = function() self:_turnPage(1) end,
     }
+    self.paste_button = self:_actionButton{
+        icon = "notebook.paste", icon_size = icon_size, width = unit,
+        callback = function() self.canvas:pasteClipboard() end,
+        enabled_func = function() return Canvas.hasClipboard() end,
+    }
 
     self.toolbar_content = HorizontalGroup:new{
         align = "center",
+        -- Keep one live notebook clock in the corner KOReader reserves for its
+        -- transient clock. When the system overlay appears it occupies the same
+        -- place, and when it hides during writing the notebook clock remains.
+        CenterContainer:new{
+            dimen = Geom:new{w=clock_w, h=self.next_page_button:getSize().h},
+            self.clock_text,
+        },
         -- Leaving is a "back" arrow on the left, where every other back control
         -- lives, rather than a Close button at the far right.
         self:_actionButton{
@@ -398,13 +458,10 @@ function Notebook:_buildToolbar()
             callback = function() self:_refreshScreen() end,
         },
         HorizontalSpan:new{ width = gap },
+        self.paste_button,
         self.prev_page_button,
         self.page_button,
         self.next_page_button,
-        CenterContainer:new{
-            dimen=Geom:new{w=clock_w, h=self.next_page_button:getSize().h},
-            self.clock_text,
-        },
         HorizontalSpan:new{ width = gap },
         self:_actionButton{
             icon = "appbar.settings", icon_size = icon_size, width = unit,
@@ -413,7 +470,7 @@ function Notebook:_buildToolbar()
     }
 
     local remaining = math.max(0, avail - self.toolbar_content:getSize().w)
-    table.insert(self.toolbar_content, 12, HorizontalSpan:new{width=remaining})
+    table.insert(self.toolbar_content, 14, HorizontalSpan:new{width=remaining})
     self.toolbar_content:resetLayout()
 
     self.toolbar = FrameContainer:new{
@@ -435,6 +492,14 @@ function Notebook:_selectTool(index)
         btn:setSelected(i == index)
     end
     self:_refreshToolbar()
+end
+
+function Notebook:_openToolOptions(index)
+    -- A menu describes the tool that is active. Long/double-tapping another
+    -- icon therefore selects that tool first, instead of leaving two mutually
+    -- contradictory highlights on screen.
+    self:_selectTool(index)
+    self:_showToolOptions(index)
 end
 
 --[[--
@@ -461,7 +526,7 @@ end
 function Notebook:_showPenOptions()
     self:_finishInteraction()
     local actions = {}
-    for _, option in ipairs({
+    for _index, option in ipairs({
         { "pen_style", "fineliner", _("Fineliner"), "notebook.fineliner" },
         { "pen_style", "fountain", _("Fountain pen"), "notebook.fountain" },
         { "pen_style", "pencil", _("Pencil"), "notebook.pencil" },
@@ -473,9 +538,23 @@ function Notebook:_showPenOptions()
             icon = option[4],
             section = option[5],
             text = label,
-            selected = self.canvas[key] == value,
+            selected = function() return self.canvas[key] == value end,
             callback = function()
                 self:_setSetting(key, value)
+                self:_selectTool(1)
+            end,
+        })
+    end
+    for _index, option in ipairs({
+        { 0, _("Black"), "black" },
+        { 255, _("White"), "white" },
+    }) do
+        local value = option[1]
+        table.insert(actions, {
+            swatch = option[3], section = value == 0 and _("Color") or nil,
+            text = option[2], selected = function() return self.canvas.pen_color == value end,
+            callback = function()
+                self:_setSetting("pen_color", value)
                 self:_selectTool(1)
             end,
         })
@@ -486,16 +565,24 @@ end
 function Notebook:_showToolMenu(index, title, actions, key)
     self:_finishInteraction()
     local menu
+    local menu_width = math.min(self.dimen.w - 2 * Size.border.window,
+        math.max(key and SettingsDialog.choiceRowWidth() or 0, Screen:scaleBySize(340)))
     local footer = key and SettingsDialog.sizeChoices(key, self.canvas[key], function(value)
         self:_setSetting(key, value)
-        UIManager:close(menu)
-        self:_selectTool(index)
-    end)
+        self.canvas.tool = TOOLS[index].tool
+        if menu then UIManager:setDirty(menu, "ui", menu.panel.dimen) end
+    end, menu_width)
     menu = ActionMenu:new{
         title=title, actions=actions, footer=footer,
-        width=math.min(self.dimen.w - 2 * Size.border.window,
-            math.max(footer and footer:getSize().w or 0, Screen:scaleBySize(340))),
+        width=menu_width,
         anchor=self.tool_buttons[index].dimen,
+        tool_buttons=self.tool_buttons,
+        on_tool_options=function(next_index)
+            UIManager:close(menu)
+            self:_openToolOptions(next_index)
+        end,
+        draw_target=self.canvas,
+        disable_double_tap=false,
     }
     UIManager:show(menu)
 end
@@ -508,42 +595,56 @@ function Notebook:_showToolOptions(index)
     end
     local actions = {}
     if tool == "eraser" then
-        for _, option in ipairs({{"stroke", _("Whole strokes")}, {"area", _("Part of a stroke")}}) do
+        for _index, option in ipairs({{"stroke", _("Whole strokes")}, {"area", _("Part of a stroke")}}) do
             local value = option[1]
             table.insert(actions, {icon="notebook.eraser",
-                text=option[2], selected=self.canvas.eraser_mode == value,
-                callback=function() self:_setSetting("eraser_mode", value); self:_selectTool(index) end})
+                text=option[2], selected=function() return self.canvas.eraser_mode == value end,
+                callback=function() self:_setSetting("eraser_mode", value) end})
         end
         return self:_showToolMenu(index, _("Eraser size"), actions, "eraser_size")
     end
     if tool == "shape" then
-        for _, option in ipairs({{"square", _("Square")}, {"rectangle", _("Rectangle")}, {"circle", _("Circle")}}) do
+        for _index, option in ipairs({{"square", _("Square")}, {"rectangle", _("Rectangle")}, {"circle", _("Circle")}}) do
             local kind = option[1]
             table.insert(actions, {icon="notebook." .. kind,
-                text=option[2], selected=self.canvas.shape_kind == kind,
-                callback=function() self:_setSetting("shape_kind", kind); self:_selectTool(index) end})
+                text=option[2], selected=function() return self.canvas.shape_kind == kind end,
+                callback=function() self:_setSetting("shape_kind", kind) end})
         end
         return self:_showToolMenu(index, _("Shapes"), actions)
     end
     if tool == "text" then
-        for _, option in ipairs({{18, _("Small")}, {26, _("Medium")}, {36, _("Large")}}) do
-            table.insert(actions, {icon="notebook.text", text=option[2],
-                selected=self.canvas.text_size == option[1],
-                callback=function() self:_setSetting("text_size", option[1]); self:_selectTool(index) end})
+        for _index, option in ipairs({{18, _("Small"), "a", 15}, {26, _("Medium"), "A", 20},
+                                  {36, _("Large"), "A", 25}}) do
+            table.insert(actions, {icon_text=option[3], icon_size=option[4], text=option[2],
+                selected=function() return self.canvas.text_size == option[1] end,
+                callback=function() self:_setSetting("text_size", option[1]) end})
         end
-        for _, option in ipairs({{"sans", _("Sans-serif")}, {"serif", _("Serif")}, {"mono", _("Monospace")}}) do
-            table.insert(actions, {icon="notebook.text", text=option[2],
-                selected=(self.canvas.text_font or "sans") == option[1],
-                callback=function() self:_setSetting("text_font", option[1]); self:_selectTool(index) end})
+        for _index, option in ipairs({{"sans", _("Sans-serif"), "E", "cfont"},
+                                  {"serif", _("Serif"), "E", "ffont"},
+                                  {"mono", _("Monospace"), "M", "infont"}}) do
+            table.insert(actions, {icon_text=option[3], icon_font=option[4], icon_size=18, text=option[2],
+                selected=function() return (self.canvas.text_font or "sans") == option[1] end,
+                callback=function() self:_setSetting("text_font", option[1]) end})
         end
-        for _, option in ipairs({{"text_bold", _("Bold")}, {"text_italic", _("Italic")},
-                                  {"text_underline", _("Underline")}}) do
-            table.insert(actions, {icon="notebook.text", text=option[2],
-                selected=self.canvas[option[1]] == true,
+        for _index, option in ipairs({{"text_bold", _("Bold"), "B", true},
+                                  {"text_italic", _("Italic"), "I"},
+                                  {"text_underline", _("Underline"), "U̲"}}) do
+            table.insert(actions, {icon_text=option[3], icon_bold=option[4], text=option[2],
+                selected=function() return self.canvas[option[1]] == true end,
                 callback=function()
                     self:_setSetting(option[1], not self.canvas[option[1]])
-                    self:_selectTool(index)
                 end})
+        end
+        for _index, option in ipairs({
+            { true, _("White"), "notebook.page", _("Background") },
+            { false, _("Transparent"), "texture-box" },
+        }) do
+            local value = option[1]
+            table.insert(actions, {
+                icon=option[3], text=option[2], section=option[4],
+                selected=function() return self.canvas.text_background == value end,
+                callback=function() self:_setSetting("text_background", value) end,
+            })
         end
         return self:_showToolMenu(index, _("Text options"), actions)
     end
@@ -565,6 +666,7 @@ function Notebook:_editText(original, x, y)
         text_bold = textOption("text_bold",false),
         text_italic = textOption("text_italic",false),
         text_underline = textOption("text_underline",false),
+        text_background = textOption("text_background",false),
     }
     local size = original and original.font_size or self.canvas.text_size
     local width = original and (original.x_max-original.x_min)
@@ -589,7 +691,13 @@ function Notebook:_editText(original, x, y)
         elseif shown=="" then
             shown="│"
         end
-        preview=require("textobject").create(shown,x,y,width,size,style)
+        -- Live editing favours the cheaper opaque blit. The stored style is
+        -- applied on commit, so transparent text becomes transparent as soon
+        -- as the user confirms it.
+        local preview_style={}
+        for key,value in pairs(style) do preview_style[key]=value end
+        preview_style.text_background=true
+        preview=require("textobject").create(shown,x,y,width,size,preview_style)
         dirty=require("rect").grow(dirty,preview:getBounds())
         self.canvas.text_preview=preview
         self.canvas:_repaintRegion(dirty.x,dirty.y,dirty.w,dirty.h,true)
@@ -621,7 +729,9 @@ function Notebook:_editText(original, x, y)
         self.canvas:_showLassoMenu({stroke})
         self:_onDocumentChanged()
     end
-    dialog = InputDialog:new{
+    dialog = CanvasTextDialog:new{
+        -- Kept for accessibility/introspection; CanvasTextDialog removes the
+        -- visible title bar so it does not cover the page.
         title = original and _("Edit text") or _("Insert text"),
         input = original and original.text or "", allow_newline=true,
         inputtext_class=CanvasTextInput,
@@ -687,6 +797,7 @@ function Notebook:_loadSettings()
     canvas.line_style = get("line_style", "line") == "arrow" and "arrow" or "line"
     canvas.shape_kind        = get("shape_kind", "rectangle")
     canvas.pen_width         = get("pen_width", canvas.pen_width)
+    canvas.pen_color         = get("pen_color", 0) == 255 and 255 or 0
     canvas.highlighter_width = get("highlighter_width", canvas.highlighter_width)
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
     canvas.eraser_mode       = get("eraser_mode", canvas.eraser_mode)
@@ -696,6 +807,7 @@ function Notebook:_loadSettings()
     canvas.text_bold         = get("text_bold", false)
     canvas.text_italic       = get("text_italic", false)
     canvas.text_underline    = get("text_underline", false)
+    canvas.text_background   = get("text_background", false)
     canvas.share_format      = get("share_format", "pdf") == "xopp" and "xopp" or "pdf"
 end
 
@@ -709,6 +821,25 @@ function Notebook:_refreshToolbar()
     self.undo_state = self.document:canUndo()
     self.redo_state = self.document:canRedo()
     UIManager:setDirty(self, "ui", self.toolbar.dimen)
+end
+
+function Notebook:onClipboardChanged(message)
+    self:_refreshToolbar()
+    if message then
+        local notice = InfoMessage:new{
+            text = message, timeout = 2, show_icon = false,
+            force_one_line = true, modal = false, dismissable = false,
+            alignment = "center",
+        }
+        notice.movable.anchor = function()
+            local size = notice.movable:getSize()
+            return Geom:new{
+                x = math.floor((Screen:getWidth() - size.w) / 2),
+                y = Screen:getHeight() - Size.padding.large,
+            }
+        end
+        UIManager:show(notice)
+    end
 end
 
 --[[--
@@ -826,18 +957,18 @@ end
 function Notebook:onShow()
     self.canvas:start()
     self.clock_tick = self.clock_tick or Safe.wrap("notebook:clock", function()
-        -- Never interrupt ink with a clock refresh or redraw a hidden notebook.
-        if UIManager:getTopmostVisibleWidget() == self and not self.canvas.pen_down
-            and not self.canvas.stroke and not self.canvas.erasing and not self.canvas.dragging_selection then
-            self.clock_text:setText(os.date("%H:%M"))
-            local r = self.clock_text.dimen
-            if r then UIManager:setDirty(self, "ui", r) end
-        end
-        UIManager:scheduleIn(60 - os.time() % 60, self.clock_tick)
+        -- Do not gate this on getTopmostVisibleWidget(): KOReader may report a
+        -- canvas child or a transient overlay even while this screen is shown,
+        -- which left the displayed time frozen at the opening minute.
+        self.clock_text:setText(os.date("%H:%M"))
+        UIManager:setDirty(self, "ui", self.toolbar.dimen)
+        UIManager:scheduleIn(math.max(1, 60 - os.time() % 60), self.clock_tick)
     end)
     Safe.onShutdown("notebook:clock", function() UIManager:unschedule(self.clock_tick) end)
     UIManager:unschedule(self.clock_tick)
-    UIManager:scheduleIn(60 - os.time() % 60, self.clock_tick)
+    self.clock_text:setText(os.date("%H:%M"))
+    UIManager:setDirty(self, "ui", self.toolbar.dimen)
+    UIManager:scheduleIn(math.max(1, 60 - os.time() % 60), self.clock_tick)
     return true
 end
 

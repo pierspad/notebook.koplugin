@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -12,6 +12,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "剪切"
+
+msgid "Paste"
+msgstr "粘贴"
+
+msgid "Copy"
+msgstr "复制"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -212,15 +221,6 @@ msgstr "已移动 %1；无法将 %2 移动到此处。"
 msgid "Edit"
 msgstr "编辑"
 
-msgid "Cut"
-msgstr "剪切"
-
-msgid "Copy"
-msgstr "复制"
-
-msgid "Paste"
-msgstr "粘贴"
-
 msgid "Close"
 msgstr "关闭"
 
@@ -265,6 +265,15 @@ msgstr "笔画结束时停顿"
 
 msgid "Arrow (straight or curved)"
 msgstr "箭头 (直线或曲线)"
+
+msgid "Black"
+msgstr "黑色"
+
+msgid "White"
+msgstr "白色"
+
+msgid "Color"
+msgstr "颜色"
 
 msgid "Pen type"
 msgstr "笔类型"
@@ -319,6 +328,12 @@ msgstr "斜体"
 
 msgid "Underline"
 msgstr "下划线"
+
+msgid "Background"
+msgstr "背景"
+
+msgid "Transparent"
+msgstr "透明"
 
 msgid "Text options"
 msgstr "文本选项"
@@ -395,6 +410,9 @@ msgstr ""
 "\n"
 "KOReader 运行正常。"
 
+msgid "Sharing format"
+msgstr "分享格式"
+
 msgid "Finger"
 msgstr "手指"
 
@@ -403,9 +421,6 @@ msgstr "翻页"
 
 msgid "Draws"
 msgstr "绘画"
-
-msgid "Sharing format"
-msgstr "分享格式"
 
 msgid "Blank"
 msgstr "空白"
@@ -424,6 +439,33 @@ msgstr "点阵"
 
 msgid "Checklist"
 msgstr "清单"
+
+msgid "Ink"
+msgstr "墨水"
+
+msgid "Eraser"
+msgstr "橡皮擦"
+
+msgid "Lasso"
+msgstr "套索"
+
+msgid "Input"
+msgstr "输入"
+
+msgid "Tuning written to the log"
+msgstr "调节参数已写入日志"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "测试笔记本——不进行调节时请重命名"
+
+msgid "Reset tab"
+msgstr "重置选项卡"
+
+msgid "Reset all"
+msgstr "全部重置"
+
+msgid "Write to log"
+msgstr "写入日志"
 
 msgid "Preparing…"
 msgstr "正在准备…"
@@ -445,3 +487,6 @@ msgstr "压缩中"
 
 msgid "Page %1 of %2 — %3"
 msgstr "第 %1 页，共 %2 页 — %3"
+
+#~ msgid "White background"
+#~ msgstr "白色背景"

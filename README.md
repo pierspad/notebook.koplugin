@@ -1,101 +1,59 @@
-## Notebook for KOReader
+# Notebook for KOReader
 
-Handwriting notebooks for KOReader, built for the Kindle Scribe's pen.
+A handwriting notebook plugin for KOReader, designed for the Kindle Scribe and
+other stylus-capable e-ink devices. It does not patch KOReader.
 
-Write freehand with the stylus, hold to snap a shape straight, lasso a drawing
-and move it, keep as many pages as you like, and organise notebooks in a gallery
-of thumbnails. Everything is stored as vectors, so a stroke stays sharp and can
-be erased or undone on its own.
+## Install
 
-Nothing in KOReader is patched. The pen arrives through KOReader's own stylus
-callback API, so this plugin is purely additive: uninstalling is deleting one
-directory.
-
-### Installation
-
-1. Download `notebook.koplugin-<version>.zip` from the
-   [latest release](https://github.com/pierspad/notebook.koplugin/releases/latest).
-2. Extract it into your KOReader plugins directory, so that you end up with a
-   `notebook.koplugin` folder there:
+1. Download the latest `notebook.koplugin-<version>.zip` from
+   [Releases](https://github.com/pierspad/notebook.koplugin/releases/latest).
+2. Extract `notebook.koplugin` into KOReader's plugin directory:
    - Kindle: `/mnt/us/koreader/plugins/`
    - Kobo: `/.adds/koreader/plugins/`
-3. Restart KOReader.
+3. Restart KOReader, then open **Tools → More tools → Notebook**.
 
-The notebooks live in **Menu → Tools → More tools → Notebook**, and are saved
-under `koreader/notebook/`.
+Notebooks are stored in `koreader/notebook/`.
 
-### What it does
+## Features
 
-| | |
-| --- | --- |
-| **Writing** | Pen, highlighter and eraser. The eraser rubs out an area or removes whole strokes, whichever you prefer. |
-| **Shapes** | Hold still at the end of a stroke and it snaps to the line, rectangle, circle or triangle you were drawing. |
-| **Lasso** | Circle part of a page to select it, then move, cut, copy, paste or delete it. |
-| **Pages** | As many as you like, each with its own background: blank, lined, narrow lined, grid, dot grid or checklist. |
-| **Gallery** | Thumbnails rather than file names, in folders, sorted however you like. Rename, duplicate, move and delete in bulk. |
-| **Export** | Any notebook to PDF, one or many at a time. |
-| **Sending** | With [localsend.koplugin](https://github.com/kaikozlov/localsend.koplugin) installed, a Send action appears in the gallery and hands notebooks to a phone over Wi-Fi. Optional: without it, nothing appears and nothing breaks. |
-| **Simple UI** | If [Simple UI](https://github.com/BetterLauncher) is installed, the gallery keeps its launcher bar and marks the notebooks tab as active. Also optional. |
+- Fineliner, pressure-sensitive fountain pen and pencil, with black or white ink.
+- Highlighter; whole-stroke and partial-stroke erasers.
+- Palm rejection and direct stylus input.
+- Lines, arrows, rectangles, squares and circles.
+- Lasso selection with move, cut, copy, paste and delete.
+- Editable text, multiple pages and per-page paper templates.
+- PDF and Xournal++ export; optional LocalSend integration.
 
-### The palm, and why it matters
+Hold or double-tap a tool button to open its options. After cutting or copying,
+use the Paste button in the top bar.
 
-A hand resting on the glass is the thing that makes handwriting on a tablet
-either work or not. The pen is tracked in its own input slot, and while it is
-down every touch is ignored; because a hand usually leaves the glass slightly
-after the nib does, the block outlasts the stroke by a moment. Writing with a
-finger is off by default for the same reason — on a device with a pen, a finger
-on the glass is usually somebody's hand.
+## Development
 
-### Pen options and shape snapping
-
-Hold the pen icon to choose a uniform fineliner, a pressure-sensitive fountain
-pen, or a gray pressure-sensitive pencil. The same menu chooses whether a line
-snapped by holding still ends as a plain line or an arrow. Preferences survive
-reopening the notebook. Pressure normalization is verified on the Scribe's
-0–4095 Wacom range; missing pressure uses a solid line.
-
-The [September 2026 audit](docs/audits/2026-09-14-notebook.md) records the input
-and rendering fixes, Kindle benchmarks, regression tests, and remaining limits.
-
-### Development
+Requires LuaJIT and `luacheck`.
 
 ```bash
-make ci         # lint, test, package, and check the package: what CI runs
-make verify     # lint and test only
-make install-hooks
+make verify       # lint and tests
+make ci           # verification plus package checks
+make package      # build the installable zip in build/
 ```
 
-`make ci` is deliberately the single definition of "does this pass": the CI
-workflow, the release workflow and the `pre-push` hook all call that one target,
-so a push cannot fail on GitHub for something the machine could have said first.
-It needs `luacheck` — `make lint` refuses to run without it rather than skipping
-itself and reporting success, which is how seventeen warnings once reached CI.
+For device deployment, copy `kindle.env.example` to `kindle.env`, configure the
+device, then run `make deploy`. See `tools/deploy.sh --help` for options.
 
-The bench is 200-odd tests across ten suites and runs in about a second: it
-drives the plugin headless under LuaJIT with the KOReader widget layer stubbed,
-at the real geometry and density of a Scribe. The stubs are deliberately
-faithful on the points that have actually caused bugs — see the comments in
-`lua/spec/uistubs.lua` — because a stub that is kinder than the real widget
-hides exactly the mistakes worth catching.
+## Contributing
 
-To put a build on a device:
+Pull requests are welcome! For major changes, please open an issue first to discuss your ideas.
 
-```bash
-cp kindle.env.example kindle.env   # then edit the address
-make deploy TARGET=root@192.168.1.42 FLAGS=--restart
-```
+If Notebook is useful to you and you want to support its maintenance, you can [sponsor the project on GitHub](https://github.com/sponsors/pierspad). Sponsorship is optional and does not unlock features.
 
-`tools/deploy.sh` runs the bench first and refuses to install a plugin that is
-failing its own tests. See `tools/deploy.sh --help` for mounted devices, SSH
-ports, and installing LocalSend alongside.
+---
 
-### Releasing
+## LLM Disclosure
 
-Tag the version that is in `lua/_meta.lua` and publish a release for it. The
-workflow builds the package from the tag, checks it is what it claims to be, and
-attaches it. The tag and the version must agree, or the release fails rather
-than shipping a zip that disagrees with its own name.
+This project was developed with the assistance of Large Language Models, used to support code writing and documentation.
 
-### License
+---
 
-MIT.
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

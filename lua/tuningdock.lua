@@ -39,8 +39,17 @@ local Tuning = require("tuning")
 local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local Safe = require("safe")
+local _ = require("i18n")
 
 local Screen = Device.screen
+
+local TAB_LABELS = {
+    ink = _("Ink"),
+    eraser = _("Eraser"),
+    lasso = _("Lasso"),
+    shapes = _("Shapes"),
+    input = _("Input"),
+}
 
 --[[--
 How much of the screen the band takes.
@@ -194,7 +203,7 @@ function TuningDock:dump()
     io.write("\nnotebook tuning:\n", text, "\n\n")
     io.flush()
     local InfoMessage = require("ui/widget/infomessage")
-    UIManager:show(InfoMessage:new{ text = "Tuning written to the log", timeout = 2 })
+    UIManager:show(InfoMessage:new{ text = _("Tuning written to the log"), timeout = 2 })
 end
 
 --[[--
@@ -247,7 +256,7 @@ function TuningDock:_build()
         -- warns about: a notebook that is named _tuning_ whether or not that
         -- was meant.
         table.insert(content, TextWidget:new{
-            text = "Test notebook - rename it if you are not tuning",
+            text = _("Test notebook - rename it if you are not tuning"),
             face = Font:getFace("cfont", self.font_size - 1),
             max_width = inner_w,
         })
@@ -291,7 +300,7 @@ function TuningDock:_tabRow(inner_w)
         local id = tab.id
         table.insert(row, Tappable:new{
             cell_h = self.cell_h, font_size = self.font_size,
-            text = tab.label,
+            text = TAB_LABELS[id] or id,
             width = cell,
             selected = id == self.tab,
             callback = function() self:setTab(id) end,
@@ -303,9 +312,9 @@ end
 function TuningDock:_commandRow(inner_w)
     local row = HorizontalGroup:new{ align = "center" }
     local commands = {
-        { text = "Reset tab", fn = function() self:resetTab() end },
-        { text = "Reset all", fn = function() self:resetAll() end },
-        { text = "Dump",      fn = function() self:dump() end },
+        { text = _("Reset tab"), fn = function() self:resetTab() end },
+        { text = _("Reset all"), fn = function() self:resetAll() end },
+        { text = _("Write to log"), fn = function() self:dump() end },
     }
     local cell = math.floor((inner_w - 2 * Size.padding.small) / 3)
     for i, c in ipairs(commands) do
@@ -373,8 +382,8 @@ function TuningDock:_eraserModeRow(inner_w)
     local row = HorizontalGroup:new{ align = "center" }
     local cell = math.floor((inner_w - Size.padding.small) / 2)
     local modes = {
-        { text = "erase: whole strokes", value = "stroke" },
-        { text = "erase: part of a stroke", value = "area" },
+        { text = _("Whole strokes"), value = "stroke" },
+        { text = _("Part of a stroke"), value = "area" },
     }
     for i, m in ipairs(modes) do
         if i > 1 then

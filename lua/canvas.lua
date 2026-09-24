@@ -42,6 +42,7 @@ local Template = require("template")
 local Tuning = require("tuning")
 local UIManager = require("ui/uimanager")
 local time = require("ui/time")
+local _ = require("i18n")
 
 local Screen = Device.screen
 local Input = Device.input
@@ -58,6 +59,7 @@ local Canvas = InputContainer:extend{
     -- What the barrel button does while held. The rubber tip always erases.
     barrel_button_tool = "highlighter",
     pen_width = 3,
+    pen_color = 0,
     pen_style = "fineliner",
     line_style = "line",
     shape_kind = "rectangle",
@@ -139,11 +141,13 @@ function Canvas:init()
     -- the path instead of only where samples happened to land.
     self.last_erase_x, self.last_erase_y = nil, nil
     self.erase_pending = nil
+    self.erase_path = nil
+    self.last_erase_apply = nil
     self.last_erase_repaint = nil
     self.erase_flush_scheduled = false
     self.erase_flush_cb = function()
         self.erase_flush_scheduled = false
-        self:_flushEraseRepaint()
+        self:_flushEraseWork()
     end
     self.shape_preview_cb = function() self:_paintShape() end
     self.drag_step_cb = function()
@@ -517,6 +521,7 @@ function Canvas:_beginStroke(tool, x, y, p)
         local b = self.selection_bbox
         if x >= b.x - 25 and x <= b.x + b.w + 25 and y >= b.y - 25 and y <= b.y + b.h + 25 then
             self.dragging_selection = true
+            self:_useOpaqueTextDuringDrag()
             self.drag_start_x, self.drag_start_y = x, y
             self.drag_last_x, self.drag_last_y = x, y
             if self.lasso_menu then
@@ -533,7 +538,8 @@ function Canvas:_beginStroke(tool, x, y, p)
     self.stroke = Stroke:new{
         tool = tool,
         width = self:widthFor(tool),
-        color = tool == "pen" and self.pen_style == "pencil" and 96 or 0,
+        color = tool == "pen" and (self.pen_color == 255 and 255
+            or (self.pen_style == "pencil" and 96 or 0)) or 0,
     }
     -- Grayscale marker pixels are not reliably visible through the binary DU
     -- waveform. Use AUTO for the marker, but at its own slower cadence, so the
@@ -616,6 +622,26 @@ function Canvas:_dragStep()
     self.last_drag_step = time.now()
 end
 
+function Canvas:_useOpaqueTextDuringDrag()
+    if self.drag_text_backgrounds or not self.selected_strokes then return end
+    local saved = {}
+    for _, stroke in ipairs(self.selected_strokes) do
+        if stroke.text then
+            saved[stroke] = stroke.text_background == true
+            stroke.text_background = true
+        end
+    end
+    self.drag_text_backgrounds = next(saved) and saved or nil
+end
+
+function Canvas:_restoreTextAfterDrag()
+    local saved = self.drag_text_backgrounds
+    self.drag_text_backgrounds = nil
+    for stroke, background in pairs(saved or {}) do
+        stroke.text_background = background
+    end
+end
+
 --[[--
 Clears what the fast refreshes left behind, once the pen is up.
 
@@ -635,6 +661,9 @@ that is already correct in the buffer, and takes the trail with it.
 function Canvas:_settleDrag()
     local touched = self.drag_touched
     self.drag_touched = nil
+    -- The cheap opaque representation is only a drag preview. Restore the
+    -- document's real style before the one final, high-quality repaint.
+    self:_restoreTextAfterDrag()
     if not touched then return end
 
     self:_repaintRegion(touched.x, touched.y, touched.w, touched.h, true)
@@ -768,30 +797,6 @@ function Canvas:_endStroke()
             local bx, by, bw, bh = stroke:getBounds()
             if bx then self:_repaintRegion(bx, by, bw, bh) end
 
-            -- Quick tap on canvas with clipboard contents -> Paste at tap position!
-            if (not bw or (bw < 24 and bh < 24)) and Canvas.clipboard and #Canvas.clipboard > 0 then
-                local cb_bbox = Lasso.getSelectionBounds(Canvas.clipboard)
-                local cx = cb_bbox and (cb_bbox.x + cb_bbox.w / 2) or self.content.x
-                local cy = cb_bbox and (cb_bbox.y + cb_bbox.h / 2) or self.content.y
-                local tap_x, tap_y = stroke:getPoint(1)
-                local dx = tap_x - cx
-                local dy = tap_y - cy
-
-                local pasted = {}
-                self.document:beginBatch()
-                for _, s in ipairs(Canvas.clipboard) do
-                    local copy = s:clone()
-                    copy:translate(dx,dy)
-                    table.insert(pasted, copy)
-                    self.document:addStroke(copy)
-                end
-                self.document:commitBatch()
-                self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
-                if self.on_change then self:on_change() end
-                self:_showLassoMenu(pasted)
-                return
-            end
-
             local lasso_pts = {}
             for i = 1, stroke:count() do
                 local px, py = stroke:getPoint(i)
@@ -879,27 +884,21 @@ function Canvas:_showLassoMenu(selected)
             self.selection_bbox = nil
             self:_repaintSelection(box)
             if self.on_change then self:on_change() end
+            if self.owner and self.owner.onClipboardChanged then
+                self.owner:onClipboardChanged(_("Cut") .. " → " .. _("Paste"))
+            end
         end,
         on_copy = function()
             self.lasso_menu = nil
             Canvas.clipboard = Lasso.cloneStrokes(selected)
             self:_deselectLasso()
+            if self.owner and self.owner.onClipboardChanged then
+                self.owner:onClipboardChanged(_("Copy") .. " → " .. _("Paste"))
+            end
         end,
         on_paste = function()
             self.lasso_menu = nil
-            if not Canvas.clipboard or #Canvas.clipboard == 0 then return end
-            local pasted = {}
-            self.document:beginBatch()
-            for _, s in ipairs(Canvas.clipboard) do
-                local copy = s:clone()
-                copy:translate(40,40)
-                table.insert(pasted, copy)
-                self.document:addStroke(copy)
-            end
-            self.document:commitBatch()
-            self:_repaintRegion(self.content.x, self.content.y, self.content.w, self.content.h)
-            if self.on_change then self:on_change() end
-            self:_showLassoMenu(pasted)
+            self:pasteClipboard()
         end,
         on_delete = function()
             self.lasso_menu = nil
@@ -918,8 +917,33 @@ function Canvas:_showLassoMenu(selected)
     UIManager:show(self.lasso_menu)
 end
 
+function Canvas.hasClipboard()
+    return Canvas.clipboard ~= nil and #Canvas.clipboard > 0
+end
+
+function Canvas:pasteClipboard(dx, dy)
+    if not Canvas.hasClipboard() then return false end
+    dx, dy = dx or 40, dy or 40
+    local pasted = {}
+    local dirty
+    self.document:beginBatch()
+    for _, stroke in ipairs(Canvas.clipboard) do
+        local copy = stroke:clone()
+        copy:translate(dx, dy)
+        pasted[#pasted + 1] = copy
+        self.document:addStroke(copy)
+        dirty = Rect.grow(dirty, copy:getBounds())
+    end
+    self.document:commitBatch()
+    if dirty then self:_repaintRegion(dirty.x, dirty.y, dirty.w, dirty.h) end
+    if self.on_change then self:on_change() end
+    self:_showLassoMenu(pasted)
+    return true
+end
+
 function Canvas:_deselectLasso()
     self.erased_shape_selection = nil
+    self:_restoreTextAfterDrag()
     if not self.selected_strokes and not self.selection_bbox and not self.lasso_menu then return end
     if self.lasso_menu then
         UIManager:close(self.lasso_menu)
@@ -1003,7 +1027,9 @@ end
 function Canvas:_endErase()
     UIManager:unschedule(self.erase_flush_cb)
     self.erase_flush_scheduled = false
-    self:_flushEraseRepaint()
+    self:_flushEraseWork()
+    self.erase_path = nil
+    self.last_erase_apply = nil
     local shapes = self.erase_shapes
     self.erase_shapes = nil
     local b = self.erase_bounds
@@ -1057,8 +1083,37 @@ function Canvas:_eraseAlong(x, y)
         px, py = x, y
     end
 
+    local path = self.erase_path
+    if not path then
+        path = { px, py }
+        self.erase_path = path
+    end
+    path[#path + 1], path[#path + 2] = x, y
+
+    local now = time.now()
+    local elapsed = self.last_erase_apply and time.to_ms(now - self.last_erase_apply)
+        or Tuning.erase_repaint_ms
+    if elapsed >= Tuning.erase_repaint_ms then
+        self:_applyErasePath()
+    elseif not self.erase_flush_scheduled then
+        self.erase_flush_scheduled = true
+        UIManager:scheduleIn(math.max(1, Tuning.erase_repaint_ms - elapsed) / 1000,
+            self.erase_flush_cb)
+    end
+end
+
+-- Applies all raw eraser samples gathered during one display interval in one
+-- model pass. This is the important half of throttling: postponing only the
+-- repaint still walked every stroke on the page for every digitizer sample.
+function Canvas:_applyErasePath()
+    local path = self.erase_path
+    if not path or #path < 4 then return end
+    self.erase_path = { path[#path - 1], path[#path] }
+    -- The first contact is a zero-length path. It may erase a dot under the
+    -- tip, but it must not consume the interval and delay the first real move.
+    local moved = path[1] ~= path[#path - 1] or path[2] ~= path[#path]
+    if moved then self.last_erase_apply = time.now() end
     self.erase_shapes = self.erase_shapes or {}
-    local path = { px, py, x, y }
     local hit, rx, ry, rw, rh, ux, uy, uw, uh
     if self.eraser_mode == "area" then
         hit, rx, ry, rw, rh, ux, uy, uw, uh =
@@ -1076,6 +1131,11 @@ function Canvas:_eraseAlong(x, y)
         self:_queueEraseRepaint(rx, ry, rw, rh)
         if self.on_change then self:on_change() end
     end
+end
+
+function Canvas:_flushEraseWork()
+    self:_applyErasePath()
+    self:_flushEraseRepaint()
 end
 
 --- Merges a region into the pending erase repaint, flushing on a timer.
@@ -1175,8 +1235,14 @@ function Canvas:onStylusEvent(slot)
     -- cannot be pressed with the pen and tapping outside does not dismiss them.
     local top_widget = UIManager:getTopmostVisibleWidget()
     if self.owner and top_widget ~= self.owner and top_widget ~= self.lasso_menu then
-        if self.stroke or self.shape_gesture then self:_endStroke() end
-        return false
+        -- A tool popover is modal, but a stroke deliberately started on the
+        -- visible page should dismiss it and keep this very first sample.
+        -- Waiting for the later tap-to-close gesture loses the entire stroke.
+        if not (top_widget and top_widget.dismissForDrawing
+            and top_widget:dismissForDrawing(slot)) then
+            if self.stroke or self.shape_gesture then self:_endStroke() end
+            return false
+        end
     end
 
     -- Explicit finger tools are always rejected from the stylus callback
@@ -1294,6 +1360,7 @@ function Canvas:onStylusEvent(slot)
             local b=self.selection_bbox
             if x>=b.x-25 and x<=b.x+b.w+25 and y>=b.y-25 and y<=b.y+b.h+25 then
                 self.dragging_selection=true
+                self:_useOpaqueTextDuringDrag()
                 self.drag_start_x,self.drag_start_y=x,y
                 self.drag_last_x,self.drag_last_y=x,y
                 if self.lasso_menu then UIManager:close(self.lasso_menu); self.lasso_menu=nil end
@@ -1409,6 +1476,7 @@ function Canvas:onTouchStart(_, ges)
         local b = self.selection_bbox
         if x >= b.x - 30 and x <= b.x + b.w + 30 and y >= b.y - 30 and y <= b.y + b.h + 30 then
             self.dragging_selection = true
+            self:_useOpaqueTextDuringDrag()
             self.drag_start_x, self.drag_start_y = x, y
             self.drag_last_x, self.drag_last_y = x, y
             if self.lasso_menu then
@@ -1455,7 +1523,7 @@ function Canvas:onTouchPan(_, ges)
     end
 
     if not self:_withinContent(x, y, self:widthFor(self.tool)) then
-        if self.stroke or self.shape_gesture then self:_endStroke() end
+        if self.stroke or self.shape_gesture or self.text_at then self:_endStroke() end
         return true
     end
 
@@ -1487,7 +1555,7 @@ function Canvas:onTouchRelease(_, ges)
     if self.draw_with_finger then
         self.last_erase_x, self.last_erase_y = nil, nil
         self:_endErase()
-        if self.stroke or self.shape_gesture then self:_endStroke() end
+        if self.stroke or self.shape_gesture or self.text_at then self:_endStroke() end
         return true
     end
 

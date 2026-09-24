@@ -30,19 +30,9 @@ local Safe = require("safe")
 
 local Screen = Device.screen
 
---[[--
-How far the page behind the panel is taken down while it is open.
-
-Light enough that what is underneath stays readable -- the panel is about the
-page, and hiding it would be no help -- but enough that the panel reads as
-something in front rather than as part of the drawing. On e-ink this is also the
-cue that a tap outside will land somewhere that is not the notebook.
---]]
-local BACKDROP_DIM = 0.12
-
 -- Size presets per tool, in stroke-width pixels.
 local PRESETS = {
-    pen_width         = { 2, 3, 5, 8, 12 },
+    pen_width         = { 2, 5, 9, 14, 22 },
     highlighter_width = { 12, 20, 30, 45, 60 },
     eraser_size       = { 10, 18, 28, 40, 60 },
 }
@@ -66,6 +56,7 @@ local SampleButton = InputContainer:extend{
     shape = "bar",
     selected = false,
     callback = nil,
+    cell_width = CELL_W,
 }
 
 function SampleButton:init()
@@ -73,11 +64,13 @@ function SampleButton:init()
         background = self.selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE,
         color = Blitbuffer.COLOR_BLACK,
         bordersize = Size.border.thin,
-        radius = Size.radius.button,
+        -- These cells form one continuous ruler. Rounded inner corners create
+        -- white wedges and make the row look narrower than its panel.
+        radius = 0,
         margin = 0,
         padding = 0,
         CenterContainer:new{
-            dimen = Geom:new{ w = CELL_W, h = CELL_H },
+            dimen = Geom:new{ w = self.cell_width, h = CELL_H },
             VerticalSpan:new{ width = 0 },
         },
     }
@@ -104,7 +97,7 @@ function SampleButton:paintTo(bb, x, y)
         bb:paintCircle(cx, cy, math.max(2, r), ink)
     else
         local thickness = math.min(self.value, math.floor(CELL_H / 2))
-        local bar_w = math.floor(CELL_W * 0.6)
+        local bar_w = math.floor(self.cell_width * 0.6)
         bb:paintRect(cx - math.floor(bar_w / 2),
             cy - math.floor(thickness / 2),
             bar_w, math.max(1, thickness), ink)
@@ -114,6 +107,11 @@ end
 function SampleButton:onTap()
     if self.callback then self.callback(self.value) end
     return true
+end
+
+function SampleButton:setSelected(selected)
+    self.selected = selected
+    self.frame.background = selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
 end
 
 --- A plain tappable line of text, for the on/off choices.
@@ -154,10 +152,21 @@ function TextChoice:onTap()
     return true
 end
 
+function TextChoice:setSelected(selected)
+    self.selected = selected
+    self.frame.background = selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
+    local label = self.frame[1] and self.frame[1][1]
+    if label then
+        label.fgcolor = selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
+    end
+end
+
 -- The panel ---------------------------------------------------------------------
 
 local SettingsDialog = InputContainer:extend{
     canvas = nil,
+    -- Kept in this catalogue for the LocalSend selector used by this plugin.
+    sharing_format_label = _("Sharing format"),
     -- Called with (key, value) when something is chosen.
     on_change = nil,
 }
@@ -180,21 +189,26 @@ function SettingsDialog:init()
     could be stating the current setting or offering the alternative. Showing
     both choices with one of them filled in removes the question.
     ]]
-    local function switchRow(current, options)
+    local function switchRow(key, current, options)
         local row = HorizontalGroup:new{ align = "center" }
+        row.choices = {}
         local cell_w = math.floor((5 * CELL_W + 4 * Size.padding.small
             - Size.padding.small) / 2)
         for i, opt in ipairs(options) do
             if i > 1 then
                 table.insert(row, HorizontalSpan:new{ width = Size.padding.small })
             end
-            table.insert(row, TextChoice:new{
+            local choice = TextChoice:new{
                 text = opt.text,
                 width = cell_w,
                 selected = opt.value == current,
                 callback = opt.callback,
-            })
+            }
+            row.choices[#row.choices + 1] = { widget = choice, value = opt.value }
+            table.insert(row, choice)
         end
+        self.choice_groups = self.choice_groups or {}
+        self.choice_groups[key] = row.choices
         return row
     end
 
@@ -216,7 +230,7 @@ function SettingsDialog:init()
     table.insert(content, VerticalSpan:new{ width = Size.padding.small })
 
     table.insert(content, heading(_("Finger")))
-    table.insert(content, switchRow(self.canvas.draw_with_finger, {
+    table.insert(content, switchRow("draw_with_finger", self.canvas.draw_with_finger, {
         {
             text = _("Turns pages"),
             value = false,
@@ -229,13 +243,6 @@ function SettingsDialog:init()
         },
     }))
 
-    table.insert(content, VerticalSpan:new{ width = Size.padding.large })
-    table.insert(content, heading(_("Sharing format")))
-    table.insert(content, switchRow(self.canvas.share_format, {
-        {text=_("PDF"), value="pdf", callback=function() self:_choose("share_format","pdf") end},
-        {text=_("Xournal++"), value="xopp", callback=function() self:_choose("share_format","xopp") end},
-    }))
-
     self.panel = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
         color = Blitbuffer.COLOR_BLACK,
@@ -243,6 +250,12 @@ function SettingsDialog:init()
         radius = Size.radius.window,
         padding = Size.padding.large,
         content,
+    }
+    local panel_size = self.panel:getSize()
+    self.panel.dimen = Geom:new{
+        x = math.floor((self.dimen.w - panel_size.w) / 2),
+        y = math.floor((self.dimen.h - panel_size.h) / 2),
+        w = panel_size.w, h = panel_size.h,
     }
 
     self[1] = CenterContainer:new{
@@ -256,29 +269,41 @@ function SettingsDialog:init()
     }
 end
 
-function SettingsDialog.sizeChoices(key, current, callback)
+function SettingsDialog.choiceRowWidth()
+    return #PRESETS.pen_width * (CELL_W + 2 * Size.border.thin)
+end
+
+function SettingsDialog.sizeChoices(key, current, callback, total_width)
     local row = HorizontalGroup:new{align="center"}
-    for _, value in ipairs(PRESETS[key]) do
-        table.insert(row, SampleButton:new{
+    row.choices = {}
+    local presets = PRESETS[key]
+    local base_outer = total_width and math.floor(total_width / #presets)
+    for i, value in ipairs(presets) do
+        local outer_width = base_outer and (i == #presets
+            and total_width - base_outer * (#presets - 1) or base_outer)
+        local button = SampleButton:new{
             value=value, shape=key == "eraser_size" and "circle" or "bar",
-            selected=value == current, callback=callback,
-        })
+            selected=value == current,
+            cell_width=outer_width and math.max(1, outer_width - 2 * Size.border.thin) or CELL_W,
+        }
+        button.callback = function(selected)
+            callback(selected)
+            for _, choice in ipairs(row.choices) do
+                choice:setSelected(choice.value == selected)
+            end
+        end
+        row.choices[#row.choices + 1] = button
+        table.insert(row, button)
     end
     return row
 end
 
 function SettingsDialog:_choose(key, value)
     if self.on_change then self.on_change(key, value) end
-    -- The replacement panel repaints the whole screen as it opens, so the
-    -- outgoing one must not also demand a flash on its way out: that would put
-    -- a full-screen flash between every two taps in here.
-    self.reopening = true
-    UIManager:close(self)
-    -- Reopen so the new choice is visible, and so several can be changed in a row.
-    UIManager:show(SettingsDialog:new{
-        canvas = self.canvas,
-        on_change = self.on_change,
-    })
+    for _, choice in ipairs((self.choice_groups and self.choice_groups[key]) or {}) do
+        choice.widget:setSelected(choice.value == value)
+    end
+    UIManager:setDirty(self, "ui", self.panel.dimen)
 end
 
 function SettingsDialog:onTapClose(_, ges)
@@ -296,31 +321,17 @@ function SettingsDialog:onClose()
     return true
 end
 
---[[--
-Paints the page behind at a lower contrast, then the panel over it.
-
-Done here rather than with a widget of its own so that the dimming is part of
-the same paint pass as the panel: the area is repainted from the notebook first,
-by UIManager, and darkened once. A separate dimming widget would be painted
-whenever *it* was dirty, and the page under it would fade a little further each
-time the panel was reopened to show a new choice.
---]]
 function SettingsDialog:paintTo(bb, x, y)
-    bb:darkenRect(x, y, self.dimen.w, self.dimen.h, BACKDROP_DIM)
     InputContainer.paintTo(self, bb, x, y)
 end
 
 function SettingsDialog:onShow()
-    -- The whole screen, not just the panel: the dimming covers all of it, and a
-    -- region left out of the repaint would be the one part still at full
-    -- contrast.
-    UIManager:setDirty(self, "ui")
+    UIManager:setDirty(self, "ui", self.panel.dimen)
     return true
 end
 
 function SettingsDialog:onCloseWidget()
-    if self.reopening then return end
-    UIManager:setDirty(nil, "ui")
+    UIManager:setDirty(nil, "ui", self.panel.dimen)
 end
 
 -- Every way the event loop can enter this screen, behind a pcall and a

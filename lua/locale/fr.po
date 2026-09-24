@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: French\n"
@@ -12,6 +12,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "Couper"
+
+msgid "Paste"
+msgstr "Coller"
+
+msgid "Copy"
+msgstr "Copier"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -213,15 +222,6 @@ msgstr "%1 déplacés ; %2 n'ont pas pu être déplacés là."
 msgid "Edit"
 msgstr "Modifier"
 
-msgid "Cut"
-msgstr "Couper"
-
-msgid "Copy"
-msgstr "Copier"
-
-msgid "Paste"
-msgstr "Coller"
-
 msgid "Close"
 msgstr "Fermer"
 
@@ -269,6 +269,15 @@ msgstr "Pause en fin de trait"
 
 msgid "Arrow (straight or curved)"
 msgstr "Flèche (droite ou courbe)"
+
+msgid "Black"
+msgstr "Noir"
+
+msgid "White"
+msgstr "Blanc"
+
+msgid "Color"
+msgstr "Couleur"
 
 msgid "Pen type"
 msgstr "Type de stylo"
@@ -323,6 +332,12 @@ msgstr "Italique"
 
 msgid "Underline"
 msgstr "Souligné"
+
+msgid "Background"
+msgstr "Arrière-plan"
+
+msgid "Transparent"
+msgstr "Transparent"
 
 msgid "Text options"
 msgstr "Options de texte"
@@ -399,6 +414,9 @@ msgstr ""
 "\n"
 "KOReader fonctionne normalement."
 
+msgid "Sharing format"
+msgstr "Format de partage"
+
 msgid "Finger"
 msgstr "Doigt"
 
@@ -407,9 +425,6 @@ msgstr "Tourne les pages"
 
 msgid "Draws"
 msgstr "Dessine"
-
-msgid "Sharing format"
-msgstr "Format de partage"
 
 msgid "Blank"
 msgstr "Vierge"
@@ -428,6 +443,33 @@ msgstr "Pointillé"
 
 msgid "Checklist"
 msgstr "Liste de contrôle"
+
+msgid "Ink"
+msgstr "Encre"
+
+msgid "Eraser"
+msgstr "Gomme"
+
+msgid "Lasso"
+msgstr "Lasso"
+
+msgid "Input"
+msgstr "Saisie"
+
+msgid "Tuning written to the log"
+msgstr "Réglages écrits dans le journal"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "Carnet de test — renommez-le hors réglage"
+
+msgid "Reset tab"
+msgstr "Réinitialiser l’onglet"
+
+msgid "Reset all"
+msgstr "Tout réinitialiser"
+
+msgid "Write to log"
+msgstr "Écrire dans le journal"
 
 msgid "Preparing…"
 msgstr "Préparation…"
@@ -449,3 +491,6 @@ msgstr "Compression"
 
 msgid "Page %1 of %2 — %3"
 msgstr "Page %1 sur %2 — %3"
+
+#~ msgid "White background"
+#~ msgstr "Arrière-plan blanc"

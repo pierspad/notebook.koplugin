@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.2.0-dev.5
+
+Development build for the next release.
+
+### Writing and tools
+
+- Added fineliner, fountain-pen and pencil styles, black or white ink and a
+  wider five-step width progression.
+- Partial-stroke erasing now batches work, uses spatial candidates and repaints
+  only dirty regions for substantially lower latency.
+- Tool menus remain open while changing several options. Long press and double
+  tap open them directly; starting a stroke outside an open menu dismisses it
+  without losing the first contact.
+- Tool state, selected rows and black/white colour samples now have consistent
+  high-contrast rendering.
+
+### Text and selection
+
+- Added editable text with size, family, bold, italic and underline controls.
+- Text can use either a white or transparent background. Transparent text uses
+  an opaque preview while editing or moving, then restores transparency.
+- Cut content is pasted only through the explicit toolbar action, with visible
+  clipboard feedback.
+
+### Export and interface
+
+- Added editable Xournal++ export alongside PDF export and moved the sharing
+  format choice into the LocalSend flow.
+- The notebook clock updates every minute while the screen remains open.
+- Reworked the README, added a repeatable emulator launcher and expanded the
+  automated coverage for tools, text interchange and translations.
+- The interface now ships complete catalogues for 13 languages plus English;
+  CI rejects missing translations and newly hardcoded widget prose.
+
 ## v1.1.0-rc.1
 
 A pre-release. Nothing new to use: this is a pass over what v1.0.0 got wrong,

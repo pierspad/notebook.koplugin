@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-23 17:44+0200\n"
+"POT-Creation-Date: 2026-09-24 02:24+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Hindi\n"
@@ -12,6 +12,15 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Cut"
+msgstr "काटें"
+
+msgid "Paste"
+msgstr "चिपकाएँ"
+
+msgid "Copy"
+msgstr "प्रतिलिपि बनाएँ"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -212,15 +221,6 @@ msgstr "%1 स्थानांतरित किया गया; %2 को �
 msgid "Edit"
 msgstr "संपादित करें"
 
-msgid "Cut"
-msgstr "काटें"
-
-msgid "Copy"
-msgstr "प्रतिलिपि बनाएँ"
-
-msgid "Paste"
-msgstr "चिपकाएँ"
-
 msgid "Close"
 msgstr "बंद करें"
 
@@ -266,6 +266,15 @@ msgstr "स्ट्रोक के अंत में रुकें"
 
 msgid "Arrow (straight or curved)"
 msgstr "तीर (सीधा या घुमावदार)"
+
+msgid "Black"
+msgstr "काला"
+
+msgid "White"
+msgstr "सफ़ेद"
+
+msgid "Color"
+msgstr "रंग"
 
 msgid "Pen type"
 msgstr "पेन का प्रकार"
@@ -320,6 +329,12 @@ msgstr "तिरछा"
 
 msgid "Underline"
 msgstr "रेखांकित"
+
+msgid "Background"
+msgstr "पृष्ठभूमि"
+
+msgid "Transparent"
+msgstr "पारदर्शी"
 
 msgid "Text options"
 msgstr "पाठ विकल्प"
@@ -396,6 +411,9 @@ msgstr ""
 "\n"
 "KOReader ठीक काम कर रहा है।"
 
+msgid "Sharing format"
+msgstr "साझाकरण प्रारूप"
+
 msgid "Finger"
 msgstr "उँगली"
 
@@ -404,9 +422,6 @@ msgstr "पृष्ठ पलटता है"
 
 msgid "Draws"
 msgstr "चित्र बनाता है"
-
-msgid "Sharing format"
-msgstr "साझाकरण प्रारूप"
 
 msgid "Blank"
 msgstr "खाली"
@@ -425,6 +440,33 @@ msgstr "डॉट ग्रिड"
 
 msgid "Checklist"
 msgstr "चेकलिस्ट"
+
+msgid "Ink"
+msgstr "स्याही"
+
+msgid "Eraser"
+msgstr "रबड़"
+
+msgid "Lasso"
+msgstr "लासो"
+
+msgid "Input"
+msgstr "इनपुट"
+
+msgid "Tuning written to the log"
+msgstr "समायोजन लॉग में लिखे गए"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "परीक्षण नोटबुक — समायोजन न कर रहे हों तो इसका नाम बदलें"
+
+msgid "Reset tab"
+msgstr "टैब रीसेट करें"
+
+msgid "Reset all"
+msgstr "सभी रीसेट करें"
+
+msgid "Write to log"
+msgstr "लॉग में लिखें"
 
 msgid "Preparing…"
 msgstr "तैयारी हो रही है…"
@@ -446,3 +488,6 @@ msgstr "संपीड़न जारी है"
 
 msgid "Page %1 of %2 — %3"
 msgstr "पृष्ठ %1 / %2 — %3"
+
+#~ msgid "White background"
+#~ msgstr "सफ़ेद पृष्ठभूमि"

@@ -121,6 +121,39 @@ local function sourceStrings()
     return order
 end
 
+-- Guard the widget fields that most commonly put prose on screen. Symbols,
+-- counters and empty placeholders are controls rather than translatable text.
+-- Everything else must be passed through i18n instead of silently remaining
+-- English in every catalogue.
+local function hardcodedWidgetStrings()
+    local offenders = {}
+    local control_glyphs = {
+        ["Aa"] = true, ["B"] = true, ["I"] = true, ["U̲"] = true,
+        ["A−"] = true, ["A+"] = true,
+    }
+    local pipe = io.popen("ls *.lua")
+    for name in pipe:lines() do
+        local file = assert(io.open(name, "r"))
+        local line_no = 0
+        for line in file:lines() do
+            line_no = line_no + 1
+            for _, field in ipairs({ "text", "title", "section", "label" }) do
+                local value = line:match('%f[%a]' .. field .. '%s*=%s*"([^"\\]*)"')
+                if value and value ~= "" and value:find("%a") then
+                    -- Fixed-width page-count sample: layout data, never displayed.
+                    if value ~= "  888 / 888  " and not control_glyphs[value] then
+                        table.insert(offenders, string.format("%s:%d: %s = %q",
+                            name, line_no, field, value))
+                    end
+                end
+            end
+        end
+        file:close()
+    end
+    pipe:close()
+    return offenders
+end
+
 --[[--
 The shipped catalogues, if any.
 
@@ -134,6 +167,11 @@ test("every interface string is valid in English fallback", function()
         local key=text:gsub("\\n","\n")
         assertEq(Text(key),key,"English: "..text)
     end
+end)
+
+test("visible widget prose is never hardcoded", function()
+    local offenders = hardcodedWidgetStrings()
+    assertEq(#offenders, 0, "hardcoded: " .. table.concat(offenders, " | "))
 end)
 
 test("the contributor template covers every string in the source", function()
