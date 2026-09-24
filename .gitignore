@@ -10,6 +10,7 @@ kindle.env
 # Rendered by spec/render.lua and spec/export_real.lua when they are run by hand.
 *.png
 *.pdf
+!docs/images/**
 
 .DS_Store
 .idea/
