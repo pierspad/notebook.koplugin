@@ -1,13 +1,12 @@
 # Changelog
 
-## v1.2.0-dev.5
-
-Development build for the next release.
+## v1.2.0
 
 ### Writing and tools
 
 - Added fineliner, fountain-pen and pencil styles, black or white ink and a
   wider five-step width progression.
+- Smooth low-latency highlighter ink with compact text input and responsive interaction.
 - Partial-stroke erasing now batches work, uses spatial candidates and repaints
   only dirty regions for substantially lower latency.
 - Tool menus remain open while changing several options. Long press and double
@@ -26,7 +25,7 @@ Development build for the next release.
 
 ### Export and interface
 
-- Added editable Xournal++ export alongside PDF export and moved the sharing
+- Added editable Xournal++ export alongside PDF export, preserved PDF geometry during XOPP sharing, and moved the sharing
   format choice into the LocalSend flow.
 - The notebook clock updates every minute while the screen remains open.
 - Reworked the README, added a repeatable emulator launcher and expanded the
