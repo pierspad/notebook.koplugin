@@ -10,8 +10,10 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 | Gallery & Organization | Drawing & Tools |
 | :---: | :---: |
 | <img src="docs/images/gallery.png" width="300" alt="Notebooks Gallery" /> | <img src="docs/images/drawing.png" width="300" alt="Drawing and Stylus Tools" /> |
-| **Paper Templates** | **PDF & XOPP Export** |
-| <img src="docs/images/templates.png" width="300" alt="Paper Templates" /> | <img src="docs/images/export.png" width="300" alt="Export Formats" /> |
+| **Pen Options & Color Palette** | **Paper Templates** |
+| <img src="docs/images/colored_pen.png" width="300" alt="Pen Options and Color Palette" /> | <img src="docs/images/templates.png" width="300" alt="Paper Templates" /> |
+| **PDF & XOPP Export** | **Quick Action (SimpleUI)** |
+| <img src="docs/images/export.png" width="300" alt="Export Formats" /> | <img src="docs/images/home.png" width="300" alt="Quick Action in SimpleUI" /> |
 
 ## Install
 
