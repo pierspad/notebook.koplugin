@@ -281,24 +281,6 @@ msgid "Purple"
 msgstr "紫"
 
 
-msgid "Red"
-msgstr "赤"
-
-msgid "Orange"
-msgstr "オレンジ"
-
-msgid "Yellow"
-msgstr "黄"
-
-msgid "Green"
-msgstr "緑"
-
-msgid "Blue"
-msgstr "青"
-
-msgid "Purple"
-msgstr "紫"
-
 msgid "White"
 msgstr "白"
 
@@ -524,8 +506,8 @@ msgstr "ページ %1 / %2 — %3"
 msgid "Triangle"
 msgstr "Triangle"
 
-msgid "Pen button"
-msgstr "ペンのボタン"
+msgid "Side button"
+msgstr "サイドボタン"
 
 msgid "Highlighter"
 msgstr "蛍光ペン"

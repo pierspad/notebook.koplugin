@@ -306,7 +306,7 @@ is actually being drawn.
 --]]
 function Notebook:_buildPageButton()
     local sizer = TextWidget:new{
-        text = "  888 / 888  ",
+        text = "888/888",
         face = Font:getFace("cfont", 18),
     }
     local size = sizer:getSize()
@@ -351,7 +351,7 @@ function Notebook:_showPages()
     self:_finishInteraction()
     if self.canvas.zoom > 1 then
         self.canvas:setZoom(1)
-        self.zoom_button:setText("2×", self.zoom_button.width)
+        self.zoom_button:setIcon("notebook.zoom-in", self.zoom_button.width)
     end
     UIManager:show(PagePanel:new{
         document = self.document,
@@ -368,7 +368,7 @@ function Notebook:_showPages()
 end
 
 function Notebook:_buildToolbar()
-    local gap = Size.padding.large
+    local gap = Size.padding.small
     local n_gaps = 4
 
     -- The page counter is text, so its width is whatever the font makes it.
@@ -436,7 +436,7 @@ function Notebook:_buildToolbar()
         enabled_func = function() return Canvas.hasClipboard() end,
     }
     self.zoom_button = self:_actionButton{
-        text = "2×", width = unit,
+        icon = "notebook.zoom-in", icon_size = icon_size, width = unit,
         callback = function() self:_toggleZoom() end,
     }
 
@@ -479,7 +479,9 @@ function Notebook:_buildToolbar()
     }
 
     local remaining = math.max(0, avail - self.toolbar_content:getSize().w)
-    table.insert(self.toolbar_content, 14, HorizontalSpan:new{width=remaining})
+    -- Keep previous / page count / next together at the right edge. The old
+    -- spacer split the count from its next arrow on wide screens.
+    table.insert(self.toolbar_content, 12, HorizontalSpan:new{width=remaining})
     self.toolbar_content:resetLayout()
 
     self.toolbar = FrameContainer:new{
@@ -499,7 +501,7 @@ function Notebook:_selectTool(index)
     if self.canvas.zoom > 1 and TOOLS[index].tool ~= "pen"
         and TOOLS[index].tool ~= "highlighter" and TOOLS[index].tool ~= "eraser" then
         self.canvas:setZoom(1)
-        self.zoom_button:setText("2×", self.zoom_button.width)
+        self.zoom_button:setIcon("notebook.zoom-in", self.zoom_button.width)
     end
     self.canvas.tool = TOOLS[index].tool
     self.canvas:_debugEvent("select-tool", nil, nil, nil, self.canvas.tool)
@@ -523,7 +525,7 @@ function Notebook:_toggleZoom()
         self:_selectTool(1)
     end
     self.canvas:setZoom(scale)
-    self.zoom_button:setText(scale == 1 and "2×" or "1×", self.zoom_button.width)
+    self.zoom_button:setIcon(scale == 1 and "notebook.zoom-in" or "notebook.zoom-out", self.zoom_button.width)
     self:_refreshToolbar()
 end
 
@@ -865,7 +867,7 @@ function Notebook:_loadSettings()
 end
 
 function Notebook:_updatePageText()
-    self.page_text:setText(string.format("  %d / %d  ",
+    self.page_text:setText(string.format("%d/%d",
         self.document.current_page, self.document:pageCount()))
 end
 
@@ -935,7 +937,7 @@ function Notebook:_afterHistoryChange(page, x, y, w, h)
     if page ~= self.document.current_page then
         if self.canvas.zoom > 1 then
             self.canvas:setZoom(1)
-            self.zoom_button:setText("2×", self.zoom_button.width)
+            self.zoom_button:setIcon("notebook.zoom-in", self.zoom_button.width)
         end
         -- The change belongs to another page; go there and repaint everything.
         self.document:goToPage(page)
@@ -960,7 +962,7 @@ function Notebook:_turnPage(delta)
     self:_finishInteraction()
     if self.canvas.zoom > 1 then
         self.canvas:setZoom(1)
-        self.zoom_button:setText("2×", self.zoom_button.width)
+        self.zoom_button:setIcon("notebook.zoom-in", self.zoom_button.width)
     end
     self.canvas:_debugEvent("turn-page", nil, nil, nil, delta)
     local target = self.document.current_page + delta

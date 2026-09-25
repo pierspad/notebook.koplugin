@@ -244,7 +244,7 @@ function SettingsDialog:init()
     }))
 
     table.insert(content, VerticalSpan:new{ width = Size.padding.small })
-    table.insert(content, heading(_("Pen button")))
+    table.insert(content, heading(_("Side button")))
     table.insert(content, switchRow("barrel_button_tool", self.canvas.barrel_button_tool, {
         {
             text = _("Highlighter"), value = "highlighter",

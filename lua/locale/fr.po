@@ -282,24 +282,6 @@ msgid "Purple"
 msgstr "Violet"
 
 
-msgid "Red"
-msgstr "Rouge"
-
-msgid "Orange"
-msgstr "Orange"
-
-msgid "Yellow"
-msgstr "Jaune"
-
-msgid "Green"
-msgstr "Vert"
-
-msgid "Blue"
-msgstr "Bleu"
-
-msgid "Purple"
-msgstr "Violet"
-
 msgid "White"
 msgstr "Blanc"
 
@@ -525,8 +507,8 @@ msgstr "Page %1 sur %2 — %3"
 msgid "Triangle"
 msgstr "Triangle"
 
-msgid "Pen button"
-msgstr "Bouton du stylet"
+msgid "Side button"
+msgstr "Bouton latéral"
 
 msgid "Highlighter"
 msgstr "Surligneur"

@@ -509,8 +509,8 @@ msgstr "Pagina %1 di %2 — %3"
 msgid "Triangle"
 msgstr "Triangolo"
 
-msgid "Pen button"
-msgstr "Pulsante della penna"
+msgid "Side button"
+msgstr "Pulsante laterale"
 
 msgid "Highlighter"
 msgstr "Evidenziatore"

@@ -281,24 +281,6 @@ msgid "Purple"
 msgstr "Fioletowy"
 
 
-msgid "Red"
-msgstr "Czerwony"
-
-msgid "Orange"
-msgstr "Pomarańczowy"
-
-msgid "Yellow"
-msgstr "Żółty"
-
-msgid "Green"
-msgstr "Zielony"
-
-msgid "Blue"
-msgstr "Niebieski"
-
-msgid "Purple"
-msgstr "Fioletowy"
-
 msgid "White"
 msgstr "Białe"
 
@@ -524,8 +506,8 @@ msgstr "Strona %1 z %2 — %3"
 msgid "Triangle"
 msgstr "Triangle"
 
-msgid "Pen button"
-msgstr "Przycisk rysika"
+msgid "Side button"
+msgstr "Przycisk boczny"
 
 msgid "Highlighter"
 msgstr "Zakreślacz"

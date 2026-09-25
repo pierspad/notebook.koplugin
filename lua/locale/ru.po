@@ -280,24 +280,6 @@ msgid "Purple"
 msgstr "Фиолетовый"
 
 
-msgid "Red"
-msgstr "Красный"
-
-msgid "Orange"
-msgstr "Оранжевый"
-
-msgid "Yellow"
-msgstr "Жёлтый"
-
-msgid "Green"
-msgstr "Зелёный"
-
-msgid "Blue"
-msgstr "Синий"
-
-msgid "Purple"
-msgstr "Фиолетовый"
-
 msgid "White"
 msgstr "Белый"
 
@@ -523,8 +505,8 @@ msgstr "Страница %1 из %2 — %3"
 msgid "Triangle"
 msgstr "Triangle"
 
-msgid "Pen button"
-msgstr "Кнопка пера"
+msgid "Side button"
+msgstr "Боковая кнопка"
 
 msgid "Highlighter"
 msgstr "Маркер"

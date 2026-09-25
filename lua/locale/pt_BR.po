@@ -281,24 +281,6 @@ msgid "Purple"
 msgstr "Roxo"
 
 
-msgid "Red"
-msgstr "Vermelho"
-
-msgid "Orange"
-msgstr "Laranja"
-
-msgid "Yellow"
-msgstr "Amarelo"
-
-msgid "Green"
-msgstr "Verde"
-
-msgid "Blue"
-msgstr "Azul"
-
-msgid "Purple"
-msgstr "Roxo"
-
 msgid "White"
 msgstr "Branco"
 
@@ -524,8 +506,8 @@ msgstr "Página %1 de %2 — %3"
 msgid "Triangle"
 msgstr "Triangle"
 
-msgid "Pen button"
-msgstr "Botão da caneta"
+msgid "Side button"
+msgstr "Botão lateral"
 
 msgid "Highlighter"
 msgstr "Marca-texto"

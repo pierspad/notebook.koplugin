@@ -101,31 +101,62 @@ function Canvas:setZoom(scale)
     scale = scale == 2 and 2 or 1
     if self.zoom == scale then return end
     self:_endZoomContact()
+    self:_clearZoomCache()
     self.zoom = scale
     self.zoom_x, self.zoom_y = self.content.x, self.content.y
     self:_debugEvent("zoom", nil, nil, nil, scale)
     if self.owner then UIManager:setDirty(self.owner, "ui") end
 end
 
+function Canvas:_clearZoomCache()
+    if self.zoom_cache then self.zoom_cache:free() end
+    self.zoom_cache = nil
+    self.zoom_cache_page = nil
+end
+
 function Canvas:_zoomPan(dx, dy)
     local c = self.content
-    self.zoom_x = Zoom.clamp(self.zoom_x - dx / self.zoom, c.x, c.w, self.zoom)
-    self.zoom_y = Zoom.clamp(self.zoom_y - dy / self.zoom, c.y, c.h, self.zoom)
+    local next_x = Zoom.clamp(self.zoom_x - dx / self.zoom, c.x, c.w, self.zoom)
+    local next_y = Zoom.clamp(self.zoom_y - dy / self.zoom, c.y, c.h, self.zoom)
+    if math.floor(next_x*self.zoom) == math.floor(self.zoom_x*self.zoom)
+        and math.floor(next_y*self.zoom) == math.floor(self.zoom_y*self.zoom) then return end
+    self.zoom_x, self.zoom_y = next_x, next_y
     self:_renderZoom(Screen.bb)
-    Screen:refreshUI(c.x, c.y, c.w, c.h)
+    Screen:refreshFast(c.x, c.y, c.w, c.h)
 end
 
 function Canvas:_renderZoom(bb)
     local c = self.content
     local view = bb:viewport(c.x, c.y, c.w, c.h)
-    view:paintRect(0, 0, c.w, c.h, Blitbuffer.COLOR_WHITE)
-    local area = {x=(c.x - self.zoom_x) * self.zoom,
-        y=(c.y - self.zoom_y) * self.zoom,
-        w=c.w * self.zoom, h=c.h * self.zoom}
-    Template.draw(view, self.document:templateFor(), area, self.zoom)
-    Renderer.drawPage(view, self.document:getPage(), self.zoom,
-        -self.zoom_x * self.zoom, -self.zoom_y * self.zoom,
-        Screen.isColorEnabled and Screen:isColorEnabled())
+    local page = self.document:getPage()
+    -- Build the enlarged page once. Panning then copies a viewport instead of
+    -- rasterizing every stroke and every paper line for each touch sample.
+    if bb.getType and (not self.zoom_cache or self.zoom_cache_page ~= page) then
+        self:_clearZoomCache()
+        local w, h = c.w * self.zoom, c.h * self.zoom
+        self.zoom_cache = Blitbuffer.new(w, h, bb:getType())
+        self.zoom_cache:paintRect(0, 0, w, h, Blitbuffer.COLOR_WHITE)
+        Template.draw(self.zoom_cache, self.document:templateFor(),
+            {x=0, y=0, w=w, h=h}, self.zoom)
+        Renderer.drawPage(self.zoom_cache, page, self.zoom,
+            -c.x * self.zoom, -c.y * self.zoom,
+            Screen.isColorEnabled and Screen:isColorEnabled())
+        self.zoom_cache_page = page
+    end
+    if self.zoom_cache then
+        view:blitFrom(self.zoom_cache, 0, 0,
+            math.floor((self.zoom_x-c.x)*self.zoom),
+            math.floor((self.zoom_y-c.y)*self.zoom), c.w, c.h)
+    else
+        -- Small in-memory test buffers do not implement getType.
+        view:paintRect(0, 0, c.w, c.h, Blitbuffer.COLOR_WHITE)
+        local area = {x=(c.x-self.zoom_x)*self.zoom,
+            y=(c.y-self.zoom_y)*self.zoom, w=c.w*self.zoom, h=c.h*self.zoom}
+        Template.draw(view, self.document:templateFor(), area, self.zoom)
+        Renderer.drawPage(view, page, self.zoom,
+            -self.zoom_x*self.zoom, -self.zoom_y*self.zoom,
+            Screen.isColorEnabled and Screen:isColorEnabled())
+    end
     if self.zoom_stroke then
         Renderer.drawPage(view, {strokes={self.zoom_stroke}}, self.zoom,
             -self.zoom_x * self.zoom, -self.zoom_y * self.zoom,
@@ -140,6 +171,7 @@ function Canvas:_endZoomContact()
         if stroke:count() > 0 then
             if stroke.tool == "highlighter" then stroke.tint = self.highlighter_color end
             self.document:addStroke(stroke)
+            self:_clearZoomCache()
             UIManager:unschedule(self.autosave_cb)
             UIManager:scheduleIn(2.5, self.autosave_cb)
             if self.on_change then self:on_change() end
@@ -147,6 +179,7 @@ function Canvas:_endZoomContact()
     end
     if self.zoom_erasing then
         self.document:commitBatch()
+        self:_clearZoomCache()
         if self.document.dirty then
             UIManager:unschedule(self.autosave_cb)
             UIManager:scheduleIn(2.5, self.autosave_cb)
@@ -193,6 +226,7 @@ function Canvas:_zoomStylus(slot, tool)
         end
         self.zoom_last_x, self.zoom_last_y = px, py
         if hit then
+            self:_clearZoomCache()
             self:_renderZoom(Screen.bb)
             Screen:refreshUI(c.x, c.y, c.w, c.h)
             if self.on_change then self:on_change() end
@@ -1431,6 +1465,7 @@ end
 -- and two overlapping refreshes would flicker.
 function Canvas:_repaintRegion(x, y, w, h, defer_refresh)
     if self.zoom > 1 then
+        self:_clearZoomCache()
         self:_renderZoom(Screen.bb)
         if not defer_refresh then
             local c = self.content
@@ -1731,6 +1766,7 @@ function Canvas:onTouchStart(_, ges)
     if self.zoom > 1 then
         if self:_touchIsPalm() then return true end
         self.zoom_touch_x, self.zoom_touch_y = self:_touchPoint(ges)
+        self.zoom_touch_moved = false
         return true
     end
     if self:_touchIsPalm() then return true end
@@ -1800,6 +1836,7 @@ function Canvas:onTouchPan(_, ges)
         local x, y = self:_touchPoint(ges)
         if x and self.zoom_touch_x then
             self:_zoomPan(x - self.zoom_touch_x, y - self.zoom_touch_y)
+            self.zoom_touch_moved = true
         end
         self.zoom_touch_x, self.zoom_touch_y = x, y
         return true
@@ -1889,7 +1926,9 @@ function Canvas:onPageSwipe(_, ges)
     if self.zoom > 1 then
         if self:_touchIsPalm() then return true end
         local first, last = ges.pos, ges.end_pos
-        if first and last then self:_zoomPan(last.x-first.x, last.y-first.y) end
+        if first and last and not self.zoom_touch_moved then
+            self:_zoomPan(last.x-first.x, last.y-first.y)
+        end
         return true
     end
     if self.selected_strokes or self.dragging_selection then return true end
@@ -2071,6 +2110,7 @@ end
 
 function Canvas:stop()
     if self.zoom > 1 then self:_endZoomContact() end
+    self:_clearZoomCache()
     self:_debugEvent("session-stop", nil, nil, nil, self.tool)
     self.debug_log_path = nil
     self.stopping = true

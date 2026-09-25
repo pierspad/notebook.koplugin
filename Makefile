@@ -25,7 +25,7 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # glob would run those as though they were tests.
 SUITES := run pages eraser palm safe i18n gallery shape lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange zoom
 
-.PHONY: all test lint verify package check-package ci clean install-hooks deploy version translations
+.PHONY: all test lint verify translations-check package check-package ci clean install-hooks deploy version translations
 
 all: verify package
 
@@ -53,7 +53,11 @@ lint:
 	}
 	@luacheck lua
 
-verify: lint test
+translations-check:
+	@command -v msgfmt >/dev/null 2>&1 || { echo "msgfmt is required to check translations" >&2; exit 1; }
+	@for catalogue in lua/locale/*.po; do msgfmt --check -o /dev/null "$$catalogue" || exit 1; done
+
+verify: lint test translations-check
 
 # The package is the plugin directory and nothing else: no tests, no tooling.
 # KOReader reads the .po catalogues at load, so those do ship.

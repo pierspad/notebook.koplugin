@@ -28,7 +28,7 @@ jobs:
       - name: Install LuaJIT and luacheck
         run: |
           sudo apt-get update
-          sudo apt-get install -y luajit lua5.1 luarocks
+          sudo apt-get install -y luajit lua5.1 luarocks gettext
           sudo luarocks install luacheck
 
       # One target, so that this and the pre-push hook cannot mean different

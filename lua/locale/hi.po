@@ -279,24 +279,6 @@ msgid "Purple"
 msgstr "बैंगनी"
 
 
-msgid "Red"
-msgstr "लाल"
-
-msgid "Orange"
-msgstr "नारंगी"
-
-msgid "Yellow"
-msgstr "पीला"
-
-msgid "Green"
-msgstr "हरा"
-
-msgid "Blue"
-msgstr "नीला"
-
-msgid "Purple"
-msgstr "बैंगनी"
-
 msgid "White"
 msgstr "सफ़ेद"
 
@@ -522,8 +504,8 @@ msgstr "पृष्ठ %1 / %2 — %3"
 msgid "Triangle"
 msgstr "Triangle"
 
-msgid "Pen button"
-msgstr "स्टाइलस बटन"
+msgid "Side button"
+msgstr "साइड बटन"
 
 msgid "Highlighter"
 msgstr "हाइलाइटर"
