@@ -521,3 +521,12 @@ msgstr "第 %1 頁，共 %2 頁 — %3"
 
 msgid "Triangle"
 msgstr "Triangle"
+
+msgid "Pen button"
+msgstr "觸控筆按鈕"
+
+msgid "Highlighter"
+msgstr "螢光筆"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "匯入的 PDF 頁面暫不支援縮放。"

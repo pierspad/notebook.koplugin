@@ -508,3 +508,12 @@ msgstr "Pagina %1 di %2 — %3"
 
 msgid "Triangle"
 msgstr "Triangolo"
+
+msgid "Pen button"
+msgstr "Pulsante della penna"
+
+msgid "Highlighter"
+msgstr "Evidenziatore"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "Lo zoom non è ancora disponibile sulle pagine PDF importate."

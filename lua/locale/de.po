@@ -526,3 +526,12 @@ msgstr "Seite %1 von %2 — %3"
 
 msgid "Triangle"
 msgstr "Triangle"
+
+msgid "Pen button"
+msgstr "Stifttaste"
+
+msgid "Highlighter"
+msgstr "Textmarker"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "Zoom ist für importierte PDF-Seiten noch nicht verfügbar."

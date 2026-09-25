@@ -520,3 +520,12 @@ msgstr "第 %1 页，共 %2 页 — %3"
 
 msgid "Triangle"
 msgstr "Triangle"
+
+msgid "Pen button"
+msgstr "手写笔按钮"
+
+msgid "Highlighter"
+msgstr "荧光笔"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "导入的 PDF 页面暂不支持缩放。"

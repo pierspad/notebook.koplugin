@@ -523,3 +523,12 @@ msgstr "ページ %1 / %2 — %3"
 
 msgid "Triangle"
 msgstr "Triangle"
+
+msgid "Pen button"
+msgstr "ペンのボタン"
+
+msgid "Highlighter"
+msgstr "蛍光ペン"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "インポートした PDF ページでは、まだズームを使用できません。"

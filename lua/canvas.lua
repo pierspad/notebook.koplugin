@@ -41,6 +41,7 @@ local Shape = require("shape")
 local Stroke = require("stroke")
 local Template = require("template")
 local Tuning = require("tuning")
+local Zoom = require("zoom")
 local UIManager = require("ui/uimanager")
 local time = require("ui/time")
 local _ = require("i18n")
@@ -93,7 +94,144 @@ local Canvas = InputContainer:extend{
     draw_with_finger = false,
     -- Called with -1 or 1 when the reader swipes to change page.
     on_page_swipe = nil,
+    zoom = 1,
 }
+
+function Canvas:setZoom(scale)
+    scale = scale == 2 and 2 or 1
+    if self.zoom == scale then return end
+    self:_endZoomContact()
+    self.zoom = scale
+    self.zoom_x, self.zoom_y = self.content.x, self.content.y
+    self:_debugEvent("zoom", nil, nil, nil, scale)
+    if self.owner then UIManager:setDirty(self.owner, "ui") end
+end
+
+function Canvas:_zoomPan(dx, dy)
+    local c = self.content
+    self.zoom_x = Zoom.clamp(self.zoom_x - dx / self.zoom, c.x, c.w, self.zoom)
+    self.zoom_y = Zoom.clamp(self.zoom_y - dy / self.zoom, c.y, c.h, self.zoom)
+    self:_renderZoom(Screen.bb)
+    Screen:refreshUI(c.x, c.y, c.w, c.h)
+end
+
+function Canvas:_renderZoom(bb)
+    local c = self.content
+    local view = bb:viewport(c.x, c.y, c.w, c.h)
+    view:paintRect(0, 0, c.w, c.h, Blitbuffer.COLOR_WHITE)
+    local area = {x=(c.x - self.zoom_x) * self.zoom,
+        y=(c.y - self.zoom_y) * self.zoom,
+        w=c.w * self.zoom, h=c.h * self.zoom}
+    Template.draw(view, self.document:templateFor(), area, self.zoom)
+    Renderer.drawPage(view, self.document:getPage(), self.zoom,
+        -self.zoom_x * self.zoom, -self.zoom_y * self.zoom,
+        Screen.isColorEnabled and Screen:isColorEnabled())
+    if self.zoom_stroke then
+        Renderer.drawPage(view, {strokes={self.zoom_stroke}}, self.zoom,
+            -self.zoom_x * self.zoom, -self.zoom_y * self.zoom,
+            Screen.isColorEnabled and Screen:isColorEnabled())
+    end
+end
+
+function Canvas:_endZoomContact()
+    if self.zoom_stroke then
+        local stroke = self.zoom_stroke
+        self.zoom_stroke = nil
+        if stroke:count() > 0 then
+            if stroke.tool == "highlighter" then stroke.tint = self.highlighter_color end
+            self.document:addStroke(stroke)
+            UIManager:unschedule(self.autosave_cb)
+            UIManager:scheduleIn(2.5, self.autosave_cb)
+            if self.on_change then self:on_change() end
+        end
+    end
+    if self.zoom_erasing then
+        self.document:commitBatch()
+        if self.document.dirty then
+            UIManager:unschedule(self.autosave_cb)
+            UIManager:scheduleIn(2.5, self.autosave_cb)
+        end
+        self.zoom_erasing = nil
+        self.zoom_last_x, self.zoom_last_y = nil, nil
+    end
+    self.pen_down = false
+    if self.zoom > 1 then
+        local c = self.content
+        self:_renderZoom(Screen.bb)
+        Screen:refreshUI(c.x, c.y, c.w, c.h)
+    end
+end
+
+function Canvas:_zoomStylus(slot, tool)
+    if slot.id == -1 then
+        local was_drawing = self.zoom_stroke ~= nil or self.zoom_erasing ~= nil
+        if was_drawing then self:_endZoomContact() end
+        return was_drawing
+    end
+    local x, y = slot.x, slot.y
+    if not x or not y then return true end
+    local c = self.content
+    if x < c.x or x >= c.x + c.w or y < c.y or y >= c.y + c.h then
+        if self.zoom_stroke or self.zoom_erasing then self:_endZoomContact() end
+        return false
+    end
+    self.pen_down = true
+    local px, py = Zoom.toPage(x, y, c, self.zoom, self.zoom_x, self.zoom_y)
+    if tool == "eraser" then
+        if self.zoom_stroke then self:_endZoomContact(); self.pen_down = true end
+        if not self.zoom_erasing then
+            self.document:beginBatch()
+            self.zoom_erasing = true
+        end
+        local lx, ly = self.zoom_last_x or px, self.zoom_last_y or py
+        local path = {lx, ly, px, py}
+        local hit
+        if self.eraser_mode == "area" then
+            hit = self.document:eraseAreaAlongPath(path, self.eraser_size)
+        else
+            hit = self.document:eraseAlongPath(path, self.eraser_size)
+        end
+        self.zoom_last_x, self.zoom_last_y = px, py
+        if hit then
+            self:_renderZoom(Screen.bb)
+            Screen:refreshUI(c.x, c.y, c.w, c.h)
+            if self.on_change then self:on_change() end
+        end
+        return true
+    end
+    if self.zoom_erasing then self:_endZoomContact(); self.pen_down = true end
+    if self.zoom_stroke and self.zoom_stroke.tool ~= tool then
+        self:_endZoomContact()
+        self.pen_down = true
+    end
+    local pressure = slot.pressure and math.max(0, math.min(1, slot.pressure / 4095)) or 1
+    if not self.zoom_stroke then
+        self.zoom_stroke = Stroke:new{tool=tool, width=self:widthFor(tool),
+            color=tool == "pen" and self:_penColor() or 0,
+            tint=tool == "highlighter" and Tuning.live_highlight_tint or nil}
+    end
+    local stroke = self.zoom_stroke
+    local n = stroke:count()
+    local lx, ly, lp = px, py, pressure
+    if n > 0 then lx, ly, lp = stroke:getPoint(n) end
+    if n == 0 or lx ~= px or ly ~= py then stroke:addPoint(px, py, pressure) end
+    local view = Screen.bb:viewport(c.x, c.y, c.w, c.h)
+    local scaled = {tool=stroke.tool, color=stroke.color, tint=stroke.tint,
+        width=stroke.width * self.zoom}
+    local x0, y0 = (lx - self.zoom_x) * self.zoom, (ly - self.zoom_y) * self.zoom
+    local x1, y1 = (px - self.zoom_x) * self.zoom, (py - self.zoom_y) * self.zoom
+    local rx, ry, rw, rh = Renderer.drawSegment(view, scaled, x0, y0, lp,
+        x1, y1, pressure, {x=0,y=0,w=c.w,h=c.h},
+        Screen.isColorEnabled and Screen:isColorEnabled())
+    if rx then
+        if tool == "highlighter" or stroke.color ~= 0 then
+            Screen:refreshUI(c.x+rx, c.y+ry, rw, rh)
+        else
+            Screen:refreshFast(c.x+rx, c.y+ry, rw, rh)
+        end
+    end
+    return true
+end
 
 -- Creating `notebook/_debug_`, `notebook/_debug_.scribe`, or opening a notebook
 -- named `_debug_` opts this session into a plain-text input log.
@@ -111,12 +249,16 @@ function Canvas:_debugEvent(kind, slot, x, y, tool)
         file = io.open(self.debug_log_path, "a")
         if not file then return end
     end
-    file:write(string.format("%s %s id=%s slot=%s raw=(%s,%s) screen=(%s,%s) tool=%s rotation=%s\n",
+    local format = "%s %s id=%s slot=%s raw=(%s,%s) screen=(%s,%s) tool=%s rotation=%s"
+        .. " eraser_button=%s highlighter_button=%s physical_tool=%s\n"
+    file:write(string.format(format,
         os.date("!%Y-%m-%dT%H:%M:%SZ"), kind,
         tostring(slot and slot.id), tostring(slot and slot.slot),
         tostring(slot and slot.x), tostring(slot and slot.y),
         tostring(x), tostring(y), tostring(tool),
-        tostring(Screen.getTouchRotation and Screen:getTouchRotation())))
+        tostring(Screen.getTouchRotation and Screen:getTouchRotation()),
+        tostring(Input.stylus_eraser_active), tostring(Input.stylus_highlighter_active),
+        tostring(self.physical_pen_tool)))
     file:close()
 end
 
@@ -1288,6 +1430,14 @@ end
 -- panel: the caller is about to refresh a region that covers this one anyway,
 -- and two overlapping refreshes would flicker.
 function Canvas:_repaintRegion(x, y, w, h, defer_refresh)
+    if self.zoom > 1 then
+        self:_renderZoom(Screen.bb)
+        if not defer_refresh then
+            local c = self.content
+            Screen:refreshUI(c.x, c.y, c.w, c.h)
+        end
+        return
+    end
     x, y, w, h = Rect.clamp(x, y, w, h, self.content)
     if not x then return end
 
@@ -1396,6 +1546,7 @@ function Canvas:onStylusEvent(slot)
     end
     local tool = self:resolveTool(slot_tool)
     self:_debugEvent("resolved-tool", raw_slot, slot.x, slot.y, tool)
+    if self.zoom > 1 then return self:_zoomStylus(slot, tool) end
 
     -- If tapping directly on the lasso menu buttons with the stylus, pass through to the menu
     if not self.transform_gesture and self.lasso_menu and self.lasso_menu.dimen and slot.x and slot.y then
@@ -1577,6 +1728,11 @@ under the ink.
 function Canvas:onTouchStart(_, ges)
     self:_debugEvent("touch-start", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
+    if self.zoom > 1 then
+        if self:_touchIsPalm() then return true end
+        self.zoom_touch_x, self.zoom_touch_y = self:_touchPoint(ges)
+        return true
+    end
     if self:_touchIsPalm() then return true end
 
     local x, y = self:_touchPoint(ges)
@@ -1639,6 +1795,15 @@ end
 function Canvas:onTouchPan(_, ges)
     self:_debugEvent("touch-pan", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
+    if self.zoom > 1 then
+        if self:_touchIsPalm() then return true end
+        local x, y = self:_touchPoint(ges)
+        if x and self.zoom_touch_x then
+            self:_zoomPan(x - self.zoom_touch_x, y - self.zoom_touch_y)
+        end
+        self.zoom_touch_x, self.zoom_touch_y = x, y
+        return true
+    end
     if self:_touchIsPalm() then return true end
 
     local x, y = self:_touchPoint(ges)
@@ -1676,6 +1841,10 @@ end
 function Canvas:onTouchRelease(_, ges)
     self:_debugEvent("touch-release", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
+    if self.zoom > 1 then
+        self.zoom_touch_x, self.zoom_touch_y = nil, nil
+        return true
+    end
     local start_x = self.touch_start_x
     local start_y = self.touch_start_y
     local end_x = self.touch_last_x or (ges and ges.pos and ges.pos.x)
@@ -1717,6 +1886,12 @@ end
 
 --- Horizontal finger swipes turn the page, the way they do in the reader.
 function Canvas:onPageSwipe(_, ges)
+    if self.zoom > 1 then
+        if self:_touchIsPalm() then return true end
+        local first, last = ges.pos, ges.end_pos
+        if first and last then self:_zoomPan(last.x-first.x, last.y-first.y) end
+        return true
+    end
     if self.selected_strokes or self.dragging_selection then return true end
     if self:_touchIsPalm() then return true end
     -- A swipe while drawing with a finger is part of the drawing, not a gesture.
@@ -1756,6 +1931,7 @@ end
 
 --- Authoritative render, straight from the vector model.
 function Canvas:paintTo(bb, x, y)
+    if self.zoom > 1 then return self:_renderZoom(bb) end
     local page=self.document:getPage()
     local background=page.background
     local cache_key=table.concat({tostring(page),self.document:templateFor() or "",
@@ -1894,6 +2070,7 @@ function Canvas:start()
 end
 
 function Canvas:stop()
+    if self.zoom > 1 then self:_endZoomContact() end
     self:_debugEvent("session-stop", nil, nil, nil, self.tool)
     self.debug_log_path = nil
     self.stopping = true

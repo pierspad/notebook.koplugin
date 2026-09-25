@@ -482,3 +482,12 @@ msgstr ""
 
 msgid "Triangle"
 msgstr ""
+
+msgid "Pen button"
+msgstr ""
+
+msgid "Highlighter"
+msgstr ""
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr ""

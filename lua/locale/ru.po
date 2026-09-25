@@ -522,3 +522,12 @@ msgstr "Страница %1 из %2 — %3"
 
 msgid "Triangle"
 msgstr "Triangle"
+
+msgid "Pen button"
+msgstr "Кнопка пера"
+
+msgid "Highlighter"
+msgstr "Маркер"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "Масштабирование импортированных страниц PDF пока недоступно."

@@ -521,3 +521,12 @@ msgstr "पृष्ठ %1 / %2 — %3"
 
 msgid "Triangle"
 msgstr "Triangle"
+
+msgid "Pen button"
+msgstr "स्टाइलस बटन"
+
+msgid "Highlighter"
+msgstr "हाइलाइटर"
+
+msgid "Zoom is not available on imported PDF pages yet."
+msgstr "आयात किए गए PDF पृष्ठों पर ज़ूम अभी उपलब्ध नहीं है।"

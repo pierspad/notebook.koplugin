@@ -243,6 +243,19 @@ function SettingsDialog:init()
         },
     }))
 
+    table.insert(content, VerticalSpan:new{ width = Size.padding.small })
+    table.insert(content, heading(_("Pen button")))
+    table.insert(content, switchRow("barrel_button_tool", self.canvas.barrel_button_tool, {
+        {
+            text = _("Highlighter"), value = "highlighter",
+            callback = function() self:_choose("barrel_button_tool", "highlighter") end,
+        },
+        {
+            text = _("Eraser"), value = "eraser",
+            callback = function() self:_choose("barrel_button_tool", "eraser") end,
+        },
+    }))
+
     self.panel = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
         color = Blitbuffer.COLOR_BLACK,

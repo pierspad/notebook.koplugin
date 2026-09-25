@@ -33,7 +33,8 @@ in the Notebook gallery (or create an empty file named `_debug_` inside `koreade
 Then open the `_debug_` notebook, reproduce the problem, and send
 `koreader/notebook/notebook-debug.log` with your device model and firmware version.
 The log records raw and screen coordinates, selected tools, touch events, and
-rotation; it does not contain notebook pages or handwriting content. The log
+rotation, plus the stylus button and physical tool flags; it does not contain
+notebook pages or handwriting content. The log
 rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too. Together
 the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_`
 marker file) and reopen Notebook to stop logging. You can then delete both log files.
@@ -60,6 +61,12 @@ provate e non implicano supporto confermato.
 
 - Fineliner, pressure-sensitive fountain pen and pencil, with a color palette.
 - Highlighter; whole-stroke and partial-stroke erasers.
+- A configurable pen button: use it for the highlighter or the eraser.
+- Experimental 2× writing view on ordinary notebook pages: tap `2×` in the
+  toolbar, drag with a finger to move around, and tap `1×` to return. Pen,
+  highlighter and eraser work in this view; selecting another tool returns to
+  the normal view. Imported PDF backgrounds and larger virtual page sizes are
+  not yet supported by this first zoom trial.
 - Palm rejection and direct stylus input.
 - Explicit triangles, rectangles, squares and circles; freehand ink stays freehand.
 - Lasso selection with move, cut, copy, paste and delete.

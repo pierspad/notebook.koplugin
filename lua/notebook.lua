@@ -349,6 +349,10 @@ end
 
 function Notebook:_showPages()
     self:_finishInteraction()
+    if self.canvas.zoom > 1 then
+        self.canvas:setZoom(1)
+        self.zoom_button:setText("2×", self.zoom_button.width)
+    end
     UIManager:show(PagePanel:new{
         document = self.document,
         on_goto = function(index)
@@ -379,8 +383,8 @@ function Notebook:_buildToolbar()
 
     self.clock_text = TextWidget:new{text=os.date("%H:%M"), face=Font:getFace("cfont", 18)}
     local clock_w = self.clock_text:getSize().w + gap
-    -- Back + tools + undo/redo/refresh + paste + previous/next + settings.
-    local n_cells = #TOOLS + 8
+    -- Back + tools + undo/redo/refresh + zoom + paste + previous/next + settings.
+    local n_cells = #TOOLS + 9
     local cell_overhead = 2 * (Size.border.thin + Size.padding.button)
     local avail = self.dimen.w - 2 * Size.padding.small
     local flexible = avail - n_gaps * gap - page_text_w - clock_w - n_cells * cell_overhead
@@ -431,6 +435,10 @@ function Notebook:_buildToolbar()
         callback = function() self.canvas:pasteClipboard() end,
         enabled_func = function() return Canvas.hasClipboard() end,
     }
+    self.zoom_button = self:_actionButton{
+        text = "2×", width = unit,
+        callback = function() self:_toggleZoom() end,
+    }
 
     self.toolbar_content = HorizontalGroup:new{
         align = "center",
@@ -459,6 +467,7 @@ function Notebook:_buildToolbar()
         },
         HorizontalSpan:new{ width = gap },
         self.paste_button,
+        self.zoom_button,
         self.prev_page_button,
         self.page_button,
         self.next_page_button,
@@ -487,11 +496,34 @@ end
 
 function Notebook:_selectTool(index)
     self:_finishInteraction()
+    if self.canvas.zoom > 1 and TOOLS[index].tool ~= "pen"
+        and TOOLS[index].tool ~= "highlighter" and TOOLS[index].tool ~= "eraser" then
+        self.canvas:setZoom(1)
+        self.zoom_button:setText("2×", self.zoom_button.width)
+    end
     self.canvas.tool = TOOLS[index].tool
     self.canvas:_debugEvent("select-tool", nil, nil, nil, self.canvas.tool)
     for i, btn in ipairs(self.tool_buttons) do
         btn:setSelected(i == index)
     end
+    self:_refreshToolbar()
+end
+
+function Notebook:_toggleZoom()
+    self:_finishInteraction()
+    if self.canvas.zoom == 1 and self.document:getPage().background then
+        UIManager:show(InfoMessage:new{
+            text = _("Zoom is not available on imported PDF pages yet."), timeout = 3,
+        })
+        return
+    end
+    local scale = self.canvas.zoom == 1 and 2 or 1
+    if scale > 1 and self.canvas.tool ~= "pen" and self.canvas.tool ~= "highlighter"
+        and self.canvas.tool ~= "eraser" then
+        self:_selectTool(1)
+    end
+    self.canvas:setZoom(scale)
+    self.zoom_button:setText(scale == 1 and "2×" or "1×", self.zoom_button.width)
     self:_refreshToolbar()
 end
 
@@ -820,6 +852,8 @@ function Notebook:_loadSettings()
     canvas.highlighter_color = marker_color == 0x1FFFF66 and 0x1FDD835 or marker_color
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
     canvas.eraser_mode       = get("eraser_mode", canvas.eraser_mode)
+    local button_tool = get("barrel_button_tool", canvas.barrel_button_tool)
+    canvas.barrel_button_tool = button_tool == "eraser" and "eraser" or "highlighter"
     canvas.draw_with_finger  = get("draw_with_finger", canvas.draw_with_finger)
     canvas.text_size         = get("text_size", 26)
     canvas.text_font         = get("text_font", "sans")
@@ -899,6 +933,10 @@ end
 
 function Notebook:_afterHistoryChange(page, x, y, w, h)
     if page ~= self.document.current_page then
+        if self.canvas.zoom > 1 then
+            self.canvas:setZoom(1)
+            self.zoom_button:setText("2×", self.zoom_button.width)
+        end
         -- The change belongs to another page; go there and repaint everything.
         self.document:goToPage(page)
         self:_fullRepaint()
@@ -920,6 +958,10 @@ end
 
 function Notebook:_turnPage(delta)
     self:_finishInteraction()
+    if self.canvas.zoom > 1 then
+        self.canvas:setZoom(1)
+        self.zoom_button:setText("2×", self.zoom_button.width)
+    end
     self.canvas:_debugEvent("turn-page", nil, nil, nil, delta)
     local target = self.document.current_page + delta
     if target < 1 then return end
