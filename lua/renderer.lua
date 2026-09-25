@@ -28,6 +28,29 @@ local HIGHLIGHT_TINT = 160
 
 local COLOR_BLACK = Blitbuffer.Color8(0)
 local COLOR_HIGHLIGHT_DEFAULT = Blitbuffer.Color8(HIGHLIGHT_TINT)
+local COLOR_HIGHLIGHT_YELLOW = 0x1FFFF66
+
+local function rgbColor(value)
+    if type(value) ~= "number" or value < 0x1000000 or value > 0x1FFFFFF then return nil end
+    return Blitbuffer.ColorRGB32(math.floor(value / 0x10000) % 0x100,
+        math.floor(value / 0x100) % 0x100, value % 0x100, 0xFF)
+end
+
+local function grayOfRGB(color)
+    return math.floor((4898 * color:getR() + 9618 * color:getG()
+        + 1869 * color:getB()) / 16384 + 0.5)
+end
+
+local function displayColor(value, color_enabled)
+    local color = rgbColor(value)
+    if not color_enabled or not color then
+        if type(value) == "number" and value > 0xFFFFFF then
+            return Blitbuffer.Color8(grayOfRGB(color or rgbColor(value)))
+        end
+        return Blitbuffer.Color8(value or 0)
+    end
+    return color
+end
 
 --- Returns the half-width, in pixels, a stroke should have at a given pressure.
 function Renderer.radiusFor(stroke, pressure)
@@ -39,10 +62,14 @@ end
 
 --- Paints a single round stamp. Small radii bypass paintCircle, which bails out
 -- entirely at r == 0 and is needlessly expensive for a dot.
-local function stamp(bb, x, y, r, color)
+local function stamp(bb, x, y, r, color, color_enabled)
     x, y = math.floor(x + 0.5), math.floor(y + 0.5)
     if r < 1 then
-        bb:paintRect(x, y, 1, 1, color)
+        if color_enabled and bb.setPixelClamped then
+            bb:setPixelClamped(x, y, color)
+        else
+            bb:paintRect(x, y, 1, 1, color)
+        end
     else
         -- w defaults to r, which gives a filled disc.
         bb:paintCircle(x, y, math.floor(r + 0.5), color)
@@ -57,7 +84,7 @@ past it. That makes highlighting idempotent -- over blank paper it gives gray,
 over black ink it leaves the ink alone, and over an existing highlight it changes
 nothing at all.
 --]]
-local function stampHighlight(bb, x, y, r, color)
+local function stampHighlight(bb, x, y, r, color, color_enabled)
     local x0 = math.floor(x - r + 0.5)
     local y0 = math.floor(y - r + 0.5)
     local s = math.floor(r * 2 + 0.5)
@@ -76,11 +103,8 @@ local function stampHighlight(bb, x, y, r, color)
     over them washed them out.
     --]]
     local tint
-    if type(color) == "number" then
-        tint = color
-    else
-        tint = color.getColor8 and color:getColor8().a or color.a or 0
-    end
+    if type(color) == "number" then tint = color
+    else tint = color.getColor8 and color:getColor8().a or color.a or 0 end
 
     --[[
     Clipped to the buffer, because getPixel and setPixel are not.
@@ -125,7 +149,7 @@ Paints the segment between two points and returns the dirtied rectangle.
 @tparam number x1,y1,p1 end point and its pressure
 @treturn number,number,number,number x, y, w, h of the dirtied area
 --]]
-function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
+function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled)
     local r0 = Renderer.radiusFor(stroke, p0)
     local r1 = Renderer.radiusFor(stroke, p1)
 
@@ -152,11 +176,18 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
     end
 
     local is_highlight = stroke.tool == "highlighter"
-    local color = COLOR_BLACK
+    local color = displayColor(stroke.color, color_enabled)
+    local is_rgb_ink = color_enabled and type(stroke.color) == "number"
+        and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF
     if is_highlight then
-        color = stroke.tint and Blitbuffer.Color8(stroke.tint) or COLOR_HIGHLIGHT_DEFAULT
+        local tint = stroke.tint or (color_enabled and COLOR_HIGHLIGHT_YELLOW)
+        color = tint and displayColor(tint, color_enabled) or COLOR_HIGHLIGHT_DEFAULT
+        if not color_enabled and stroke.tint then
+            local stored_rgb = rgbColor(stroke.tint)
+            if stored_rgb then color = Blitbuffer.Color8(grayOfRGB(stored_rgb)) end
+        end
     elseif stroke.color and stroke.color ~= 0 then
-        color = Blitbuffer.Color8(stroke.color)
+        color = displayColor(stroke.color, color_enabled)
     end
 
     local is_lasso = stroke.tool == "lasso"
@@ -192,7 +223,7 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip)
             if is_highlight then
                 stampHighlight(bb, x, y, r, color)
             else
-                stamp(bb, x, y, r, color)
+                stamp(bb, x, y, r, color, is_rgb_ink)
             end
         end
     end
@@ -222,21 +253,30 @@ function Renderer.drawDashedRect(bb, x, y, w, h, color)
 
     local max_x = bb:getWidth() - 1
     local max_y = bb:getHeight() - 1
+    local function span(px, py, width, height)
+        if bb.paintRect then
+            bb:paintRect(px, py, width, height, color)
+        elseif width > 1 then
+            for dx = 0, width - 1 do bb:setPixel(px+dx, py, color) end
+        else
+            for dy = 0, height - 1 do bb:setPixel(px, py+dy, color) end
+        end
+    end
 
-    -- The dash pattern is a function of the distance along each edge, so the
-    -- clipping is done on the loop bounds and never on the counter: a frame
-    -- half off the screen keeps the dashes the rest of it has.
+    -- Paint one span per dash; per-pixel FFI writes dominate large selections.
     local function hline(py)
         if py < 0 or py > max_y then return end
-        for i = math.max(0, -x), math.min(w, max_x - x) do
-            if (i % cycle) < dash then bb:setPixel(x + i, py, color) end
+        for i = 0, w, cycle do
+            local a, b = math.max(0, x+i), math.min(max_x, x+math.min(w, i+dash-1))
+            if b >= a then span(a, py, b-a+1, 1) end
         end
     end
 
     local function vline(px)
         if px < 0 or px > max_x then return end
-        for j = math.max(0, -y), math.min(h, max_y - y) do
-            if (j % cycle) < dash then bb:setPixel(px, y + j, color) end
+        for j = 0, h, cycle do
+            local a, b = math.max(0, y+j), math.min(max_y, y+math.min(h, j+dash-1))
+            if b >= a then span(px, a, 1, b-a+1) end
         end
     end
 
@@ -256,11 +296,64 @@ put back -- but a line crossing a corner of that region does not need its whole
 length rasterised, and stamping is expensive enough that the difference is the
 difference between a rub that keeps up with the hand and one that does not.
 --]]
-function Renderer.drawStroke(bb, stroke, clip)
+function Renderer.drawStroke(bb, stroke, clip, color_enabled)
     if stroke.text then return require("textobject").draw(bb,stroke,1,0,0,clip) end
     local n = stroke:count()
     if n == 0 then return end
 
+    -- Regular geometry is a primitive, not thousands of overlapping round
+    -- pen stamps. Scan each circle row once; rectangles need only four spans.
+    local kind = stroke.shape_kind
+    local axis_aligned = true
+    if kind == "rectangle" or kind == "square" then
+        local ax, ay = stroke:getPoint(1)
+        local bx, by = stroke:getPoint(2)
+        axis_aligned = math.abs(ay-by) < 0.01 and math.abs(bx-ax) > 0.01
+    elseif kind == "circle" then
+        axis_aligned = math.abs((stroke.x_max-stroke.x_min)-(stroke.y_max-stroke.y_min)) < 0.01
+    end
+    if axis_aligned and (kind == "circle" or kind == "rectangle" or kind == "square") then
+        local x0,y0 = stroke.x_min,stroke.y_min
+        local x1,y1 = stroke.x_max,stroke.y_max
+        local left = clip and math.max(0, math.floor(clip.x)) or 0
+        local top = clip and math.max(0, math.floor(clip.y)) or 0
+        local right = clip and math.min(bb:getWidth()-1, math.ceil(clip.x+clip.w)-1)
+            or bb:getWidth()-1
+        local bottom = clip and math.min(bb:getHeight()-1, math.ceil(clip.y+clip.h)-1)
+            or bb:getHeight()-1
+        if right < left or bottom < top then return end
+        local r = stroke.width/2
+        local color = displayColor(stroke.color or 0, color_enabled)
+        local rgb = color_enabled and type(stroke.color) == "number"
+            and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF
+            and bb.paintRectRGB32
+        local function span(y,a,b)
+            a,b=math.max(left,math.ceil(a)),math.min(right,math.floor(b))
+            if b>=a and y>=top and y<=bottom then
+                if rgb then bb:paintRectRGB32(a,y,b-a+1,1,color)
+                else bb:paintRect(a,y,b-a+1,1,color) end
+            end
+        end
+        if kind == "circle" then
+            local cx,cy=(x0+x1)/2,(y0+y1)/2
+            local outer=(x1-x0)/2+r
+            local inner=math.max(0,(x1-x0)/2-r)
+            for y=math.max(top,math.ceil(cy-outer)),math.min(bottom,math.floor(cy+outer)) do
+                local dy=y-cy
+                local dx=math.sqrt(math.max(0,outer*outer-dy*dy))
+                if math.abs(dy)<inner then
+                    local hole=math.sqrt(inner*inner-dy*dy)
+                    span(y,cx-dx,cx-hole); span(y,cx+hole,cx+dx)
+                else span(y,cx-dx,cx+dx) end
+            end
+        else
+            for y=math.max(top,math.ceil(y0-r)),math.min(bottom,math.floor(y1+r)) do
+                if y<=y0+r or y>=y1-r then span(y,x0-r,x1+r)
+                else span(y,x0-r,x0+r); span(y,x1-r,x1+r) end
+            end
+        end
+        return
+    end
     local ox, oy = 0, 0
     local target = bb
     if clip then
@@ -271,41 +364,9 @@ function Renderer.drawStroke(bb, stroke, clip)
         target = bb:viewport(ox, oy, w, h)
     end
     local bounds = clip and { w = target:getWidth(), h = target:getHeight() }
-    -- Regular geometry is a primitive, not thousands of overlapping round
-    -- pen stamps. Scan each circle row once; rectangles need only four spans.
-    local kind = stroke.shape_kind
-    if kind == "circle" or kind == "rectangle" or kind == "square" then
-        local x0,y0 = stroke.x_min-ox,stroke.y_min-oy
-        local x1,y1 = stroke.x_max-ox,stroke.y_max-oy
-        local r = stroke.width/2
-        local color = Blitbuffer.Color8(stroke.color or 0)
-        local function span(y,a,b)
-            a,b=math.max(0,math.ceil(a)),math.min(target:getWidth()-1,math.floor(b))
-            if b>=a and y>=0 and y<target:getHeight() then target:paintRect(a,y,b-a+1,1,color) end
-        end
-        if kind == "circle" then
-            local cx,cy=(x0+x1)/2,(y0+y1)/2
-            local outer=(x1-x0)/2+r
-            local inner=math.max(0,(x1-x0)/2-r)
-            for y=math.max(0,math.ceil(cy-outer)),math.min(target:getHeight()-1,math.floor(cy+outer)) do
-                local dy=y-cy
-                local dx=math.sqrt(math.max(0,outer*outer-dy*dy))
-                if math.abs(dy)<inner then
-                    local hole=math.sqrt(inner*inner-dy*dy)
-                    span(y,cx-dx,cx-hole); span(y,cx+hole,cx+dx)
-                else span(y,cx-dx,cx+dx) end
-            end
-        else
-            for y=math.max(0,math.ceil(y0-r)),math.min(target:getHeight()-1,math.floor(y1+r)) do
-                if y<=y0+r or y>=y1-r then span(y,x0-r,x1+r)
-                else span(y,x0-r,x0+r); span(y,x1-r,x1+r) end
-            end
-        end
-        return
-    end
     local function segment(x0, y0, p0, x1, y1, p1)
         Renderer.drawSegment(target, stroke, x0 - ox, y0 - oy, p0,
-            x1 - ox, y1 - oy, p1, bounds)
+            x1 - ox, y1 - oy, p1, bounds, color_enabled)
     end
 
     -- Short strokes have no index and are drawn whole: their bounding box has
@@ -333,9 +394,11 @@ function Renderer.drawStroke(bb, stroke, clip)
         local r = Renderer.radiusFor(stroke, p)
         if stroke.tool == "highlighter" then
             stampHighlight(target, x - ox, y - oy, r,
-                Blitbuffer.Color8(stroke.tint or HIGHLIGHT_TINT))
+                displayColor(stroke.tint or HIGHLIGHT_TINT, color_enabled))
         else
-            stamp(target, x - ox, y - oy, r, Blitbuffer.Color8(stroke.color))
+            stamp(target, x - ox, y - oy, r, displayColor(stroke.color, color_enabled),
+                color_enabled and type(stroke.color) == "number"
+                    and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF)
         end
         return
     end
@@ -356,11 +419,11 @@ rendering the full page and scaling the bitmap down, is the difference between
 touching a few thousand pixels and four and a half million -- which matters when
 a gallery has to produce one of these per notebook.
 --]]
-function Renderer.drawPage(bb, page, scale, ox, oy)
+function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
     ox, oy = ox or 0, oy or 0
     if (not scale or scale == 1) and ox == 0 and oy == 0 then
         for _, stroke in ipairs(page.strokes) do
-            Renderer.drawStroke(bb, stroke)
+            Renderer.drawStroke(bb, stroke, nil, color_enabled)
         end
         return
     end
@@ -382,13 +445,13 @@ function Renderer.drawPage(bb, page, scale, ox, oy)
             local px, py, pp = stroke:getPoint(1)
             if n == 1 then
                 Renderer.drawSegment(bb, scaled, px * scale + ox, py * scale + oy, pp,
-                    px * scale + ox, py * scale + oy, pp)
+                    px * scale + ox, py * scale + oy, pp, nil, color_enabled)
             else
                 for i = 2, n do
                     local x, y, p = stroke:getPoint(i)
                     Renderer.drawSegment(bb, scaled,
                         px * scale + ox, py * scale + oy, pp,
-                        x * scale + ox, y * scale + oy, p)
+                        x * scale + ox, y * scale + oy, p, nil, color_enabled)
                     px, py, pp = x, y, p
                 end
             end

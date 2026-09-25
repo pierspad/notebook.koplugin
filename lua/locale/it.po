@@ -263,17 +263,26 @@ msgstr "Stilografica"
 msgid "Pencil"
 msgstr "Matita"
 
-msgid "Straight line"
-msgstr "Linea retta"
-
-msgid "Pause at the end of a stroke"
-msgstr "Fermandoti alla fine del tratto"
-
-msgid "Arrow (straight or curved)"
-msgstr "Freccia retta o curva"
-
 msgid "Black"
 msgstr "Nero"
+
+msgid "Red"
+msgstr "Rosso"
+
+msgid "Orange"
+msgstr "Arancione"
+
+msgid "Yellow"
+msgstr "Giallo"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Blue"
+msgstr "Blu"
+
+msgid "Purple"
+msgstr "Viola"
 
 msgid "White"
 msgstr "Bianco"
@@ -496,3 +505,6 @@ msgstr "Pagina %1 di %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Sfondo bianco"
+
+msgid "Triangle"
+msgstr "Triangolo"

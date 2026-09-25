@@ -260,17 +260,44 @@ msgstr "Pióro wieczne"
 msgid "Pencil"
 msgstr "Ołówek"
 
-msgid "Straight line"
-msgstr "Linia prosta"
-
-msgid "Pause at the end of a stroke"
-msgstr "Przytrzymaj na końcu pociągnięcia"
-
-msgid "Arrow (straight or curved)"
-msgstr "Strzałka (prosta lub zakrzywiona)"
-
 msgid "Black"
 msgstr "Czarny"
+msgid "Red"
+msgstr "Czerwony"
+
+msgid "Orange"
+msgstr "Pomarańczowy"
+
+msgid "Yellow"
+msgstr "Żółty"
+
+msgid "Green"
+msgstr "Zielony"
+
+msgid "Blue"
+msgstr "Niebieski"
+
+msgid "Purple"
+msgstr "Fioletowy"
+
+
+msgid "Red"
+msgstr "Czerwony"
+
+msgid "Orange"
+msgstr "Pomarańczowy"
+
+msgid "Yellow"
+msgstr "Żółty"
+
+msgid "Green"
+msgstr "Zielony"
+
+msgid "Blue"
+msgstr "Niebieski"
+
+msgid "Purple"
+msgstr "Fioletowy"
 
 msgid "White"
 msgstr "Białe"
@@ -493,3 +520,6 @@ msgstr "Strona %1 z %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Białe tło"
+
+msgid "Triangle"
+msgstr "Triangle"

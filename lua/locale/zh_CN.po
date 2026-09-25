@@ -257,17 +257,44 @@ msgstr "钢笔"
 msgid "Pencil"
 msgstr "铅笔"
 
-msgid "Straight line"
-msgstr "直线"
-
-msgid "Pause at the end of a stroke"
-msgstr "笔画结束时停顿"
-
-msgid "Arrow (straight or curved)"
-msgstr "箭头 (直线或曲线)"
-
 msgid "Black"
 msgstr "黑色"
+msgid "Red"
+msgstr "红色"
+
+msgid "Orange"
+msgstr "橙色"
+
+msgid "Yellow"
+msgstr "黄色"
+
+msgid "Green"
+msgstr "绿色"
+
+msgid "Blue"
+msgstr "蓝色"
+
+msgid "Purple"
+msgstr "紫色"
+
+
+msgid "Red"
+msgstr "红色"
+
+msgid "Orange"
+msgstr "橙色"
+
+msgid "Yellow"
+msgstr "黄色"
+
+msgid "Green"
+msgstr "绿色"
+
+msgid "Blue"
+msgstr "蓝色"
+
+msgid "Purple"
+msgstr "紫色"
 
 msgid "White"
 msgstr "白色"
@@ -490,3 +517,6 @@ msgstr "第 %1 页，共 %2 页 — %3"
 
 #~ msgid "White background"
 #~ msgstr "白色背景"
+
+msgid "Triangle"
+msgstr "Triangle"

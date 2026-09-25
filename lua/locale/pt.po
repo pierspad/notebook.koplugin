@@ -261,17 +261,44 @@ msgstr "Caneta de tinta permanente"
 msgid "Pencil"
 msgstr "Lápis"
 
-msgid "Straight line"
-msgstr "Linha reta"
-
-msgid "Pause at the end of a stroke"
-msgstr "Pausar no final do traço"
-
-msgid "Arrow (straight or curved)"
-msgstr "Seta (reta ou curva)"
-
 msgid "Black"
 msgstr "Preto"
+msgid "Red"
+msgstr "Vermelho"
+
+msgid "Orange"
+msgstr "Laranja"
+
+msgid "Yellow"
+msgstr "Amarelo"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Blue"
+msgstr "Azul"
+
+msgid "Purple"
+msgstr "Roxo"
+
+
+msgid "Red"
+msgstr "Vermelho"
+
+msgid "Orange"
+msgstr "Laranja"
+
+msgid "Yellow"
+msgstr "Amarelo"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Blue"
+msgstr "Azul"
+
+msgid "Purple"
+msgstr "Roxo"
 
 msgid "White"
 msgstr "Branco"
@@ -494,3 +521,6 @@ msgstr "Página %1 de %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Fundo branco"
+
+msgid "Triangle"
+msgstr "Triangle"

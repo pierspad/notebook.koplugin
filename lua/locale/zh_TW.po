@@ -258,17 +258,44 @@ msgstr "鋼筆"
 msgid "Pencil"
 msgstr "鉛筆"
 
-msgid "Straight line"
-msgstr "直線"
-
-msgid "Pause at the end of a stroke"
-msgstr "筆畫結束時停頓"
-
-msgid "Arrow (straight or curved)"
-msgstr "箭頭 (直線或曲線)"
-
 msgid "Black"
 msgstr "黑色"
+msgid "Red"
+msgstr "紅色"
+
+msgid "Orange"
+msgstr "橙色"
+
+msgid "Yellow"
+msgstr "黃色"
+
+msgid "Green"
+msgstr "綠色"
+
+msgid "Blue"
+msgstr "藍色"
+
+msgid "Purple"
+msgstr "紫色"
+
+
+msgid "Red"
+msgstr "紅色"
+
+msgid "Orange"
+msgstr "橙色"
+
+msgid "Yellow"
+msgstr "黃色"
+
+msgid "Green"
+msgstr "綠色"
+
+msgid "Blue"
+msgstr "藍色"
+
+msgid "Purple"
+msgstr "紫色"
 
 msgid "White"
 msgstr "白色"
@@ -491,3 +518,6 @@ msgstr "第 %1 頁，共 %2 頁 — %3"
 
 #~ msgid "White background"
 #~ msgstr "白色背景"
+
+msgid "Triangle"
+msgstr "Triangle"

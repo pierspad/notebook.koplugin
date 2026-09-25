@@ -36,6 +36,30 @@ end
 
 io.write("shape recognition and geometry snapping\n")
 
+test("explicit triangle keeps rectangular drag bounds and black ink", function()
+    local triangle = Shape.create("triangle", 20, 30, 220, 130, 3, 0)
+    assertTrue(triangle, "triangle")
+    assertEq(triangle.shape_kind, "triangle", "kind")
+    assertEq(triangle.color, 0, "color")
+    assertEq(triangle:count(), 4, "closed vertices")
+    assertEq(triangle.x_min, 20, "left")
+    assertEq(triangle.x_max, 220, "right")
+    assertEq(triangle.y_min, 30, "top")
+    assertEq(triangle.y_max, 130, "bottom")
+end)
+
+test("edge resize and rotation use the original figure", function()
+    local triangle = Shape.create("triangle", 100, 100, 300, 200, 3, 0)
+    local wider = Shape.transform(triangle, "e", 400, 150, 300, 150)
+    assertEq(wider.x_min, 100, "fixed left edge")
+    assertEq(wider.x_max, 400, "moved right edge")
+    assertEq(triangle.x_max, 300, "original unchanged")
+    local rotated = Shape.transform(triangle, "rotate", 200, 250, 350, 150)
+    assertEq(rotated.shape_kind, "triangle", "kind retained")
+    assertTrue(rotated.y_max > triangle.y_max, "rotation moved vertices")
+    assertEq(rotated:count(), triangle:count(), "points retained")
+end)
+
 test("detects straight line from imperfect freehand stroke", function()
     local s = Stroke:new{ tool = "pen", width = 3 }
     for x = 100, 500, 10 do

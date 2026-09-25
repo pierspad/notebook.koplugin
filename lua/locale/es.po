@@ -260,17 +260,44 @@ msgstr "Pluma estilográfica"
 msgid "Pencil"
 msgstr "Lápiz"
 
-msgid "Straight line"
-msgstr "Línea recta"
-
-msgid "Pause at the end of a stroke"
-msgstr "Pausar al final del trazo"
-
-msgid "Arrow (straight or curved)"
-msgstr "Flecha (recta o curva)"
-
 msgid "Black"
 msgstr "Negro"
+msgid "Red"
+msgstr "Rojo"
+
+msgid "Orange"
+msgstr "Naranja"
+
+msgid "Yellow"
+msgstr "Amarillo"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Blue"
+msgstr "Azul"
+
+msgid "Purple"
+msgstr "Morado"
+
+
+msgid "Red"
+msgstr "Rojo"
+
+msgid "Orange"
+msgstr "Naranja"
+
+msgid "Yellow"
+msgstr "Amarillo"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Blue"
+msgstr "Azul"
+
+msgid "Purple"
+msgstr "Morado"
 
 msgid "White"
 msgstr "Blanco"
@@ -493,3 +520,6 @@ msgstr "Página %1 de %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Fondo blanco"
+
+msgid "Triangle"
+msgstr "Triangle"

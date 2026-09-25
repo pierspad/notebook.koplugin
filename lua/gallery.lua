@@ -986,7 +986,8 @@ function Gallery:_listenForSelectionPen()
     if not input or not input.registerStylusCallback then return end
     if not self.selection then
         if self.selection_pen_cb and input.stylus_callback == self.selection_pen_cb then
-            input:unregisterStylusCallback()
+            input:registerStylusCallback(self.previous_selection_callback)
+            self.previous_selection_callback = nil
         end
         return
     end
@@ -1018,9 +1019,15 @@ function Gallery:_listenForSelectionPen()
         end
         return self:onGalleryPan(nil, {pos=pos})
     end)
-    input:registerStylusCallback(self.selection_pen_cb)
+    if input.stylus_callback ~= self.selection_pen_cb then
+        self.previous_selection_callback = input.stylus_callback
+        input:registerStylusCallback(self.selection_pen_cb)
+    end
     Safe.onShutdown(self, function()
-        if input.stylus_callback == self.selection_pen_cb then input:unregisterStylusCallback() end
+        if input.stylus_callback == self.selection_pen_cb
+            or Safe.failed and input.stylus_callback == nil then
+            input:registerStylusCallback(self.previous_selection_callback)
+        end
         self.closed = true
         self:_cancelThumbnails()
     end)
@@ -1781,7 +1788,9 @@ and rasterising pages for a screen nobody is looking at.
 function Gallery:onCloseWidget()
     Safe.clearShutdown(self)
     if Device.input and Device.input.stylus_callback == self.selection_pen_cb
-        and self.selection_pen_cb then Device.input:unregisterStylusCallback() end
+        and self.selection_pen_cb then
+        Device.input:registerStylusCallback(self.previous_selection_callback)
+    end
     self.closed = true
     self:_cancelThumbnails()
     self:_freeWidgets()

@@ -263,17 +263,44 @@ msgstr "Füllfederhalter"
 msgid "Pencil"
 msgstr "Bleistift"
 
-msgid "Straight line"
-msgstr "Gerade Linie"
-
-msgid "Pause at the end of a stroke"
-msgstr "Am Strichende anhalten"
-
-msgid "Arrow (straight or curved)"
-msgstr "Pfeil (gerade oder gebogen)"
-
 msgid "Black"
 msgstr "Schwarz"
+msgid "Red"
+msgstr "Rot"
+
+msgid "Orange"
+msgstr "Orange"
+
+msgid "Yellow"
+msgstr "Gelb"
+
+msgid "Green"
+msgstr "Grün"
+
+msgid "Blue"
+msgstr "Blau"
+
+msgid "Purple"
+msgstr "Lila"
+
+
+msgid "Red"
+msgstr "Rot"
+
+msgid "Orange"
+msgstr "Orange"
+
+msgid "Yellow"
+msgstr "Gelb"
+
+msgid "Green"
+msgstr "Grün"
+
+msgid "Blue"
+msgstr "Blau"
+
+msgid "Purple"
+msgstr "Lila"
 
 msgid "White"
 msgstr "Weiß"
@@ -496,3 +523,6 @@ msgstr "Seite %1 von %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Weißer Hintergrund"
+
+msgid "Triangle"
+msgstr "Triangle"

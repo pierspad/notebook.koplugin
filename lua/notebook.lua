@@ -488,6 +488,7 @@ end
 function Notebook:_selectTool(index)
     self:_finishInteraction()
     self.canvas.tool = TOOLS[index].tool
+    self.canvas:_debugEvent("select-tool", nil, nil, nil, self.canvas.tool)
     for i, btn in ipairs(self.tool_buttons) do
         btn:setSelected(i == index)
     end
@@ -520,7 +521,29 @@ end
 --- Persists a canvas setting and applies it immediately.
 function Notebook:_setSetting(key, value)
     self.canvas[key] = value
+    self.canvas:_debugEvent("setting:" .. key, nil, nil, nil, value)
     G_reader_settings:saveSetting(SETTING_PREFIX .. key, value)
+end
+
+function Notebook:_colorActions(key, index)
+    local actions = {}
+    for i, option in ipairs({
+        {0, _("Black"), "black"}, {255, _("White"), "white"},
+        {0x1E53935, _("Red"), "red"}, {0x11E88E5, _("Blue"), "blue"},
+        {0x1FB8C00, _("Orange"), "orange"}, {0x143A047, _("Green"), "green"},
+        {0x1FDD835, _("Yellow"), "yellow"}, {0x18E24AA, _("Purple"), "purple"},
+    }) do
+        local value = option[1]
+        actions[#actions + 1] = {
+            swatch = option[3], section = i == 1 and _("Color") or nil,
+            text = option[2], selected = function() return self.canvas[key] == value end,
+            callback = function()
+                self:_setSetting(key, value)
+                self:_selectTool(index)
+            end,
+        }
+    end
+    return actions
 end
 
 function Notebook:_showPenOptions()
@@ -530,8 +553,6 @@ function Notebook:_showPenOptions()
         { "pen_style", "fineliner", _("Fineliner"), "notebook.fineliner" },
         { "pen_style", "fountain", _("Fountain pen"), "notebook.fountain" },
         { "pen_style", "pencil", _("Pencil"), "notebook.pencil" },
-        { "line_style", "line", _("Straight line"), "notebook.line", _("Pause at the end of a stroke") },
-        { "line_style", "arrow", _("Arrow (straight or curved)"), "notebook.arrow" },
     }) do
         local key, value, label = option[1], option[2], option[3]
         table.insert(actions, {
@@ -545,20 +566,7 @@ function Notebook:_showPenOptions()
             end,
         })
     end
-    for _index, option in ipairs({
-        { 0, _("Black"), "black" },
-        { 255, _("White"), "white" },
-    }) do
-        local value = option[1]
-        table.insert(actions, {
-            swatch = option[3], section = value == 0 and _("Color") or nil,
-            text = option[2], selected = function() return self.canvas.pen_color == value end,
-            callback = function()
-                self:_setSetting("pen_color", value)
-                self:_selectTool(1)
-            end,
-        })
-    end
+    for _, action in ipairs(self:_colorActions("pen_color", 1)) do actions[#actions + 1] = action end
     self:_showToolMenu(1, _("Pen type"), actions, "pen_width")
 end
 
@@ -591,7 +599,8 @@ function Notebook:_showToolOptions(index)
     local tool = TOOLS[index].tool
     if tool == "pen" then return self:_showPenOptions() end
     if tool == "highlighter" then
-        return self:_showToolMenu(index, _("Marker size"), {}, "highlighter_width")
+        local colors = self:_colorActions("highlighter_color", index)
+        return self:_showToolMenu(index, _("Marker size"), colors, "highlighter_width")
     end
     local actions = {}
     if tool == "eraser" then
@@ -604,12 +613,17 @@ function Notebook:_showToolOptions(index)
         return self:_showToolMenu(index, _("Eraser size"), actions, "eraser_size")
     end
     if tool == "shape" then
-        for _index, option in ipairs({{"square", _("Square")}, {"rectangle", _("Rectangle")}, {"circle", _("Circle")}}) do
+        for _index, option in ipairs({
+            {"square", _("Square")}, {"rectangle", _("Rectangle")},
+            {"circle", _("Circle")}, {"triangle", _("Triangle")},
+        }) do
             local kind = option[1]
             table.insert(actions, {icon="notebook." .. kind,
                 text=option[2], selected=function() return self.canvas.shape_kind == kind end,
                 callback=function() self:_setSetting("shape_kind", kind) end})
         end
+        local colors = self:_colorActions("shape_color", index)
+        for _, action in ipairs(colors) do actions[#actions + 1] = action end
         return self:_showToolMenu(index, _("Shapes"), actions)
     end
     if tool == "text" then
@@ -796,9 +810,14 @@ function Notebook:_loadSettings()
     canvas.pen_style = (style == "fountain" or style == "pencil") and style or "fineliner"
     canvas.line_style = get("line_style", "line") == "arrow" and "arrow" or "line"
     canvas.shape_kind        = get("shape_kind", "rectangle")
+    canvas.shape_color       = get("shape_color", 0)
     canvas.pen_width         = get("pen_width", canvas.pen_width)
-    canvas.pen_color         = get("pen_color", 0) == 255 and 255 or 0
+    local pen_color = get("pen_color", 0)
+    canvas.pen_color = type(pen_color) == "number" and pen_color or 0
     canvas.highlighter_width = get("highlighter_width", canvas.highlighter_width)
+    local marker_color = get("highlighter_color", canvas.highlighter_color)
+    -- The former default yellow was stored before it appeared in the palette.
+    canvas.highlighter_color = marker_color == 0x1FFFF66 and 0x1FDD835 or marker_color
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
     canvas.eraser_mode       = get("eraser_mode", canvas.eraser_mode)
     canvas.draw_with_finger  = get("draw_with_finger", canvas.draw_with_finger)
@@ -864,6 +883,7 @@ end
 
 function Notebook:_undo()
     self:_finishInteraction()
+    self.canvas:_debugEvent("undo", nil, nil, nil, self.canvas.tool)
     local page, x, y, w, h = self.document:undo()
     if not page then return end
     self:_afterHistoryChange(page, x, y, w, h)
@@ -871,6 +891,7 @@ end
 
 function Notebook:_redo()
     self:_finishInteraction()
+    self.canvas:_debugEvent("redo", nil, nil, nil, self.canvas.tool)
     local page, x, y, w, h = self.document:redo()
     if not page then return end
     self:_afterHistoryChange(page, x, y, w, h)
@@ -899,6 +920,7 @@ end
 
 function Notebook:_turnPage(delta)
     self:_finishInteraction()
+    self.canvas:_debugEvent("turn-page", nil, nil, nil, delta)
     local target = self.document.current_page + delta
     if target < 1 then return end
     if target > self.document:pageCount() then

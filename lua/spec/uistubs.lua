@@ -407,6 +407,7 @@ function stubs.install(fs)
             getWidth = function() return SCREEN_W end,
             getHeight = function() return SCREEN_H end,
             scaleBySize = function(_, n) return scaled(n) end,
+            isColorEnabled = function() return false end,
         },
         isTouchDevice = function() return true end,
         input = {},
@@ -450,6 +451,15 @@ function stubs.install(fs)
         COLOR_WHITE = 0xff,
         COLOR_BLACK = 0x00,
         Color8 = function(c) return c end,
+        ColorRGB32 = function(r, g, b, a)
+            return { r = r, g = g, b = b, alpha = a,
+                getR = function(s) return s.r end,
+                getG = function(s) return s.g end,
+                getB = function(s) return s.b end,
+                getColor8 = function(s)
+                    return { a = math.floor((4898*s.r + 9618*s.g + 1869*s.b)/16384 + 0.5) }
+                end }
+        end,
     }
 
     package.loaded["datastorage"] = {

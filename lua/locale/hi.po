@@ -258,17 +258,44 @@ msgstr "फाउंटेन पेन"
 msgid "Pencil"
 msgstr "पेंसिल"
 
-msgid "Straight line"
-msgstr "सीधी रेखा"
-
-msgid "Pause at the end of a stroke"
-msgstr "स्ट्रोक के अंत में रुकें"
-
-msgid "Arrow (straight or curved)"
-msgstr "तीर (सीधा या घुमावदार)"
-
 msgid "Black"
 msgstr "काला"
+msgid "Red"
+msgstr "लाल"
+
+msgid "Orange"
+msgstr "नारंगी"
+
+msgid "Yellow"
+msgstr "पीला"
+
+msgid "Green"
+msgstr "हरा"
+
+msgid "Blue"
+msgstr "नीला"
+
+msgid "Purple"
+msgstr "बैंगनी"
+
+
+msgid "Red"
+msgstr "लाल"
+
+msgid "Orange"
+msgstr "नारंगी"
+
+msgid "Yellow"
+msgstr "पीला"
+
+msgid "Green"
+msgstr "हरा"
+
+msgid "Blue"
+msgstr "नीला"
+
+msgid "Purple"
+msgstr "बैंगनी"
 
 msgid "White"
 msgstr "सफ़ेद"
@@ -491,3 +518,6 @@ msgstr "पृष्ठ %1 / %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "सफ़ेद पृष्ठभूमि"
+
+msgid "Triangle"
+msgstr "Triangle"

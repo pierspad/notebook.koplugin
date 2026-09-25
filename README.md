@@ -24,21 +24,62 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 
 Notebooks are stored in `koreader/notebook/`.
 
+### Input debug log
+
+To capture a device-specific pen problem, create an empty file named `_debug_`
+inside `koreader/notebook/`, then close and reopen Notebook. Reproduce the
+problem and send `koreader/notebook/notebook-debug.log` with the device model,
+firmware version, KOReader version, and a short description of where you touched
+the display. The log records raw and screen coordinates, selected tools, touch
+events, and rotation; it does not contain notebook pages or handwriting content.
+The log rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too.
+Together the two files use at most about 2 MB. Delete `_debug_` and reopen
+Notebook to stop logging. You can then delete both log files.
+
+## Dispositivi
+
+### Testati
+
+- Amazon Kindle Scribe (1ª generazione)
+
+### Da verificare
+
+- Altri modelli Kindle Scribe
+- Dispositivi KOReader con penna/stilo
+
+Notebook è un plugin di KOReader; la compatibilità non dipende dal launcher
+(per esempio ZenUI o Simple UI). Le voci “da verificare” non sono ancora state
+provate e non implicano supporto confermato.
+
 > [!TIP]
 > You can also place Notebook directly on KOReader's bottom navigation bar using [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) (Custom quick actions → Plugin → Notebook, icon `F405`).
 
 ## Features
 
-- Fineliner, pressure-sensitive fountain pen and pencil, with black or white ink.
+- Fineliner, pressure-sensitive fountain pen and pencil, with a color palette.
 - Highlighter; whole-stroke and partial-stroke erasers.
 - Palm rejection and direct stylus input.
-- Lines, arrows, rectangles, squares and circles.
+- Explicit triangles, rectangles, squares and circles; freehand ink stays freehand.
 - Lasso selection with move, cut, copy, paste and delete.
 - Editable text, multiple pages and per-page paper templates.
 - PDF and Xournal++ export; optional LocalSend integration.
 
 Hold or double-tap a tool button to open its options. After cutting or copying,
 use the Paste button in the top bar.
+
+### Custom pen icons
+
+KOReader looks in its user `icons` directory before bundled icons. On Kindle,
+place your SVGs in `/mnt/us/koreader/icons/` with these exact names:
+`notebook.pen.svg` (toolbar), `notebook.fineliner.svg` (Fineliner option), and
+`notebook.pencil.svg` (Pencil option). The current fountain pen icon is
+`notebook.fountain.svg` if you ever want to replace it too. Use a square
+`viewBox="0 0 24 24"`, then restart KOReader so its icon cache sees the files.
+These files stay outside the plugin directory when the plugin is updated.
+
+The KOReader desktop emulator can check the color palette and grayscale
+fallback, but its display is monochrome. To confirm actual color rendering,
+test on a color e-ink device.
 
 ## Development
 

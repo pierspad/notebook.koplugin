@@ -52,6 +52,23 @@ local ColorSwatch = Widget:extend{
     selected = false,
 }
 
+local SWATCH_COLORS = {
+    black = Blitbuffer.ColorRGB32(0x00, 0x00, 0x00, 0xFF),
+    red = Blitbuffer.ColorRGB32(0xE5, 0x39, 0x35, 0xFF),
+    orange = Blitbuffer.ColorRGB32(0xFB, 0x8C, 0x00, 0xFF),
+    yellow = Blitbuffer.ColorRGB32(0xFD, 0xD8, 0x35, 0xFF),
+    green = Blitbuffer.ColorRGB32(0x43, 0xA0, 0x47, 0xFF),
+    blue = Blitbuffer.ColorRGB32(0x1E, 0x88, 0xE5, 0xFF),
+    purple = Blitbuffer.ColorRGB32(0x8E, 0x24, 0xAA, 0xFF),
+    white = Blitbuffer.ColorRGB32(0xFF, 0xFF, 0xFF, 0xFF),
+}
+
+local function swatchColor(color)
+    local rgb = SWATCH_COLORS[color] or SWATCH_COLORS.black
+    if Screen:isColorEnabled() then return rgb end
+    return rgb:getColor8()
+end
+
 function ColorSwatch:init()
     self.dimen = Geom:new{ w = ICON_SZ, h = ICON_SZ }
 end
@@ -59,14 +76,15 @@ end
 function ColorSwatch:paintTo(bb, x, y)
     local cx, cy = x + math.floor(ICON_SZ / 2), y + math.floor(ICON_SZ / 2)
     local outer, inner = math.floor(ICON_SZ * 0.36), math.floor(ICON_SZ * 0.27)
-    if self.color == "black" then
-        if self.selected then bb:paintCircle(cx, cy, outer, Blitbuffer.COLOR_WHITE) end
-        bb:paintCircle(cx, cy, self.selected and inner or outer, Blitbuffer.COLOR_BLACK)
-    elseif self.selected then
-        bb:paintCircle(cx, cy, outer, Blitbuffer.COLOR_WHITE)
-    else
+    local color = swatchColor(self.color)
+    if self.selected then
+        bb:paintCircle(cx, cy, outer,
+            self.color == "black" and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK)
+    end
+    bb:paintCircle(cx, cy, self.selected and inner or outer, color)
+    if self.color == "white" and not self.selected then
         bb:paintCircle(cx, cy, outer, Blitbuffer.COLOR_BLACK)
-        bb:paintCircle(cx, cy, inner, Blitbuffer.COLOR_WHITE)
+        bb:paintCircle(cx, cy, inner, color)
     end
 end
 
@@ -192,7 +210,9 @@ function ActionMenu:init()
         })
     end
 
-    for i, action in ipairs(self.actions or {}) do
+    local i = 1
+    while i <= #(self.actions or {}) do
+        local action = self.actions[i]
         if action.section then
             table.insert(content, CenterContainer:new{
                 dimen = Geom:new{w=width, h=math.floor(ROW_H * 0.7)},
@@ -205,24 +225,34 @@ function ActionMenu:init()
                 background = Blitbuffer.COLOR_LIGHT_GRAY,
             })
         end
+        local pair = action.swatch and self.actions[i + 1] and self.actions[i + 1].swatch
+        local function makeRow(item)
         local row = Row:new{
-            icon = action.icon,
-            icon_selected = action.icon_selected,
-            swatch = action.swatch,
-            icon_text = action.icon_text,
-            icon_font = action.icon_font,
-            icon_size = action.icon_size,
-            icon_bold = action.icon_bold,
-            text = action.text,
-            selected = actionIsSelected(action),
-            width = width,
+            icon = item.icon,
+            icon_selected = item.icon_selected,
+            swatch = item.swatch,
+            icon_text = item.icon_text,
+            icon_font = item.icon_font,
+            icon_size = item.icon_size,
+            icon_bold = item.icon_bold,
+            text = item.text,
+            selected = actionIsSelected(item),
+            width = pair and math.floor(width / 2) or width,
             callback = function()
-                action.callback()
+                item.callback()
                 self:_refreshRows()
             end,
         }
-        self.action_rows[#self.action_rows + 1] = { row = row, action = action }
-        table.insert(content, row)
+        self.action_rows[#self.action_rows + 1] = { row = row, action = item }
+        return row
+        end
+        if pair then
+            table.insert(content, HorizontalGroup:new{align="center", makeRow(action), makeRow(self.actions[i + 1])})
+            i = i + 2
+        else
+            table.insert(content, makeRow(action))
+            i = i + 1
+        end
     end
 
     if self.footer then table.insert(content, self.footer) end

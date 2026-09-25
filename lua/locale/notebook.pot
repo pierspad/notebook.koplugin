@@ -249,16 +249,25 @@ msgstr ""
 msgid "Pencil"
 msgstr ""
 
-msgid "Straight line"
-msgstr ""
-
-msgid "Pause at the end of a stroke"
-msgstr ""
-
-msgid "Arrow (straight or curved)"
-msgstr ""
-
 msgid "Black"
+msgstr ""
+
+msgid "Red"
+msgstr ""
+
+msgid "Orange"
+msgstr ""
+
+msgid "Yellow"
+msgstr ""
+
+msgid "Green"
+msgstr ""
+
+msgid "Blue"
+msgstr ""
+
+msgid "Purple"
 msgstr ""
 
 msgid "White"
@@ -469,4 +478,7 @@ msgid "Compressing"
 msgstr ""
 
 msgid "Page %1 of %2 — %3"
+msgstr ""
+
+msgid "Triangle"
 msgstr ""

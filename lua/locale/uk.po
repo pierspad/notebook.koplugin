@@ -259,17 +259,44 @@ msgstr "Перова ручка"
 msgid "Pencil"
 msgstr "Олівець"
 
-msgid "Straight line"
-msgstr "Пряма лінія"
-
-msgid "Pause at the end of a stroke"
-msgstr "Затримати в кінці штриха"
-
-msgid "Arrow (straight or curved)"
-msgstr "Стрілка (пряма або зігнута)"
-
 msgid "Black"
 msgstr "Чорний"
+msgid "Red"
+msgstr "Червоний"
+
+msgid "Orange"
+msgstr "Помаранчевий"
+
+msgid "Yellow"
+msgstr "Жовтий"
+
+msgid "Green"
+msgstr "Зелений"
+
+msgid "Blue"
+msgstr "Синій"
+
+msgid "Purple"
+msgstr "Фіолетовий"
+
+
+msgid "Red"
+msgstr "Червоний"
+
+msgid "Orange"
+msgstr "Помаранчевий"
+
+msgid "Yellow"
+msgstr "Жовтий"
+
+msgid "Green"
+msgstr "Зелений"
+
+msgid "Blue"
+msgstr "Синій"
+
+msgid "Purple"
+msgstr "Фіолетовий"
 
 msgid "White"
 msgstr "Білий"
@@ -492,3 +519,6 @@ msgstr "Сторінка %1 з %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Білий фон"
+
+msgid "Triangle"
+msgstr "Triangle"

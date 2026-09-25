@@ -260,17 +260,44 @@ msgstr "万年筆"
 msgid "Pencil"
 msgstr "鉛筆"
 
-msgid "Straight line"
-msgstr "直線"
-
-msgid "Pause at the end of a stroke"
-msgstr "描画終了時に静止"
-
-msgid "Arrow (straight or curved)"
-msgstr "矢印 (直線または曲線)"
-
 msgid "Black"
 msgstr "黒"
+msgid "Red"
+msgstr "赤"
+
+msgid "Orange"
+msgstr "オレンジ"
+
+msgid "Yellow"
+msgstr "黄"
+
+msgid "Green"
+msgstr "緑"
+
+msgid "Blue"
+msgstr "青"
+
+msgid "Purple"
+msgstr "紫"
+
+
+msgid "Red"
+msgstr "赤"
+
+msgid "Orange"
+msgstr "オレンジ"
+
+msgid "Yellow"
+msgstr "黄"
+
+msgid "Green"
+msgstr "緑"
+
+msgid "Blue"
+msgstr "青"
+
+msgid "Purple"
+msgstr "紫"
 
 msgid "White"
 msgstr "白"
@@ -493,3 +520,6 @@ msgstr "ページ %1 / %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "白い背景"
+
+msgid "Triangle"
+msgstr "Triangle"

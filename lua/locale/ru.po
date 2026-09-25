@@ -259,17 +259,44 @@ msgstr "Перьевая ручка"
 msgid "Pencil"
 msgstr "Карандаш"
 
-msgid "Straight line"
-msgstr "Прямая линия"
-
-msgid "Pause at the end of a stroke"
-msgstr "Пауза в конце штриха"
-
-msgid "Arrow (straight or curved)"
-msgstr "Стрелка (прямая или изогнутая)"
-
 msgid "Black"
 msgstr "Чёрный"
+msgid "Red"
+msgstr "Красный"
+
+msgid "Orange"
+msgstr "Оранжевый"
+
+msgid "Yellow"
+msgstr "Жёлтый"
+
+msgid "Green"
+msgstr "Зелёный"
+
+msgid "Blue"
+msgstr "Синий"
+
+msgid "Purple"
+msgstr "Фиолетовый"
+
+
+msgid "Red"
+msgstr "Красный"
+
+msgid "Orange"
+msgstr "Оранжевый"
+
+msgid "Yellow"
+msgstr "Жёлтый"
+
+msgid "Green"
+msgstr "Зелёный"
+
+msgid "Blue"
+msgstr "Синий"
+
+msgid "Purple"
+msgstr "Фиолетовый"
 
 msgid "White"
 msgstr "Белый"
@@ -492,3 +519,6 @@ msgstr "Страница %1 из %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Белый фон"
+
+msgid "Triangle"
+msgstr "Triangle"

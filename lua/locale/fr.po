@@ -261,17 +261,44 @@ msgstr "Stylo plume"
 msgid "Pencil"
 msgstr "Crayon"
 
-msgid "Straight line"
-msgstr "Ligne droite"
-
-msgid "Pause at the end of a stroke"
-msgstr "Pause en fin de trait"
-
-msgid "Arrow (straight or curved)"
-msgstr "Flèche (droite ou courbe)"
-
 msgid "Black"
 msgstr "Noir"
+msgid "Red"
+msgstr "Rouge"
+
+msgid "Orange"
+msgstr "Orange"
+
+msgid "Yellow"
+msgstr "Jaune"
+
+msgid "Green"
+msgstr "Vert"
+
+msgid "Blue"
+msgstr "Bleu"
+
+msgid "Purple"
+msgstr "Violet"
+
+
+msgid "Red"
+msgstr "Rouge"
+
+msgid "Orange"
+msgstr "Orange"
+
+msgid "Yellow"
+msgstr "Jaune"
+
+msgid "Green"
+msgstr "Vert"
+
+msgid "Blue"
+msgstr "Bleu"
+
+msgid "Purple"
+msgstr "Violet"
 
 msgid "White"
 msgstr "Blanc"
@@ -494,3 +521,6 @@ msgstr "Page %1 sur %2 — %3"
 
 #~ msgid "White background"
 #~ msgstr "Arrière-plan blanc"
+
+msgid "Triangle"
+msgstr "Triangle"

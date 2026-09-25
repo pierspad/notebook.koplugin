@@ -32,6 +32,20 @@ doc:undo(); assert(doc:getPage().strokes[1]==original, 'resize undo restores ori
 doc:redo(); assert(doc:getPage().strokes[1]==resized, 'resize redo')
 assert(Stroke:deserialize(resized:serialize()).shape_kind=='rectangle', 'shape metadata round trips')
 assert(resized:clone().shape_kind=='rectangle', 'clipboard keeps geometry')
+local east_x, east_y = resized.x_max, (resized.y_min+resized.y_max)/2
+assert(c:_shapeHandleAt(resized,east_x,east_y)=='e', 'right edge resize handle missing')
+local rotate_x = resized.x_max + Device.screen:scaleBySize(42)
+local rotate_y = east_y
+assert(c:_shapeHandleAt(resized,rotate_x,rotate_y)=='rotate', 'rotation handle missing')
+pen(c,rotate_x,rotate_y)
+pen(c,rotate_y+100,rotate_x)
+pen(c,rotate_y+100,rotate_x,true)
+local rotated=doc:getPage().strokes[1]
+assert(rotated~=resized and rotated.shape_kind=='rectangle', 'rotation did not replace the shape')
+doc:undo(); assert(doc:getPage().strokes[1]==resized, 'rotation undo restores original')
+doc:redo(); assert(doc:getPage().strokes[1]==rotated, 'rotation redo restores figure')
+c:_deselectLasso()
+doc:undo(); assert(doc:getPage().strokes[1]==resized, 'rotation undo preserves later tests')
 for _,kind in ipairs({'square','circle'}) do
     local shape=Shape.create(kind,300,350,100,100,3)
     assert(math.abs((shape.x_max-shape.x_min)-(shape.y_max-shape.y_min))<0.01, 'aspect ratio retained')
@@ -70,6 +84,9 @@ UI.getTopmostVisibleWidget=function() return {} end
 assert(not cb(nil,{id=1,x=15,y=15}), 'pen must reach dialog over gallery')
 g:onCloseWidget(); assert(not Device.input.stylus_callback, 'gallery unregisters callback')
 local nb=require('notebook'):new{document=doc}
+assert(nb.canvas.pen_color==0 and nb.canvas.shape_color==0
+    and nb.canvas.highlighter_color==0x1FDD835,
+    'fresh notebook colors must be black pen, yellow marker, black shapes')
 nb:paintTo(Device.screen.bb,0,0)
 nb:_showToolOptions(1)
 local menu=rec.shown[#rec.shown]
@@ -78,7 +95,8 @@ local selected_rows=0
 for _,item in ipairs(menu.action_rows) do
     if item.row.selected then selected_rows=selected_rows+1 end
 end
-assert(selected_rows==3, 'pen menu marks unselected rows as selected')
+assert(selected_rows==2, 'pen menu marks unselected rows as selected')
+assert(menu.actions[4].selected(), 'black pen color is not preselected')
 assert(nb.ges_events == nil or nb.disable_double_tap == false, 'notebook does not enable double tap')
 assert(nb.tool_buttons[1].ges_events.DoubleTap, 'tool has no double-tap option gesture')
 assert(menu.disable_double_tap == false, 'open menu disables double tap')
@@ -92,8 +110,11 @@ assert(nb.canvas.pen_width==14 and #rec.closed==closed_before,
     'choosing a width closed the menu or did not apply')
 menu.action_rows[2].row:onTap()
 assert(#rec.closed==closed_before, 'choosing a pen style closed the menu')
-assert(menu.actions[6].swatch=='black' and menu.actions[7].swatch=='white',
-    'pen colors are not rendered as background-independent swatches')
+assert(menu.actions[4].swatch=='black' and menu.actions[5].swatch=='white'
+    and menu.actions[6].swatch=='red' and menu.actions[11].swatch=='purple',
+    'pen color palette is missing swatches')
+menu.actions[6].callback()
+assert(nb.canvas.pen_color==0x1E53935, 'color choice was not applied to the pen')
 assert(menu.footer:getSize().w==menu.width,
     'size choices do not fill the menu width')
 
@@ -143,10 +164,20 @@ for _,i in ipairs({2,3,5,6}) do
     nb:_showToolOptions(i)
     menu=rec.shown[#rec.shown]
     assert(menu.anchor==nb.tool_buttons[i].dimen, 'popover anchored to its tool')
-    if i==5 then assert(#menu.actions==3)
+    if i==5 then assert(#menu.actions==12)
     elseif i==6 then assert(#menu.actions==11)
     else assert(menu.footer) end
 end
+nb:_showToolOptions(5)
+local shape_menu=rec.shown[#rec.shown]
+assert(shape_menu.actions[5].selected(), 'black shape color is not preselected')
+assert(shape_menu.actions[4].text=='Triangle' and shape_menu.actions[4].icon=='notebook.triangle',
+    'triangle option missing')
+shape_menu.actions[4].callback()
+assert(nb.canvas.shape_kind=='triangle', 'triangle selection was not applied')
+nb:_showToolOptions(2)
+local marker_menu=rec.shown[#rec.shown]
+assert(marker_menu.actions[7].selected(), 'yellow marker color is not preselected')
 local text_menu=menu
 local expected_icons={'a','A','A','E','E','M','B','I','U̲'}
 for i,expected in ipairs(expected_icons) do
@@ -238,8 +269,17 @@ c:_showLassoMenu({selected_shape})
 c.lasso_menu.on_delete()
 assert(#doc:getPage().strokes==0, 'explicit delete removes preserved shape')
 doc:undo(); assert(doc:getPage().strokes[1]==selected_shape, 'shape delete is undoable')
-local broken=Canvas:new{document=doc}
-broken._triggerShapeSnap=function() error('timer regression') end
-broken.shape_snap_cb()
-assert(Safe.failed, 'timer exceptions cannot escape into KOReader')
-print('tools passed: pen menus, raw selection, shape creation/resize/undo, eraser, protected timers')
+local free_doc=Document:new('/tmp/notebook-freehand.scribe')
+local free_canvas=Canvas:new{document=free_doc}
+free_canvas.tool='pen'
+pen(free_canvas,100,100)
+pen(free_canvas,200,100)
+pen(free_canvas,200,200)
+pen(free_canvas,100,200)
+pen(free_canvas,100,100)
+pen(free_canvas,100,100,true)
+assert(not free_canvas.shape_snap_cb and not free_canvas._triggerShapeSnap,
+    'automatic shape recognition is still active')
+assert(not free_doc:getPage().strokes[1].shape_kind,
+    'freehand pen stroke became a geometric shape')
+print('tools passed: pen menus, raw selection, shape creation/resize/undo, eraser, freehand')

@@ -187,6 +187,15 @@ function support.installStubs(store)
 
     package.loaded["ffi/blitbuffer"] = {
         Color8 = function(v) return { a = v, getColor8 = function(s) return s end } end,
+        ColorRGB32 = function(r, g, b, a)
+            return { r = r, g = g, b = b, alpha = a,
+                getR = function(s) return s.r end,
+                getG = function(s) return s.g end,
+                getB = function(s) return s.b end,
+                getColor8 = function(s)
+                    return { a = math.floor((4898*s.r + 9618*s.g + 1869*s.b)/16384 + 0.5) }
+                end }
+        end,
         new = function(w, h, bb_type) return support.FakeBB.new(w, h) end,
         COLOR_WHITE = 255,
         COLOR_BLACK = 0,

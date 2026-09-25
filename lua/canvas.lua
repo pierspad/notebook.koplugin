@@ -27,6 +27,7 @@ you write.
 --]]--
 
 local Blitbuffer = require("ffi/blitbuffer")
+local DataStorage = require("datastorage")
 local Device = require("device")
 local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
@@ -47,6 +48,23 @@ local _ = require("i18n")
 local Screen = Device.screen
 local Input = Device.input
 
+
+-- Stylus callbacks receive coordinates before GestureDetector applies the
+-- screen's touch rotation. Finger gestures have already passed through it.
+local function stylusScreenPoint(x, y)
+    if not x or not y then return x, y end
+    local mode = Screen.getTouchRotation and Screen:getTouchRotation()
+    if mode == nil then return x, y end
+    if mode == Screen.DEVICE_ROTATED_CLOCKWISE then
+        return Screen:getWidth() - y, x
+    elseif mode == Screen.DEVICE_ROTATED_UPSIDE_DOWN then
+        return Screen:getWidth() - x, Screen:getHeight() - y
+    elseif mode == Screen.DEVICE_ROTATED_COUNTER_CLOCKWISE then
+        return y, Screen:getHeight() - x
+    end
+    return x, y
+end
+
 -- The numbers that decide how the pen feels live in `tuning.lua`, one place,
 -- each with the range it may take and the reason it is what it is. They are
 -- read as `Tuning.<name>` at the point of use: one hash lookup per pen sample,
@@ -63,7 +81,10 @@ local Canvas = InputContainer:extend{
     pen_style = "fineliner",
     line_style = "line",
     shape_kind = "rectangle",
+    shape_color = 0,
     highlighter_width = 24,
+    -- Highlighter tint in packed RGB form; rendered as gray on monochrome.
+    highlighter_color = 0x1FDD835,
     eraser_size = Tuning.spec.eraser_radius.default,
     -- "stroke" removes whole strokes; "area" rubs out only what is under the tip.
     eraser_mode = "stroke",
@@ -73,6 +94,30 @@ local Canvas = InputContainer:extend{
     -- Called with -1 or 1 when the reader swipes to change page.
     on_page_swipe = nil,
 }
+
+-- Creating `notebook/_debug_` opts this session into a plain-text input log.
+-- Keep the file closed between events so a crash does not lose the trace.
+-- Two 1 MiB files bound the storage cost even if the marker is left in place.
+local DEBUG_LOG_LIMIT = 1024 * 1024
+function Canvas:_debugEvent(kind, slot, x, y, tool)
+    if not self.debug_log_path then return end
+    local file = io.open(self.debug_log_path, "a")
+    if not file then return end
+    if (file:seek("end") or 0) >= DEBUG_LOG_LIMIT then
+        file:close()
+        os.remove(self.debug_log_path .. ".1")
+        if not os.rename(self.debug_log_path, self.debug_log_path .. ".1") then return end
+        file = io.open(self.debug_log_path, "a")
+        if not file then return end
+    end
+    file:write(string.format("%s %s id=%s slot=%s raw=(%s,%s) screen=(%s,%s) tool=%s rotation=%s\n",
+        os.date("!%Y-%m-%dT%H:%M:%SZ"), kind,
+        tostring(slot and slot.id), tostring(slot and slot.slot),
+        tostring(slot and slot.x), tostring(slot and slot.y),
+        tostring(x), tostring(y), tostring(tool),
+        tostring(Screen.getTouchRotation and Screen:getTouchRotation())))
+    file:close()
+end
 
 function Canvas:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
@@ -122,10 +167,6 @@ function Canvas:init()
         end
     end
 
-    -- Real-time hold-to-snap callback
-    self.shape_snap_cb = function()
-        self:_triggerShapeSnap()
-    end
 
     -- Set while the pen is in contact, plus the moment it last left, so a hand
     -- resting on the panel can be told from a deliberate touch.
@@ -156,7 +197,7 @@ function Canvas:init()
     end
 
     for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
-        "shape_snap_cb", "erase_flush_cb", "drag_step_cb", "shape_preview_cb"}) do
+        "erase_flush_cb", "drag_step_cb", "shape_preview_cb"}) do
         self[name] = Safe.wrap("canvas:" .. name, self[name])
     end
 
@@ -349,39 +390,9 @@ function Canvas:_isOutlier(x, y, px, py)
     return true, false
 end
 
--- Shape snap in real time while holding still
-function Canvas:_triggerShapeSnap()
-    if not self.stroke or self.shape_snapped or self.stroke:count() < 4 or self.erasing or self.dragging_selection then
-        return
-    end
-    local clean = Shape.recognize(self.stroke, self.line_style)
-    if clean then
-        self.shape_snapped = true
-        local bx, by, bw, bh = self.stroke:getBounds()
-        self.stroke = clean
-        if bx then
-            self:_repaintRegion(bx, by, bw, bh, true)
-            -- The refresh has to cover what the raw stroke occupied as well as
-            -- what the tidied one does, and the tidied one is often the smaller
-            -- of the two: a wide scrawl becomes a compact circle. Refreshing
-            -- only the shape left the parts of the scrawl outside it corrected
-            -- in the buffer and still on the panel, as a ghost that stayed
-            -- until something else happened to repaint over it.
-            self:_accumulate(bx, by, bw, bh)
-        end
-        local nbx, nby, nbw, nbh = clean:getBounds()
-        if nbx then
-            Renderer.drawStroke(Screen.bb, clean, self.content)
-            self:_accumulate(nbx, nby, nbw, nbh)
-        end
-        self:_flush()
-    end
-end
-
 -- Drawing ----------------------------------------------------------------------
 
 function Canvas:_beginShape(x, y, original)
-    UIManager:unschedule(self.shape_snap_cb)
     UIManager:unschedule(self.reconcile_cb)
     self.shape_gesture = {x=x, y=y, original=original,
         kind=original and original.shape_kind or self.shape_kind or "rectangle"}
@@ -430,7 +441,8 @@ function Canvas:_paintShape()
                 text_italic=original.text_italic,text_underline=original.text_underline})
     else
         clean = Shape.create(gesture.kind, x0, y0, x, y,
-            original and original.width or self.pen_width, original and original.color or 0)
+            original and original.width or self.pen_width,
+            original and original.color or self.shape_color)
     end
     local old = self.stroke
     self.stroke = nil
@@ -445,10 +457,17 @@ function Canvas:_paintShape()
     end
     self.stroke = clean
     if clean then
-        Renderer.drawStroke(Screen.bb, clean, self.content)
+        Renderer.drawStroke(Screen.bb, clean, self.content, Screen.isColorEnabled and Screen:isColorEnabled())
         self:_accumulate(clean:getBounds())
     end
     self:_flush()
+end
+
+-- Preserve selected RGB ink and legacy white; pencil's softer gray remains
+-- the default only while black is selected.
+function Canvas:_penColor()
+    if self.pen_color == 255 or self.pen_color > 0xFFFFFF then return self.pen_color end
+    return self.pen_style == "pencil" and 96 or self.pen_color
 end
 
 function Canvas:_endShape()
@@ -485,12 +504,94 @@ function Canvas:_endShape()
     end
 end
 
+local function shapeHandles(shape)
+    local l, t, r, b = shape.x_min, shape.y_min, shape.x_max, shape.y_max
+    local mx, my = (l+r)/2, (t+b)/2
+    local gap = Screen:scaleBySize(42)
+    return {
+        {"nw",l,t}, {"n",mx,t}, {"ne",r,t},
+        {"w",l,my}, {"e",r,my},
+        {"sw",l,b}, {"s",mx,b}, {"se",r,b},
+        {"rotate",r+gap,my},
+    }
+end
+
+function Canvas:_shapeHandleAt(shape, x, y)
+    if not shape or not shape.shape_kind then return nil end
+    local radius = Screen:scaleBySize(18)
+    for _, handle in ipairs(shapeHandles(shape)) do
+        if math.abs(x-handle[2]) <= radius and math.abs(y-handle[3]) <= radius then
+            return handle[1]
+        end
+    end
+end
+
+function Canvas:_beginShapeTransform(shape, handle, x, y)
+    self.transform_gesture = {original=shape, handle=handle, x=x, y=y}
+    self:_deselectLasso()
+    self:_repaintRegion(shape:getBounds())
+    self.transform_gesture.background = Screen.bb:copy()
+end
+
+function Canvas:_extendShapeTransform(x, y)
+    local gesture = self.transform_gesture
+    if not gesture then return end
+    gesture.next_x, gesture.next_y = x, y
+    local px, py = gesture.paint_x or gesture.x, gesture.paint_y or gesture.y
+    local spacing = Screen:scaleBySize(12)
+    if (x-px)^2 + (y-py)^2 < spacing*spacing then return end
+    gesture.paint_x, gesture.paint_y = x, y
+    local next_shape = Shape.transform(gesture.original, gesture.handle, x, y, gesture.x, gesture.y)
+    -- The snapshot was taken after removing the original figure. During a
+    -- drag only the previous preview needs clearing; including the original
+    -- bounding box makes every rotation repaint most of the page.
+    local dirty = gesture.preview and Rect.grow(nil, gesture.preview:getBounds()) or nil
+    dirty = Rect.grow(dirty, next_shape:getBounds())
+    local rx, ry, rw, rh = Rect.clamp(dirty.x, dirty.y, dirty.w, dirty.h, self.content)
+    if rx then
+        Screen.bb:blitFrom(gesture.background, rx, ry, rx, ry, rw, rh)
+        Renderer.drawStroke(Screen.bb, next_shape, self.content,
+            Screen.isColorEnabled and Screen:isColorEnabled())
+        self:_refreshNow(rx, ry, rw, rh, next_shape.color == 0 and "fast" or "ui")
+    end
+    gesture.preview = next_shape
+end
+
+function Canvas:_endShapeTransform()
+    local gesture = self.transform_gesture
+    if not gesture then return end
+    self.transform_gesture = nil
+    local moved = gesture.next_x and (gesture.next_x ~= gesture.x or gesture.next_y ~= gesture.y)
+    local shape = moved and Shape.transform(gesture.original, gesture.handle,
+        gesture.next_x, gesture.next_y, gesture.x, gesture.y) or gesture.original
+
+    -- The background snapshot already contains every other stroke and the
+    -- paper, with the selected figure removed. Finalizing only needs to clear
+    -- the last preview and draw the final figure, just like first creation.
+    local dirty = gesture.preview and Rect.grow(nil, gesture.preview:getBounds()) or nil
+    dirty = Rect.grow(dirty, shape:getBounds())
+    local rx, ry, rw, rh = Rect.clamp(dirty.x, dirty.y, dirty.w, dirty.h, self.content)
+    if rx and gesture.background then
+        Screen.bb:blitFrom(gesture.background, rx, ry, rx, ry, rw, rh)
+        Renderer.drawStroke(Screen.bb, shape, self.content,
+            Screen.isColorEnabled and Screen:isColorEnabled())
+        self:_refreshNow(rx, ry, rw, rh, shape.color == 0 and "fast" or "ui")
+    end
+    if gesture.background then gesture.background:free() end
+    if moved then
+        self.document:replaceStroke(gesture.original, shape)
+        if self.on_change then self:on_change() end
+        UIManager:unschedule(self.autosave_cb)
+        UIManager:scheduleIn(2.5, self.autosave_cb)
+    end
+    self:_showLassoMenu({shape})
+end
+
 function Canvas:_beginStroke(tool, x, y, p)
     -- The pen is back on the page, so the pending tidy-up must stand down: it
     -- would otherwise fire in the middle of the new stroke. The region it had
     -- accumulated is kept, and gets folded into the next one.
     UIManager:unschedule(self.reconcile_cb)
-    UIManager:unschedule(self.shape_snap_cb)
 
     --[[
     Putting any other tool on the page ends the selection.
@@ -538,8 +639,7 @@ function Canvas:_beginStroke(tool, x, y, p)
     self.stroke = Stroke:new{
         tool = tool,
         width = self:widthFor(tool),
-        color = tool == "pen" and (self.pen_color == 255 and 255
-            or (self.pen_style == "pencil" and 96 or 0)) or 0,
+        color = tool == "pen" and self:_penColor() or 0,
     }
     -- Grayscale marker pixels are not reliably visible through the binary DU
     -- waveform. Use AUTO for the marker, but at its own slower cadence, so the
@@ -554,17 +654,10 @@ function Canvas:_beginStroke(tool, x, y, p)
     self.last_point_at = time.now()
     self.outliers = 0
 
-    -- Hold-to-snap shape recognition tracking
-    self.hold_start_x = x
-    self.hold_start_y = y
-    self.shape_snapped = false
-    if tool ~= "eraser" and tool ~= "lasso" then
-        UIManager:scheduleIn(Tuning.hold_delay_ms / 1000, self.shape_snap_cb)
-    end
 
     -- Put down the initial dot so a tap leaves a mark rather than nothing.
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
-        x, y, p, x, y, p)
+        x, y, p, x, y, p, nil, Screen.isColorEnabled and Screen:isColorEnabled())
     self:_accumulate(rx, ry, rw, rh)
     self:_maybeFlush()
 end
@@ -727,22 +820,6 @@ function Canvas:_extendStroke(x, y, p)
     end
     self.last_point_at = time.now()
 
-    if self.shape_snapped then return end
-
-    -- Hold-to-snap: the anchor only moves once the nib has genuinely travelled,
-    -- and while it has not, the pending snap is left alone to come due.
-    if self.stroke.tool ~= "eraser" and self.stroke.tool ~= "lasso" then
-        local hdx = x - (self.hold_start_x or x)
-        local hdy = y - (self.hold_start_y or y)
-        if hdx * hdx + hdy * hdy > Tuning.hold_travel_sq then
-            self.hold_start_x = x
-            self.hold_start_y = y
-            UIManager:unschedule(self.shape_snap_cb)
-            if self.stroke:count() >= 4 then
-                UIManager:scheduleIn(Tuning.hold_delay_ms / 1000, self.shape_snap_cb)
-            end
-        end
-    end
 
     -- Wobble under a resting nib is not movement, and stamping it costs a
     -- refresh for nothing. See Tuning.jitter_floor_sq: this rounds the path, it does
@@ -752,7 +829,8 @@ function Canvas:_extendStroke(x, y, p)
     if jdx * jdx + jdy * jdy < Tuning.jitter_floor_sq then return end
 
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
-        self.last_x, self.last_y, self.last_p, x, y, p)
+        self.last_x, self.last_y, self.last_p, x, y, p, nil,
+        Screen.isColorEnabled and Screen:isColorEnabled())
     self.stroke:addPoint(x, y, p)
     self.last_x, self.last_y, self.last_p = x, y, p
 
@@ -761,6 +839,7 @@ function Canvas:_extendStroke(x, y, p)
 end
 
 function Canvas:_endStroke()
+    if self.transform_gesture then return self:_endShapeTransform() end
     if self.text_at then
         local at=self.text_at; self.text_at=nil
         if not self.stopping and self.on_text then self:on_text(at.x,at.y) end
@@ -816,6 +895,9 @@ function Canvas:_endStroke()
         -- What is stored is the ordinary highlight; the darker tint belonged to
         -- the drawing of it, not to the mark.
         stroke.tint = nil
+        if stroke.tool == "highlighter" and Screen:isColorEnabled() then
+            stroke.tint = self.highlighter_color
+        end
         self.document:addStroke(stroke)
         if stroke.tool == "highlighter" then
             -- Repaint the band from the model, which takes the live tint back
@@ -854,8 +936,27 @@ function Canvas:_showLassoMenu(selected)
 
     if #selected == 1 and selected[1].shape_kind then
         local shape = selected[1]
-        Renderer.drawDashedRect(Screen.bb, shape.x_max-9, shape.y_max-9, 18, 18)
-        self:_refreshNow(shape.x_max-12, shape.y_max-12, 24, 24)
+        local size = math.max(6, Screen:scaleBySize(12))
+        local dirty
+        for _, handle in ipairs(shapeHandles(shape)) do
+            local hx, hy = math.floor(handle[2]), math.floor(handle[3])
+            if handle[1] == "rotate" then
+                local from = math.floor(shape.x_max+size/2)
+                Screen.bb:paintRect(from, hy, math.max(0,hx-from-size/2), 1, Blitbuffer.COLOR_BLACK)
+                Screen.bb:paintCircle(hx, hy, math.floor(size/2), Blitbuffer.COLOR_BLACK)
+                Screen.bb:paintCircle(hx, hy, math.max(1,math.floor(size/2)-2), Blitbuffer.COLOR_WHITE)
+                dirty = Rect.grow(dirty, from, hy-size, hx-from+size, size*2)
+            else
+                local left, top = math.floor(hx-size/2), math.floor(hy-size/2)
+                Screen.bb:paintRect(left, top, size, size, Blitbuffer.COLOR_WHITE)
+                Screen.bb:paintRect(left, top, size, 1, Blitbuffer.COLOR_BLACK)
+                Screen.bb:paintRect(left, top+size-1, size, 1, Blitbuffer.COLOR_BLACK)
+                Screen.bb:paintRect(left, top, 1, size, Blitbuffer.COLOR_BLACK)
+                Screen.bb:paintRect(left+size-1, top, 1, size, Blitbuffer.COLOR_BLACK)
+                dirty = Rect.grow(dirty, left, top, size, size)
+            end
+        end
+        if dirty then self:_refreshNow(dirty.x, dirty.y, dirty.w, dirty.h, "ui") end
     end
 
     self.lasso_menu = LassoMenu:new{
@@ -1202,14 +1303,15 @@ function Canvas:_repaintRegion(x, y, w, h, defer_refresh)
         local sx, sy, sw, sh = stroke:getBounds()
         if stroke ~= self.hidden_stroke
             and not (self.shape_gesture and stroke == self.shape_gesture.original)
+            and not (self.transform_gesture and stroke == self.transform_gesture.original)
             and sx < x + w and sx + sw > x and sy < y + h and sy + sh > y then
-            Renderer.drawStroke(Screen.bb, stroke, clip)
+            Renderer.drawStroke(Screen.bb, stroke, clip, Screen.isColorEnabled and Screen:isColorEnabled())
         end
     end
     if self.text_preview then
         local sx,sy,sw,sh=self.text_preview:getBounds()
         if sx < x+w and sx+sw > x and sy < y+h and sy+sh > y then
-            Renderer.drawStroke(Screen.bb,self.text_preview,clip)
+            Renderer.drawStroke(Screen.bb,self.text_preview,clip, Screen.isColorEnabled and Screen:isColorEnabled())
         end
     end
     if not defer_refresh then
@@ -1227,6 +1329,19 @@ otherwise every stroke would also register as a swipe or a tap and start
 turning pages underneath the drawing.
 --]]
 function Canvas:onStylusEvent(slot)
+    local raw_slot = slot
+    -- Match the same transform KOReader applies to touch gestures. Make a
+    -- private copy: the input subsystem may pass this slot on to gestures.
+    if slot.x and slot.y then
+        local x, y = stylusScreenPoint(slot.x, slot.y)
+        if x ~= slot.x or y ~= slot.y then
+            local mapped = {}
+            for key, value in pairs(slot) do mapped[key] = value end
+            mapped.x, mapped.y = x, y
+            slot = mapped
+        end
+    end
+    self:_debugEvent("stylus", raw_slot, slot.x, slot.y, slot.tool)
     -- Only draw when the notebook is the frontmost thing on screen.
     --
     -- This callback runs ahead of gesture detection and claims the event, so
@@ -1279,9 +1394,10 @@ function Canvas:onStylusEvent(slot)
         elseif Input.stylus_highlighter_active then slot_tool = Input.TOOL_TYPE_HIGHLIGHTER end
     end
     local tool = self:resolveTool(slot_tool)
+    self:_debugEvent("resolved-tool", raw_slot, slot.x, slot.y, tool)
 
     -- If tapping directly on the lasso menu buttons with the stylus, pass through to the menu
-    if self.lasso_menu and self.lasso_menu.dimen and slot.x and slot.y then
+    if not self.transform_gesture and self.lasso_menu and self.lasso_menu.dimen and slot.x and slot.y then
         local md = self.lasso_menu.dimen
         if slot.x >= md.x and slot.x <= md.x + md.w and slot.y >= md.y and slot.y <= md.y + md.h then
             return false
@@ -1294,7 +1410,8 @@ function Canvas:onStylusEvent(slot)
         -- ends a tap on the toolbar has to reach the gesture engine, or the
         -- button never completes its tap.
         local was_drawing = self.stroke ~= nil or self.erasing or self.dragging_selection
-            or self.shape_gesture ~= nil or self.text_at ~= nil or self.dismiss_contact
+            or self.shape_gesture ~= nil or self.transform_gesture ~= nil
+            or self.text_at ~= nil or self.dismiss_contact
         self.dismiss_contact = nil
         self.pen_down = false
         self.pen_left_at = time.now()
@@ -1350,8 +1467,13 @@ function Canvas:onStylusEvent(slot)
     if new_contact and self.selected_strokes then
         local selected = self.selected_strokes
         local shape = #selected == 1 and selected[1]
+        local handle = self:_shapeHandleAt(shape, x, y)
+        if handle then
+            self:_beginShapeTransform(shape, handle, x, y)
+            return true
+        end
         if shape and (shape.shape_kind == "rectangle" or shape.shape_kind == "square"
-            or shape.shape_kind == "circle" or shape.text) and math.abs(x-shape.x_max) <= Screen:scaleBySize(24)
+            or shape.shape_kind == "circle" or shape.shape_kind == "triangle" or shape.text) and math.abs(x-shape.x_max) <= Screen:scaleBySize(24)
             and math.abs(y-shape.y_max) <= Screen:scaleBySize(24) then
             self:_beginShape(x, y, shape)
             return true
@@ -1374,6 +1496,7 @@ function Canvas:onStylusEvent(slot)
             return true
         end
     end
+    if self.transform_gesture then self:_extendShapeTransform(x, y); return true end
     if self.shape_gesture then self:_extendShape(x, y); return true end
 
     if tool == "eraser" then
@@ -1451,6 +1574,8 @@ is how resting a palm pressed toolbar buttons and repainted pieces of the screen
 under the ink.
 --]]
 function Canvas:onTouchStart(_, ges)
+    self:_debugEvent("touch-start", nil, ges and ges.pos and ges.pos.x,
+        ges and ges.pos and ges.pos.y, self.tool)
     if self:_touchIsPalm() then return true end
 
     local x, y = self:_touchPoint(ges)
@@ -1463,6 +1588,12 @@ function Canvas:onTouchStart(_, ges)
 
     -- A resting hand must not move or dismiss a pen selection.
     if self.selected_strokes and not self.draw_with_finger then return true end
+
+    if self.selected_strokes and #self.selected_strokes == 1 then
+        local shape = self.selected_strokes[1]
+        local handle = self:_shapeHandleAt(shape, x, y)
+        if handle then self:_beginShapeTransform(shape, handle, x, y); return true end
+    end
 
     -- If lasso selection is active, finger touching inside selection initiates drag/move
     if self.tool == "lasso" and self.selected_strokes and self.selection_bbox then
@@ -1505,6 +1636,8 @@ function Canvas:onTouchStart(_, ges)
 end
 
 function Canvas:onTouchPan(_, ges)
+    self:_debugEvent("touch-pan", nil, ges and ges.pos and ges.pos.x,
+        ges and ges.pos and ges.pos.y, self.tool)
     if self:_touchIsPalm() then return true end
 
     local x, y = self:_touchPoint(ges)
@@ -1512,6 +1645,8 @@ function Canvas:onTouchPan(_, ges)
 
     self.touch_last_x = x
     self.touch_last_y = y
+
+    if self.transform_gesture then self:_extendShapeTransform(x, y); return true end
 
     if self.dragging_selection then
         self:_extendStroke(x, y, 1)
@@ -1538,6 +1673,8 @@ function Canvas:onTouchPan(_, ges)
 end
 
 function Canvas:onTouchRelease(_, ges)
+    self:_debugEvent("touch-release", nil, ges and ges.pos and ges.pos.x,
+        ges and ges.pos and ges.pos.y, self.tool)
     local start_x = self.touch_start_x
     local start_y = self.touch_start_y
     local end_x = self.touch_last_x or (ges and ges.pos and ges.pos.x)
@@ -1546,6 +1683,8 @@ function Canvas:onTouchRelease(_, ges)
     self.touch_last_x, self.touch_last_y = nil, nil
 
     if self:_touchIsPalm() then return true end
+
+    if self.transform_gesture then self:_endShapeTransform(); return true end
 
     if self.dragging_selection then
         self:_endStroke()
@@ -1630,9 +1769,9 @@ function Canvas:paintTo(bb, x, y)
         self.background_cache_key=cache_key
     end
     for _,stroke in ipairs(self.document:getPage().strokes) do
-        if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke) end
+        if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
     end
-    if self.text_preview then Renderer.drawStroke(bb,self.text_preview) end
+    if self.text_preview then Renderer.drawStroke(bb,self.text_preview,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
 end
 
 --[[--
@@ -1661,6 +1800,15 @@ called by the parent, not arrived at through event propagation.
 --]]
 function Canvas:start()
     self.stopping = false
+    local debug_root = DataStorage:getDataDir() .. "/notebook"
+    local sentinel = io.open(debug_root .. "/_debug_", "r")
+    if sentinel then
+        sentinel:close()
+        self.debug_log_path = debug_root .. "/notebook-debug.log"
+        self:_debugEvent("session-start", nil, nil, nil, self.tool)
+    else
+        self.debug_log_path = nil
+    end
     -- The patches below are KOReader's, not ours, and they outlive any screen
     -- of ours that is holding them. A fault closes this plugin without ever
     -- reaching onCloseWidget, so the undoing is registered here as well rather
@@ -1724,19 +1872,28 @@ function Canvas:start()
             end
         end
     end
-    Input:registerStylusCallback(Safe.wrap("canvas:stylus", function(_, slot)
+    self.previous_stylus_callback = Input.stylus_callback
+    self.stylus_callback = Safe.wrap("canvas:stylus", function(_, slot)
         return self:onStylusEvent(slot)
-    end))
+    end)
+    Input:registerStylusCallback(self.stylus_callback)
 end
 
 function Canvas:stop()
+    self:_debugEvent("session-stop", nil, nil, nil, self.tool)
+    self.debug_log_path = nil
     self.stopping = true
     -- Whichever path got here first is the one that does it; the other must not
     -- run again and put the patches back on top of the restored handlers.
     Safe.clearShutdown("canvas:input")
     if self.pressure_sensor then self.pressure_sensor:close(); self.pressure_sensor = nil end
 
-    Input:unregisterStylusCallback()
+    if self.stylus_callback and (Input.stylus_callback == self.stylus_callback
+        or Safe.failed and Input.stylus_callback == nil) then
+        Input:registerStylusCallback(self.previous_stylus_callback)
+    end
+    self.stylus_callback = nil
+    self.previous_stylus_callback = nil
     if self.orig_handleTouchEv and Input then
         Input.handleTouchEv = self.orig_handleTouchEv
         self.orig_handleTouchEv = nil
@@ -1751,7 +1908,7 @@ function Canvas:stop()
         self.orig_pen_slot = nil
     end
     for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
-        "shape_snap_cb", "erase_flush_cb", "drag_step_cb", "shape_preview_cb"}) do
+        "erase_flush_cb", "drag_step_cb", "shape_preview_cb"}) do
         if self[name] then UIManager:unschedule(self[name]) end
     end
     self:_endStroke()
@@ -1765,7 +1922,6 @@ function Canvas:stop()
     UIManager:unschedule(self.erase_flush_cb)
     UIManager:unschedule(self.reconcile_cb)
     UIManager:unschedule(self.autosave_cb)
-    UIManager:unschedule(self.shape_snap_cb)
     if self.document and self.document.dirty then
         self.document:save()
     end

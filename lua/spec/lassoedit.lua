@@ -273,5 +273,34 @@ test("a frame entirely off the buffer draws nothing", function()
     Renderer.drawDashedRect(strictBB(600, 800), 900, 900, 100, 100, 0)
 end)
 
+test("span dashes match the original pixel pattern and use fewer calls", function()
+    local pixels, calls = {}, 0
+    local bb = {
+        getWidth = function() return 96 end,
+        getHeight = function() return 88 end,
+        paintRect = function(_, x, y, w, h)
+            calls = calls + 1
+            for yy = y, y+h-1 do
+                for xx = x, x+w-1 do pixels[yy*96+xx] = true end
+            end
+        end,
+    }
+    local x, y, w, h = -11, 7, 102, 70
+    Renderer.drawDashedRect(bb, x, y, w, h, 0)
+    local expected = {}
+    local function put(px, py)
+        if px >= 0 and px < 96 and py >= 0 and py < 88 then expected[py*96+px] = true end
+    end
+    for i = 0, w do
+        if i % 14 < 8 then put(x+i,y); put(x+i,y+h) end
+    end
+    for j = 0, h do
+        if j % 14 < 8 then put(x,y+j); put(x+w,y+j) end
+    end
+    for key in pairs(expected) do assertTrue(pixels[key], "missing dash pixel") end
+    for key in pairs(pixels) do assertTrue(expected[key], "extra dash pixel") end
+    assertTrue(calls < 35, "dashes still make a call per pixel")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

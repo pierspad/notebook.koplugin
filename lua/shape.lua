@@ -375,9 +375,9 @@ end
 
 --- Creates a regular, axis-aligned shape inside a dragged rectangle.
 function Shape.create(kind, x0, y0, x1, y1, width, color)
-    if kind ~= "rectangle" and kind ~= "square" and kind ~= "circle" then return nil end
+    if kind ~= "rectangle" and kind ~= "square" and kind ~= "circle" and kind ~= "triangle" then return nil end
     local w, h = math.abs(x1-x0), math.abs(y1-y0)
-    if kind ~= "rectangle" then
+    if kind == "square" or kind == "circle" then
         local side = math.min(w, h)
         x1 = x0 + (x1 < x0 and -side or side)
         y1 = y0 + (y1 < y0 and -side or side)
@@ -385,7 +385,11 @@ function Shape.create(kind, x0, y0, x1, y1, width, color)
     local left, right = math.min(x0,x1), math.max(x0,x1)
     local top, bottom = math.min(y0,y1), math.max(y0,y1)
     local stroke = Stroke:new{tool="pen", width=width, color=color, shape_kind=kind}
-    if kind == "circle" then
+    if kind == "triangle" then
+        for _, point in ipairs({{left,bottom},{(left+right)/2,top},{right,bottom},{left,bottom}}) do
+            stroke:addPoint(point[1],point[2],1)
+        end
+    elseif kind == "circle" then
         local radius = (right-left)/2
         local cx, cy = (left+right)/2, (top+bottom)/2
         for n = 0, 64 do
@@ -398,6 +402,38 @@ function Shape.create(kind, x0, y0, x1, y1, width, color)
         end
     end
     return stroke
+end
+
+--- Transform one explicit figure from its original points, without accumulating rounding error.
+function Shape.transform(original, handle, x, y, start_x, start_y)
+    local left, top = original.x_min, original.y_min
+    local right, bottom = original.x_max, original.y_max
+    local cx, cy = (left + right) / 2, (top + bottom) / 2
+    local angle = 0
+    if handle == "rotate" then
+        angle = math.atan2(y - cy, x - cx) - math.atan2(start_y - cy, start_x - cx)
+    else
+        if handle:find("w", 1, true) then left = math.min(x, right - 8) end
+        if handle:find("e", 1, true) then right = math.max(x, left + 8) end
+        if handle:find("n", 1, true) then top = math.min(y, bottom - 8) end
+        if handle:find("s", 1, true) then bottom = math.max(y, top + 8) end
+    end
+    local result = Stroke:new{tool=original.tool, width=original.width,
+        color=original.color, shape_kind=original.shape_kind}
+    local old_w = math.max(1, original.x_max - original.x_min)
+    local old_h = math.max(1, original.y_max - original.y_min)
+    local c, s = math.cos(angle), math.sin(angle)
+    for i = 1, original:count() do
+        local px, py, pressure = original:getPoint(i)
+        if handle == "rotate" then
+            local dx, dy = px - cx, py - cy
+            result:addPoint(cx + dx*c - dy*s, cy + dx*s + dy*c, pressure)
+        else
+            result:addPoint(left + (px - original.x_min) * (right-left) / old_w,
+                top + (py - original.y_min) * (bottom-top) / old_h, pressure)
+        end
+    end
+    return result
 end
 
 --- Recognizes a geometric shape from a raw stroke.
