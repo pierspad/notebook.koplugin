@@ -95,7 +95,8 @@ local Canvas = InputContainer:extend{
     on_page_swipe = nil,
 }
 
--- Creating `notebook/_debug_` opts this session into a plain-text input log.
+-- Creating `notebook/_debug_`, `notebook/_debug_.scribe`, or opening a notebook
+-- named `_debug_` opts this session into a plain-text input log.
 -- Keep the file closed between events so a crash does not lose the trace.
 -- Two 1 MiB files bound the storage cost even if the marker is left in place.
 local DEBUG_LOG_LIMIT = 1024 * 1024
@@ -1798,16 +1799,29 @@ with `true` silenced the notebook's own handler -- and with it the full refresh
 that puts the notebook on the panel. Lifecycle that the parent drives should be
 called by the parent, not arrived at through event propagation.
 --]]
+function Canvas:_resolveDebugLogPath()
+    local debug_root = DataStorage:getDataDir() .. "/notebook"
+    if self.document and self.document.path then
+        local p = self.document.path:lower()
+        if p:match("[/\\]_debug_%.scribe$") or p:match("[/\\]_debug_$") then
+            return debug_root .. "/notebook-debug.log"
+        end
+    end
+    for _, name in ipairs({ "_debug_", "_debug_.scribe" }) do
+        local f = io.open(debug_root .. "/" .. name, "r")
+        if f then
+            f:close()
+            return debug_root .. "/notebook-debug.log"
+        end
+    end
+    return nil
+end
+
 function Canvas:start()
     self.stopping = false
-    local debug_root = DataStorage:getDataDir() .. "/notebook"
-    local sentinel = io.open(debug_root .. "/_debug_", "r")
-    if sentinel then
-        sentinel:close()
-        self.debug_log_path = debug_root .. "/notebook-debug.log"
+    self.debug_log_path = self:_resolveDebugLogPath()
+    if self.debug_log_path then
         self:_debugEvent("session-start", nil, nil, nil, self.tool)
-    else
-        self.debug_log_path = nil
     end
     -- The patches below are KOReader's, not ours, and they outlive any screen
     -- of ours that is holding them. A fault closes this plugin without ever

@@ -26,15 +26,15 @@ Notebooks are stored in `koreader/notebook/`.
 
 ### Input debug log
 
-To capture a device-specific pen problem, create an empty file named `_debug_`
-inside `koreader/notebook/`, then close and reopen Notebook. Reproduce the
-problem and send `koreader/notebook/notebook-debug.log` with the device model,
-firmware version, KOReader version, and a short description of where you touched
-the display. The log records raw and screen coordinates, selected tools, touch
-events, and rotation; it does not contain notebook pages or handwriting content.
-The log rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too.
-Together the two files use at most about 2 MB. Delete `_debug_` and reopen
-Notebook to stop logging. You can then delete both log files.
+To capture a device-specific pen problem, create a new notebook named `_debug_`
+in the Notebook gallery (or create an empty file named `_debug_` inside `koreader/notebook/`).
+Then open the `_debug_` notebook, reproduce the problem, and send
+`koreader/notebook/notebook-debug.log` with your device model and firmware version.
+The log records raw and screen coordinates, selected tools, touch events, and
+rotation; it does not contain notebook pages or handwriting content. The log
+rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too. Together
+the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_`
+marker file) and reopen Notebook to stop logging. You can then delete both log files.
 
 ## Dispositivi
 

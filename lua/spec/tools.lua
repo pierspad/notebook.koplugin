@@ -282,4 +282,10 @@ assert(not free_canvas.shape_snap_cb and not free_canvas._triggerShapeSnap,
     'automatic shape recognition is still active')
 assert(not free_doc:getPage().strokes[1].shape_kind,
     'freehand pen stroke became a geometric shape')
-print('tools passed: pen menus, raw selection, shape creation/resize/undo, eraser, freehand')
+local normal_canvas = Canvas:new{document=Document:new('/tmp/normal.scribe')}
+assert(normal_canvas:_resolveDebugLogPath() == nil, 'normal notebook does not activate debug log')
+local debug_canvas = Canvas:new{document=Document:new('/tmp/_debug_.scribe')}
+assert(debug_canvas:_resolveDebugLogPath() ~= nil, '_debug_.scribe notebook activates debug log')
+local debug_canvas_upper = Canvas:new{document=Document:new('/tmp/_DEBUG_.scribe')}
+assert(debug_canvas_upper:_resolveDebugLogPath() ~= nil, 'case-insensitive _DEBUG_.scribe activates debug log')
+print('tools passed: pen menus, raw selection, shape creation/resize/undo, eraser, freehand, debug path resolution')
