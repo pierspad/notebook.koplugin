@@ -491,3 +491,13 @@ msgstr ""
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr ""
+
+
+
+
+
+msgid "Line"
+msgstr ""
+
+msgid "Arrow"
+msgstr ""

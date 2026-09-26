@@ -84,6 +84,10 @@ UI.getTopmostVisibleWidget=function() return {} end
 assert(not cb(nil,{id=1,x=15,y=15}), 'pen must reach dialog over gallery')
 g:onCloseWidget(); assert(not Device.input.stylus_callback, 'gallery unregisters callback')
 local nb=require('notebook'):new{document=doc}
+local gaps={nb.toolbar_content[2].width,nb.toolbar_content[5].width,
+    nb.toolbar_content[9].width,nb.toolbar_content[15].width}
+table.sort(gaps)
+assert(gaps[4]-gaps[1] <= 1, 'toolbar surplus was not split evenly')
 assert(nb.canvas.pen_color==0 and nb.canvas.shape_color==0
     and nb.canvas.highlighter_color==0x1FDD835,
     'fresh notebook colors must be black pen, yellow marker, black shapes')
@@ -95,8 +99,10 @@ local selected_rows=0
 for _,item in ipairs(menu.action_rows) do
     if item.row.selected then selected_rows=selected_rows+1 end
 end
-assert(selected_rows==2, 'pen menu marks unselected rows as selected')
-assert(menu.actions[4].selected(), 'black pen color is not preselected')
+assert(selected_rows==3, 'pen menu marks unselected rows as selected')
+assert(menu.actions[4].icon=='notebook.line' and menu.actions[5].icon=='notebook.arrow',
+    'pen shape icons are missing')
+assert(menu.actions[6].selected(), 'black pen color is not preselected')
 assert(nb.ges_events == nil or nb.disable_double_tap == false, 'notebook does not enable double tap')
 assert(nb.tool_buttons[1].ges_events.DoubleTap, 'tool has no double-tap option gesture')
 assert(menu.disable_double_tap == false, 'open menu disables double tap')
@@ -110,10 +116,10 @@ assert(nb.canvas.pen_width==14 and #rec.closed==closed_before,
     'choosing a width closed the menu or did not apply')
 menu.action_rows[2].row:onTap()
 assert(#rec.closed==closed_before, 'choosing a pen style closed the menu')
-assert(menu.actions[4].swatch=='black' and menu.actions[5].swatch=='white'
-    and menu.actions[6].swatch=='red' and menu.actions[11].swatch=='purple',
+assert(menu.actions[6].swatch=='black' and menu.actions[7].swatch=='white'
+    and menu.actions[8].swatch=='red' and menu.actions[13].swatch=='purple',
     'pen color palette is missing swatches')
-menu.actions[6].callback()
+menu.actions[8].callback()
 assert(nb.canvas.pen_color==0x1E53935, 'color choice was not applied to the pen')
 assert(menu.footer:getSize().w==menu.width,
     'size choices do not fill the menu width')
@@ -192,8 +198,10 @@ nb.canvas.text_bold=true
 nb:_editText(nil,120,220)
 local editor=rec.shown[#rec.shown]
 local styles={}
-for _,button in ipairs(editor.buttons[1]) do styles[button.text]=button end
-assert(#editor.buttons==1 and editor.text_height==1 and editor.inputtext_class.skip_paint,
+for _,row in ipairs(editor.buttons) do
+    for _,button in ipairs(row) do styles[button.text]=button end
+end
+assert(#editor.buttons==2 and #editor.buttons[1]==5 and #editor.buttons[2]==5 and editor.text_height==1 and editor.inputtext_class.skip_paint,
     'text editor is not the compact page-preview variant')
 local anchor=editor.movable.anchor()
 assert(math.abs(anchor.x-120)<=2 and math.abs(anchor.y-220)<=2 and anchor.w>0 and anchor.h>0,
@@ -204,8 +212,10 @@ styles.I.callback()
 assert(styles.I.checked_func(),'toggled text style did not remain selected')
 editor.input='Live on page'; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='Live on page','typed text is not previewed on the page')
-assert(nb.canvas.text_preview.text_background,
-    'live text preview does not use the efficient opaque work surface')
+styles.White.callback()
+assert(nb.canvas.text_preview.text_background, 'white preview not applied')
+styles.Transparent.callback()
+assert(not nb.canvas.text_preview.text_background, 'transparent preview not applied')
 editor.input='ab'; editor._input_widget={charlist={'a','b'},charpos=2}; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='a│b','page preview does not mirror the input cursor')
 styles['✕'].callback()
@@ -278,10 +288,21 @@ pen(free_canvas,200,200)
 pen(free_canvas,100,200)
 pen(free_canvas,100,100)
 pen(free_canvas,100,100,true)
-assert(not free_canvas.shape_snap_cb and not free_canvas._triggerShapeSnap,
-    'automatic shape recognition is still active')
 assert(not free_doc:getPage().strokes[1].shape_kind,
     'freehand pen stroke became a geometric shape')
+local snap_doc=Document:new('/tmp/notebook-hold-snap.scribe')
+local snap_canvas=Canvas:new{document=snap_doc}
+snap_canvas.line_style='arrow'
+snap_canvas:_beginStroke('pen', 100, 400, 1)
+for x=110,300,10 do snap_canvas:_extendStroke(x,400,1) end
+assert(snap_canvas.shape_snap.stroke==snap_canvas.stroke,
+    'hold recognition did not track the live pen stroke')
+snap_canvas.shape_snap:trigger()
+assert(snap_canvas.stroke.shape_kind=='arrow',
+    'holding a straight pen stroke did not create the chosen arrow')
+snap_canvas:_endStroke()
+assert(snap_doc:getPage().strokes[1].shape_kind=='arrow',
+    'held arrow was not committed to the document')
 local normal_canvas = Canvas:new{document=Document:new('/tmp/normal.scribe')}
 assert(normal_canvas:_resolveDebugLogPath() == nil, 'normal notebook does not activate debug log')
 local debug_canvas = Canvas:new{document=Document:new('/tmp/_debug_.scribe')}

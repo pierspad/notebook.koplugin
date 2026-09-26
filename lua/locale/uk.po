@@ -513,3 +513,13 @@ msgstr "Маркер"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "Масштабування імпортованих сторінок PDF поки недоступне."
+
+
+
+
+
+msgid "Line"
+msgstr "Лінія"
+
+msgid "Arrow"
+msgstr "Стрілка"

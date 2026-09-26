@@ -514,3 +514,13 @@ msgstr "蛍光ペン"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "インポートした PDF ページでは、まだズームを使用できません。"
+
+
+
+
+
+msgid "Line"
+msgstr "線"
+
+msgid "Arrow"
+msgstr "矢印"

@@ -514,3 +514,13 @@ msgstr "Zakreślacz"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "Powiększanie zaimportowanych stron PDF nie jest jeszcze dostępne."
+
+
+
+
+
+msgid "Line"
+msgstr "Linia"
+
+msgid "Arrow"
+msgstr "Strzałka"

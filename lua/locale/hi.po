@@ -512,3 +512,13 @@ msgstr "हाइलाइटर"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "आयात किए गए PDF पृष्ठों पर ज़ूम अभी उपलब्ध नहीं है।"
+
+
+
+
+
+msgid "Line"
+msgstr "रेखा"
+
+msgid "Arrow"
+msgstr "तीर"

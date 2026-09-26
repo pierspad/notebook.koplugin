@@ -517,3 +517,13 @@ msgstr "Textmarker"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "Zoom ist für importierte PDF-Seiten noch nicht verfügbar."
+
+
+
+
+
+msgid "Line"
+msgstr "Linie"
+
+msgid "Arrow"
+msgstr "Pfeil"

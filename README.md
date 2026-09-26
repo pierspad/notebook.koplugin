@@ -68,7 +68,10 @@ provate e non implicano supporto confermato.
   the normal view. Imported PDF backgrounds and larger virtual page sizes are
   not yet supported by this first zoom trial.
 - Palm rejection and direct stylus input.
-- Explicit triangles, rectangles, squares and circles; freehand ink stays freehand.
+- Explicit triangles, rectangles, squares and circles. Hold the pen or marker
+  still at the end of a stroke to straighten a line or regularise a shape.
+  In the notebook's gear menu, **Hold to straighten** turns this on or off;
+  **Straight stroke** chooses a line or an arrow. It is enabled by default.
 - Lasso selection with move, cut, copy, paste and delete.
 - Editable text, multiple pages and per-page paper templates.
 - PDF and Xournal++ export; optional LocalSend integration.
@@ -92,7 +95,7 @@ test on a color e-ink device.
 
 ## Development
 
-Requires LuaJIT and `luacheck`.
+Requires LuaJIT and `luacheck`. For in-depth architectural and engineering documentation, see the [Technical Reference Manual](docs/README.md).
 
 ```bash
 make verify       # lint and tests

@@ -514,3 +514,13 @@ msgstr "Resaltador"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "El zoom aún no está disponible en páginas PDF importadas."
+
+
+
+
+
+msgid "Line"
+msgstr "Línea"
+
+msgid "Arrow"
+msgstr "Flecha"

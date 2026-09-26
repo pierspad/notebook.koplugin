@@ -14,6 +14,8 @@ the rectangle I dirtied. Callers use that rectangle to drive a partial refresh.
 --]]--
 
 local Blitbuffer = require("ffi/blitbuffer")
+local HighlightInk = require("highlightink")
+local GeometryInk = require("geometryink")
 
 local Renderer = {}
 
@@ -84,61 +86,6 @@ past it. That makes highlighting idempotent -- over blank paper it gives gray,
 over black ink it leaves the ink alone, and over an existing highlight it changes
 nothing at all.
 --]]
-local function stampHighlight(bb, x, y, r, color, color_enabled)
-    local x0 = math.floor(x - r + 0.5)
-    local y0 = math.floor(y - r + 0.5)
-    local s = math.floor(r * 2 + 0.5)
-    if s < 1 then s = 1 end
-    local x1, y1 = x0 + s - 1, y0 + s - 1
-
-    --[[
-    A Color8 is FFI cdata on a device, and a plain number only in the tests.
-
-    `type()` on cdata answers neither "table" nor "number", so asking it those
-    two questions and defaulting to zero meant the threshold was zero
-    everywhere it mattered: the blend stopped being "darken towards the tint"
-    and became "repaint everything that is not already pure black". Pen ink
-    survived that, being black, and the dots of dot grid paper did not -- they
-    are darker than the tint, they are meant to be left alone, and highlighting
-    over them washed them out.
-    --]]
-    local tint
-    if type(color) == "number" then tint = color
-    else tint = color.getColor8 and color:getColor8().a or color.a or 0 end
-
-    --[[
-    Clipped to the buffer, because getPixel and setPixel are not.
-
-    Every other primitive here goes through blitbuffer's own painting calls,
-    which clip. These two index straight into the row pointer with the
-    coordinate they are given, so a stamp that overhangs the edge reads and
-    writes past the end of the allocation. Nothing on the drawing path can
-    reach that -- the canvas keeps the nib a full stroke width inside the page
-    -- but an export renders into a buffer of its own chosen size, and a page
-    written on a wider panel would hang over the side of it.
-    --]]
-    local w = bb.getWidth and bb:getWidth() or bb.w
-    local h = bb.getHeight and bb:getHeight() or bb.h
-    if w and h then
-        if x0 < 0 then x0 = 0 end
-        if y0 < 0 then y0 = 0 end
-        if x1 > w - 1 then x1 = w - 1 end
-        if y1 > h - 1 then y1 = h - 1 end
-    end
-
-    for j = y0, y1 do
-        for i = x0, x1 do
-            local px = bb:getPixel(i, j)
-            if px then
-                local gray = px.getColor8 and px:getColor8().a or px.a
-                -- Only ever darken *towards* the tint, never past it.
-                if gray and gray > tint then
-                    bb:setPixel(i, j, color)
-                end
-            end
-        end
-    end
-end
 
 --[[--
 Paints the segment between two points and returns the dirtied rectangle.
@@ -215,15 +162,16 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
         local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.8)) or 1.0
         local steps = math.max(1, math.ceil(dist / step_dist))
 
-        for i = math.max(0, math.floor(first_t * steps)), math.min(steps, math.ceil(last_t * steps)) do
-            local t = i / steps
-            local x = x0 + dx * t
-            local y = y0 + dy * t
-            local r = r0 + (r1 - r0) * t
-            if is_highlight then
-                stampHighlight(bb, x, y, r, color)
-            else
-                stamp(bb, x, y, r, color, is_rgb_ink)
+        local first = math.max(0, math.floor(first_t * steps))
+        local last = math.min(steps, math.ceil(last_t * steps))
+        if is_highlight then
+            HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1,
+                color, first, last, steps)
+        else
+            for i = first, last do
+                local t = i / steps
+                stamp(bb, x0 + dx*t, y0 + dy*t, r0 + (r1-r0)*t,
+                    color, is_rgb_ink)
             end
         end
     end
@@ -301,59 +249,8 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
     local n = stroke:count()
     if n == 0 then return end
 
-    -- Regular geometry is a primitive, not thousands of overlapping round
-    -- pen stamps. Scan each circle row once; rectangles need only four spans.
-    local kind = stroke.shape_kind
-    local axis_aligned = true
-    if kind == "rectangle" or kind == "square" then
-        local ax, ay = stroke:getPoint(1)
-        local bx, by = stroke:getPoint(2)
-        axis_aligned = math.abs(ay-by) < 0.01 and math.abs(bx-ax) > 0.01
-    elseif kind == "circle" then
-        axis_aligned = math.abs((stroke.x_max-stroke.x_min)-(stroke.y_max-stroke.y_min)) < 0.01
-    end
-    if axis_aligned and (kind == "circle" or kind == "rectangle" or kind == "square") then
-        local x0,y0 = stroke.x_min,stroke.y_min
-        local x1,y1 = stroke.x_max,stroke.y_max
-        local left = clip and math.max(0, math.floor(clip.x)) or 0
-        local top = clip and math.max(0, math.floor(clip.y)) or 0
-        local right = clip and math.min(bb:getWidth()-1, math.ceil(clip.x+clip.w)-1)
-            or bb:getWidth()-1
-        local bottom = clip and math.min(bb:getHeight()-1, math.ceil(clip.y+clip.h)-1)
-            or bb:getHeight()-1
-        if right < left or bottom < top then return end
-        local r = stroke.width/2
-        local color = displayColor(stroke.color or 0, color_enabled)
-        local rgb = color_enabled and type(stroke.color) == "number"
-            and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF
-            and bb.paintRectRGB32
-        local function span(y,a,b)
-            a,b=math.max(left,math.ceil(a)),math.min(right,math.floor(b))
-            if b>=a and y>=top and y<=bottom then
-                if rgb then bb:paintRectRGB32(a,y,b-a+1,1,color)
-                else bb:paintRect(a,y,b-a+1,1,color) end
-            end
-        end
-        if kind == "circle" then
-            local cx,cy=(x0+x1)/2,(y0+y1)/2
-            local outer=(x1-x0)/2+r
-            local inner=math.max(0,(x1-x0)/2-r)
-            for y=math.max(top,math.ceil(cy-outer)),math.min(bottom,math.floor(cy+outer)) do
-                local dy=y-cy
-                local dx=math.sqrt(math.max(0,outer*outer-dy*dy))
-                if math.abs(dy)<inner then
-                    local hole=math.sqrt(inner*inner-dy*dy)
-                    span(y,cx-dx,cx-hole); span(y,cx+hole,cx+dx)
-                else span(y,cx-dx,cx+dx) end
-            end
-        else
-            for y=math.max(top,math.ceil(y0-r)),math.min(bottom,math.floor(y1+r)) do
-                if y<=y0+r or y>=y1-r then span(y,x0-r,x1+r)
-                else span(y,x0-r,x0+r); span(y,x1-r,x1+r) end
-            end
-        end
-        return
-    end
+    if stroke.shape_kind and GeometryInk.draw(bb, stroke, clip,
+        displayColor(stroke.color or 0, color_enabled), color_enabled) then return end
     local ox, oy = 0, 0
     local target = bb
     if clip then
@@ -393,7 +290,7 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
         local x, y, p = stroke:getPoint(1)
         local r = Renderer.radiusFor(stroke, p)
         if stroke.tool == "highlighter" then
-            stampHighlight(target, x - ox, y - oy, r,
+            HighlightInk.stamp(target, x - ox, y - oy, r,
                 displayColor(stroke.tint or HIGHLIGHT_TINT, color_enabled))
         else
             stamp(target, x - ox, y - oy, r, displayColor(stroke.color, color_enabled),
@@ -435,6 +332,27 @@ function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
         else
         local n = stroke:count()
         if n > 0 then
+            -- Regular figures remain primitives in the enlarged viewport.
+            -- Replaying their many stored points as round stamps is costly
+            -- during cache rebuilds and makes zoomed circles look uneven.
+            local kind = stroke.shape_kind
+            if kind == "circle" or kind == "rectangle" or kind == "square" then
+                local scaled_shape = {
+                    shape_kind = kind, color = stroke.color,
+                    tool = stroke.tool, tint = stroke.tint,
+                    width = math.max(1, stroke.width * scale),
+                    x_min = stroke.x_min*scale + ox,
+                    y_min = stroke.y_min*scale + oy,
+                    x_max = stroke.x_max*scale + ox,
+                    y_max = stroke.y_max*scale + oy,
+                    count = function() return n end,
+                    getPoint = function(_, i)
+                        local x, y, p = stroke:getPoint(i)
+                        return x*scale + ox, y*scale + oy, p
+                    end,
+                }
+                Renderer.drawStroke(bb, scaled_shape, nil, color_enabled)
+            else
             -- A stand-in carrying the scaled width; the real stroke is untouched.
             local scaled = {
                 tool = stroke.tool,
@@ -454,6 +372,7 @@ function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
                         x * scale + ox, y * scale + oy, p, nil, color_enabled)
                     px, py, pp = x, y, p
                 end
+            end
             end
         end
         end

@@ -1304,6 +1304,10 @@ test("creating a notebook asks for the name and the paper together", function()
 
     samples[3]:onTap()
     assertEq(dialog.paper, samples[3].id, "the paper that was tapped")
+    assertTrue(not samples[1].selected and samples[3].selected,
+        "only the chosen paper remains selected")
+    assertEq(samples[1].frame.bordersize, samples[3].frame.bordersize,
+        "the old paper kept its thick selection border")
 
     dialog.input.getText = function() return "Trip notes" end
     dialog.input.onCloseKeyboard = function() end

@@ -52,7 +52,9 @@ function Sample:init()
     self.frame = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
         color = Blitbuffer.COLOR_BLACK,
-        bordersize = self.selected and Size.border.thick or Size.border.thin,
+        -- Selection is painted as an overlay, so changing it cannot leave the
+        -- original thick FrameContainer border behind on the old card.
+        bordersize = Size.border.thin,
         radius = Size.radius.button,
         margin = 0,
         padding = 0,

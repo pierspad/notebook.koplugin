@@ -515,3 +515,13 @@ msgstr "Surligneur"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "Le zoom n’est pas encore disponible pour les pages PDF importées."
+
+
+
+
+
+msgid "Line"
+msgstr "Ligne"
+
+msgid "Arrow"
+msgstr "Flèche"

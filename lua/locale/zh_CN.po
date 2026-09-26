@@ -511,3 +511,13 @@ msgstr "荧光笔"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "导入的 PDF 页面暂不支持缩放。"
+
+
+
+
+
+msgid "Line"
+msgstr "直线"
+
+msgid "Arrow"
+msgstr "箭头"

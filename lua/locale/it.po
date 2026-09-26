@@ -517,3 +517,13 @@ msgstr "Evidenziatore"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "Lo zoom non è ancora disponibile sulle pagine PDF importate."
+
+
+
+
+
+msgid "Line"
+msgstr "Linea"
+
+msgid "Arrow"
+msgstr "Freccia"

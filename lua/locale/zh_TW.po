@@ -512,3 +512,13 @@ msgstr "螢光筆"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "匯入的 PDF 頁面暫不支援縮放。"
+
+
+
+
+
+msgid "Line"
+msgstr "直線"
+
+msgid "Arrow"
+msgstr "箭頭"

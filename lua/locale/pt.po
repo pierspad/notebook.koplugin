@@ -515,3 +515,13 @@ msgstr "Marcador"
 
 msgid "Zoom is not available on imported PDF pages yet."
 msgstr "O zoom ainda não está disponível em páginas PDF importadas."
+
+
+
+
+
+msgid "Line"
+msgstr "Linha"
+
+msgid "Arrow"
+msgstr "Seta"
