@@ -23,19 +23,14 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # Every suite in the bench. Named rather than globbed: spec/ also holds the
 # helpers the suites share and the two tools that render to a real file, and a
 # glob would run those as though they were tests.
-SUITES := run pages eraser palm safe i18n gallery shape shapesnap highlightink geometryink lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange zoom zoomrefresh
+SUITES := run pages eraser palm safe i18n gallery shape shapesnap highlightink geometryink lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange zoom zoomrefresh regressions interaction liveink
 
 .PHONY: all test lint verify translations-check package check-package ci clean install-hooks deploy version translations
 
 all: verify package
 
 test:
-	@cd lua && for s in $(SUITES); do \
-	    printf '%-10s ' "$$s"; \
-	    luajit spec/$$s.lua > /tmp/notebook-spec.$$s 2>&1 \
-	        && tail -1 /tmp/notebook-spec.$$s \
-	        || { echo FAILED; cat /tmp/notebook-spec.$$s; exit 1; }; \
-	done
+	@bash tools/test.sh $(SUITES)
 
 # A check that skips itself when its tool is missing is not a check. This one
 # used to say "luacheck not installed, skipping (CI runs it)" and return

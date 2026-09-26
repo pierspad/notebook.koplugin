@@ -114,10 +114,10 @@ assert(#region_blits == 1 and region_blits[1].w < 40
     "marker lift did not replace only its tinted region")
 local ink_cache = cached_canvas.zoom_cache
 cached_canvas:_zoomStylus({id=1,x=10,y=10},"eraser")
-assert(not cached_canvas.zoom_cache and ink_cache.freed,
-    "zoomed eraser retained the stale enlarged cache")
+assert(cached_canvas.zoom_cache == ink_cache and not ink_cache.freed,
+    "zoomed eraser discarded the reusable enlarged cache")
 cached_canvas:_zoomStylus({id=-1},"eraser")
-assert(not cached_canvas.zoom_cache, "zoomed eraser rebuilt the full cache on release")
+assert(cached_canvas.zoom_cache == ink_cache, "zoomed eraser rebuilt the full cache on release")
 cached_canvas:_zoomPan(-2,-2)
 cached_canvas:_flushZoomPan()
 assert(cached_canvas.zoom_cache, "pan did not rebuild the stale cache")
@@ -161,5 +161,58 @@ end
 cached_snap.shape_snap:trigger()
 assert(snap_blits == 1 and cached_snap.zoom_stroke.shape_kind == "line",
     "zoomed snap did not replace only its dirty region")
+
+-- Cached erase pixels, including grain and ruling, equal a fresh render after
+-- several samples and a pan. Updating only dirty bounds must not leave trails.
+for _,mode in ipairs({'area','stroke'}) do
+    local screen=support.FakeBB.new(120,160)
+    screen.getType=function() return 1 end
+    Device.screen.bb=screen
+    local document=Document:new('/tmp/zoom-repair.scribe')
+    local c=Canvas:new{document=document,content={x=0,y=0,w=120,h=160}}
+    c.eraser_mode=mode;c.eraser_size=3;c.pen_style='pencil';c.pen_width=6
+    c:setZoom(2);c:_renderZoom(screen)
+    for x=12,110,7 do c:_zoomStylus({id=1,x=x,y=60,pressure=2500},'pen') end
+    c:_zoomStylus({id=-1},'pen')
+    assert(document:getPage().strokes[1].pen_style=='pencil','zoom lost stored brush style')
+    local cache=c.zoom_cache
+    for x=40,60,4 do c:_zoomStylus({id=1,x=x,y=60},'eraser') end
+    c:_zoomStylus({id=-1},'eraser')
+    assert(c.zoom_cache==cache,'erase rebuilt entire cache')
+    local expected=support.FakeBB.new(120,160)
+    c:_renderZoom(expected,true)
+    for y=0,159 do for x=0,119 do
+        assert(screen:get(x,y)==expected:get(x,y),mode..' erase left stale pixels')
+    end end
+    c:_zoomPan(-20,-20);c:_flushZoomPan();c:_renderZoom(expected,true)
+    for y=0,159 do for x=0,119 do
+        assert(screen:get(x,y)==expected:get(x,y),mode..' pan exposed stale cache pixels')
+    end end
+end
+-- A final erase sample inside the refresh interval still paints while the
+-- nib pauses in contact: release is not required to reveal its result.
+local clock=0
+local timing=require('ui/time');timing.now=function() return clock end;timing.to_ms=function(t) return t end
+local UI=require('ui/uimanager');local scheduled={}
+UI.scheduleIn=function(_,delay,fn) scheduled[fn]=delay end
+UI.unschedule=function(_,fn) scheduled[fn]=nil end
+local erdoc=Document:new('/tmp/zoom-trailing.scribe')
+local ercanvas=Canvas:new{document=erdoc,content={x=0,y=0,w=120,h=160}}
+ercanvas.eraser_mode='stroke';ercanvas.eraser_size=2
+local Stroke=require('stroke')
+for _,x in ipairs({10,30}) do local s=Stroke:new{};s:addPoint(x,30);erdoc:addStroke(s) end
+ercanvas:setZoom(2)
+ercanvas:_zoomStylus({id=1,x=20,y=60},'eraser')
+clock=1;ercanvas:_zoomStylus({id=1,x=60,y=60},'eraser')
+assert(scheduled[ercanvas.zoom_erase_cb] and ercanvas.zoom_erase_region,'erase has no trailing refresh')
+clock=100;ercanvas.zoom_erase_cb()
+assert(not ercanvas.zoom_erase_region and not scheduled[ercanvas.zoom_erase_cb], 'trailing erase was not flushed')
+ercanvas:_zoomStylus({id=-1},'eraser')
+-- Zoom must read the physical sensor when virtual stylus events omit pressure.
+local c=Canvas:new{document=Document:new('/tmp/zoom-pressure.scribe'),content={x=0,y=0,w=120,h=160}}
+c.pen_style='fountain';c.pressure_sensor={read=function() return 1024 end};c:setZoom(2)
+c:_zoomStylus({id=1,x=40,y=50},'pen')
+local _,_,p=c.zoom_stroke:getPoint(1)
+assert(p>0.24 and p<0.26 and c.zoom_stroke.pen_style=='fountain','zoom ignored sensor pressure')
 
 print("zoom viewport mapping and pen storage passed")

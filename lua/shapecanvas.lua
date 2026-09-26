@@ -2,7 +2,6 @@
 -- Installed on Canvas at load time; owns shape creation, preview and resize.
 local Device = require("device")
 local Rect = require("rect")
-local Renderer = require("renderer")
 local Shape = require("shape")
 local UIManager = require("ui/uimanager")
 local time = require("ui/time")
@@ -25,18 +24,13 @@ end
 function ShapeCanvas:_extendShape(x, y)
     local gesture = self.shape_gesture
     gesture.next_x, gesture.next_y = x, y
-    local spacing = Screen:scaleBySize(24)
-    local px, py = gesture.paint_x or gesture.x, gesture.paint_y or gesture.y
-    local dx, dy = x-px, y-py
-    if dx*dx+dy*dy >= spacing*spacing then
+    local interval=0.05
+    local elapsed=gesture.last_paint and time.to_ms(time.now()-gesture.last_paint)/1000 or interval
+    if elapsed>=interval then
         self:_paintShape()
-    else
-        -- Trailing debounce: a slow stream of one-pixel samples must not make
-        -- us repaint a page-sized preview over and over. It still catches up
-        -- shortly after the nib pauses, and release always paints the endpoint.
-        UIManager:unschedule(self.shape_preview_cb)
-        gesture.scheduled = true
-        UIManager:scheduleIn(0.12, self.shape_preview_cb)
+    elseif not gesture.scheduled then
+        gesture.scheduled=true
+        UIManager:scheduleIn(interval-elapsed,self.shape_preview_cb)
     end
 end
 
@@ -60,12 +54,13 @@ function ShapeCanvas:_paintShape()
     else
         clean = Shape.create(gesture.kind, x0, y0, x, y,
             original and original.width or self.pen_width,
-            original and original.color or self.shape_color)
+            original and original.color or self.shape_color,
+            original ~= nil and original.filled == true or (original == nil and self.shape_fill == true))
     end
     local old = self.stroke
     self.stroke = nil
     if old then
-        local bx, by, bw, bh = old:getBounds()
+        local bx, by, bw, bh = self:_viewBounds(old)
         -- getBounds can reach beyond the drawing area at the initial point.
         bx, by, bw, bh = Rect.clamp(bx, by, bw, bh, self.content)
         if bx then
@@ -75,8 +70,8 @@ function ShapeCanvas:_paintShape()
     end
     self.stroke = clean
     if clean then
-        Renderer.drawStroke(Screen.bb, clean, self.content, Screen.isColorEnabled and Screen:isColorEnabled())
-        self:_accumulate(clean:getBounds())
+        self:_drawViewStroke(clean)
+        self:_accumulate(self:_viewBounds(clean))
     end
     self:_flush()
 end
@@ -110,6 +105,8 @@ function ShapeCanvas:_endShape()
             -- it from the document here made pen-up look frozen, especially
             -- for a large, thick figure.
         end
+        if self.zoom>1 then self:_clearZoomCache() end
+        self:_scheduleCleanScreen()
         if not self.stopping then
             self:_showLassoMenu({stroke})
             UIManager:unschedule(self.autosave_cb)
@@ -122,10 +119,10 @@ function ShapeCanvas:_endShape()
     end
 end
 
-local function shapeHandles(shape)
+local function shapeHandles(shape,scale)
     local l, t, r, b = shape.x_min, shape.y_min, shape.x_max, shape.y_max
     local mx, my = (l+r)/2, (t+b)/2
-    local gap = Screen:scaleBySize(42)
+    local gap = Screen:scaleBySize(42)/(scale or 1)
     return {
         {"nw",l,t}, {"n",mx,t}, {"ne",r,t},
         {"w",l,my}, {"e",r,my},
@@ -136,8 +133,8 @@ end
 
 function ShapeCanvas:_shapeHandleAt(shape, x, y)
     if not shape or not shape.shape_kind then return nil end
-    local radius = Screen:scaleBySize(18)
-    for _, handle in ipairs(shapeHandles(shape)) do
+    local radius = Screen:scaleBySize(18)/self.zoom
+    for _, handle in ipairs(shapeHandles(shape,self.zoom)) do
         if math.abs(x-handle[2]) <= radius and math.abs(y-handle[3]) <= radius then
             return handle[1]
         end
@@ -155,27 +152,40 @@ function ShapeCanvas:_extendShapeTransform(x, y)
     local gesture = self.transform_gesture
     if not gesture then return end
     gesture.next_x, gesture.next_y = x, y
-    local px, py = gesture.paint_x or gesture.x, gesture.paint_y or gesture.y
-    local spacing = Screen:scaleBySize(12)
-    if (x-px)^2 + (y-py)^2 < spacing*spacing then return end
-    gesture.paint_x, gesture.paint_y = x, y
+    local interval = 0.05
+    local elapsed = gesture.last_paint and time.to_ms(time.now()-gesture.last_paint)/1000 or interval
+    if elapsed >= interval then
+        self:_paintShapeTransform()
+    elseif not gesture.scheduled then
+        gesture.scheduled=true
+        UIManager:scheduleIn(interval-elapsed,self.transform_preview_cb)
+    end
+end
+
+function ShapeCanvas:_paintShapeTransform()
+    local gesture=self.transform_gesture
+    if not gesture or not gesture.next_x then return end
+    UIManager:unschedule(self.transform_preview_cb)
+    gesture.scheduled=nil
+    gesture.last_paint=time.now()
+    local x,y=gesture.next_x,gesture.next_y
     local next_shape = Shape.transform(gesture.original, gesture.handle, x, y, gesture.x, gesture.y)
     -- The snapshot was taken after removing the original figure. During a
     -- drag only the previous preview needs clearing; including the original
     -- bounding box makes every rotation repaint most of the page.
-    local dirty = gesture.preview and Rect.grow(nil, gesture.preview:getBounds()) or nil
-    dirty = Rect.grow(dirty, next_shape:getBounds())
+    local dirty = gesture.preview and Rect.grow(nil, self:_viewBounds(gesture.preview)) or nil
+    dirty = Rect.grow(dirty, self:_viewBounds(next_shape))
     local rx, ry, rw, rh = Rect.clamp(dirty.x, dirty.y, dirty.w, dirty.h, self.content)
     if rx then
         Screen.bb:blitFrom(gesture.background, rx, ry, rx, ry, rw, rh)
-        Renderer.drawStroke(Screen.bb, next_shape, self.content,
-            Screen.isColorEnabled and Screen:isColorEnabled())
+        self:_drawViewStroke(next_shape)
         self:_refreshNow(rx, ry, rw, rh, next_shape.color == 0 and "fast" or "ui")
     end
     gesture.preview = next_shape
 end
 
 function ShapeCanvas:_endShapeTransform()
+    UIManager:unschedule(self.transform_preview_cb)
     local gesture = self.transform_gesture
     if not gesture then return end
     self.transform_gesture = nil
@@ -186,13 +196,12 @@ function ShapeCanvas:_endShapeTransform()
     -- The background snapshot already contains every other stroke and the
     -- paper, with the selected figure removed. Finalizing only needs to clear
     -- the last preview and draw the final figure, just like first creation.
-    local dirty = gesture.preview and Rect.grow(nil, gesture.preview:getBounds()) or nil
-    dirty = Rect.grow(dirty, shape:getBounds())
+    local dirty = gesture.preview and Rect.grow(nil, self:_viewBounds(gesture.preview)) or nil
+    dirty = Rect.grow(dirty, self:_viewBounds(shape))
     local rx, ry, rw, rh = Rect.clamp(dirty.x, dirty.y, dirty.w, dirty.h, self.content)
     if rx and gesture.background then
         Screen.bb:blitFrom(gesture.background, rx, ry, rx, ry, rw, rh)
-        Renderer.drawStroke(Screen.bb, shape, self.content,
-            Screen.isColorEnabled and Screen:isColorEnabled())
+        self:_drawViewStroke(shape)
         self:_refreshNow(rx, ry, rw, rh, shape.color == 0 and "fast" or "ui")
     end
     if gesture.background then gesture.background:free() end
@@ -202,11 +211,15 @@ function ShapeCanvas:_endShapeTransform()
         UIManager:unschedule(self.autosave_cb)
         UIManager:scheduleIn(2.5, self.autosave_cb)
     end
-    self:_showLassoMenu({shape})
+    if self.zoom>1 and moved then
+        self:_clearZoomCache()
+    end
+    self:_scheduleCleanScreen()
+    if not self.stopping then self:_showLassoMenu({shape}) end
 end
 
 function ShapeCanvas:shapeHandles(shape)
-    return shapeHandles(shape)
+    return shapeHandles(shape,self.zoom)
 end
 
 return ShapeCanvas

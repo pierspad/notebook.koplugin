@@ -504,7 +504,7 @@ msgstr "ページ %1 / %2 — %3"
 #~ msgstr "白い背景"
 
 msgid "Triangle"
-msgstr "Triangle"
+msgstr "三角形"
 
 msgid "Side button"
 msgstr "サイドボタン"
@@ -524,3 +524,6 @@ msgstr "線"
 
 msgid "Arrow"
 msgstr "矢印"
+
+msgid "Filled shape"
+msgstr "塗りつぶした図形"

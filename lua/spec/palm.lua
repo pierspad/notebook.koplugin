@@ -170,30 +170,29 @@ test("the marker shows darker while it moves, and settles back afterwards", func
     canvas:_beginStroke("highlighter", 100, 100, 1)
     after(10)
     canvas:_extendStroke(200, 100, 1)
-    assertTrue(bb:get(150, 100) < settled,
+    assertTrue(bb:get(152, 100) < settled,
         "the second pass is invisible: nothing shows under the tip")
 
     -- And when it lifts, the two passes are the same flat gray again.
     canvas:_endStroke()
     assertEq(bb:get(150, 100), settled, "the darker tint outlived the stroke")
     for _, stroke in ipairs(doc.pages[1].strokes) do
-        assertEq(stroke.tint, nil, "the live tint was stored on the stroke")
+        assertEq(stroke.tint, canvas.highlighter_color, "the selected tint was lost")
+        assertEq(stroke.live_preview, nil, "the preview was stored")
     end
 end)
 
-test("the moving marker uses visible throttled grayscale refreshes", function()
+test("the moving marker uses fast binary feedback without gray updates", function()
     local canvas = newCanvas()
     local fast,ui=0,0
     Device.screen.refreshFast=function() fast=fast+1 end
     Device.screen.refreshUI=function() ui=ui+1 end
     canvas:_beginStroke("highlighter",100,180,1)
-    assertEq(canvas.refresh_mode,"ui","marker waveform")
+    assertEq(canvas.refresh_mode,"fast","marker waveform")
     for i=1,12 do after(5); canvas:_extendStroke(100+i*8,180,1) end
-    assertTrue(ui>=1,"the live marker was never shown")
-    -- One immediate update, then no more than one per configured interval.
-    local maximum=1+math.ceil(60/Tuning.live_highlight_refresh_ms)
-    assertTrue(ui<=maximum,"grayscale refreshes were not throttled")
-    assertEq(fast,0,"marker used the binary waveform")
+    assertTrue(fast>=2,"the live marker was never shown")
+    assertTrue(fast<=1+math.ceil(60/Tuning.refresh_interval_ms),"fast updates were not coalesced")
+    assertEq(ui,0,"marker queued a slow gray waveform while drawing")
     canvas:_endStroke()
 end)
 

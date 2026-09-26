@@ -51,6 +51,7 @@ is how resting a palm pressed toolbar buttons and repainted pieces of the screen
 under the ink.
 --]]
 function TouchInput:onTouchStart(_, ges)
+    self.sample_time=nil
     self:_debugEvent("touch-start", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
@@ -119,6 +120,7 @@ function TouchInput:onTouchStart(_, ges)
 end
 
 function TouchInput:onTouchPan(_, ges)
+    self.sample_time=nil
     self:_debugEvent("touch-pan", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
@@ -158,7 +160,9 @@ function TouchInput:onTouchPan(_, ges)
     if self.tool == "eraser" then
         self:_eraseAlong(x, y)
     elseif self.stroke or self.shape_gesture then
-        self:_extendStroke(x, y, 1)
+        local p=require("penpressure").sample(self.tool == "pen" and self.pen_style or nil,
+            self.stroke,x,y,nil,self.last_point_at and time.to_ms(time.now()-self.last_point_at))
+        self:_extendStroke(x, y, p)
     else
         self:_beginStroke(self.tool, x, y, 1)
     end

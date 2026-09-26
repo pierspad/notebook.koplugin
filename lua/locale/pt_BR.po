@@ -504,7 +504,7 @@ msgstr "Página %1 de %2 — %3"
 #~ msgstr "Fundo branco"
 
 msgid "Triangle"
-msgstr "Triangle"
+msgstr "Triângulo"
 
 msgid "Side button"
 msgstr "Botão lateral"
@@ -524,3 +524,6 @@ msgstr "Linha"
 
 msgid "Arrow"
 msgstr "Seta"
+
+msgid "Filled shape"
+msgstr "Forma preenchida"

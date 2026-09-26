@@ -35,6 +35,7 @@ turning pages underneath the drawing.
 --]]
 function StylusInput:onStylusEvent(slot)
     local raw_slot = slot
+    self.sample_time=slot.timev
     -- Match the same transform KOReader applies to touch gestures. Make a
     -- private copy: the input subsystem may pass this slot on to gestures.
     if slot.x and slot.y then
@@ -150,24 +151,12 @@ function StylusInput:onStylusEvent(slot)
         return false
     end
 
-    -- The Scribe Wacom digitizer reports 0..4095 (EVIOCGABS ABS_PRESSURE).
-    -- Pressure is baked into ordinary stroke points, so exports and old readers
-    -- need no new codec or brush metadata. Missing pressure keeps a solid line.
-    local p = 1
-    if tool == "pen" and self.pen_style ~= "fineliner" and Input.wacom_protocol then
-        local pressure = slot.pressure
-        if pressure == nil and self.pressure_sensor then
-            pressure = self.pressure_sensor:read()
-        end
-        if pressure then p = math.max(0, math.min(1, pressure / 4095)) end
-        if self.stroke and self.stroke.tool == "pen" and self.stroke.n>0 then
-            local lx,ly,lp=self.stroke:getPoint(self.stroke.n)
-            local distance=math.sqrt((x-lx)^2+(y-ly)^2)
-            -- Smooth pressure over distance rather than sample count, keeping
-            -- the response consistent at different input rates and speeds.
-            p=lp+(p-lp)*(1-math.exp(-distance/12))
-        end
+    local pressure=slot.pressure
+    if pressure == nil and tool == "pen" and self.pen_style ~= "fineliner" and self.pressure_sensor then
+        pressure=self.pressure_sensor:read()
     end
+    local p=require("penpressure").sample(tool == "pen" and self.pen_style or nil,
+        self.stroke,x,y,pressure,self.last_point_at and time.to_ms(time.now()-self.last_point_at))
 
     if self.dismiss_contact then return true end
     if new_contact and self.selected_strokes then

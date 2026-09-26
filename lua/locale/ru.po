@@ -503,7 +503,7 @@ msgstr "Страница %1 из %2 — %3"
 #~ msgstr "Белый фон"
 
 msgid "Triangle"
-msgstr "Triangle"
+msgstr "Треугольник"
 
 msgid "Side button"
 msgstr "Боковая кнопка"
@@ -523,3 +523,6 @@ msgstr "Линия"
 
 msgid "Arrow"
 msgstr "Стрелка"
+
+msgid "Filled shape"
+msgstr "Залитая фигура"

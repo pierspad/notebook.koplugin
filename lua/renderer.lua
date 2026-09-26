@@ -55,11 +55,21 @@ local function displayColor(value, color_enabled)
 end
 
 --- Returns the half-width, in pixels, a stroke should have at a given pressure.
-function Renderer.radiusFor(stroke, pressure)
+function Renderer.radiusFor(stroke, pressure, dx, dy)
     local p = pressure or 1
     if p < 0 then p = 0 elseif p > 1 then p = 1 end
     local factor = MIN_PRESSURE_FACTOR + (1 - MIN_PRESSURE_FACTOR) * p
-    return (stroke.width * factor) / 2
+    local r = (stroke.width * factor) / 2
+    if stroke.pen_style == "fountain" then
+        local angle_factor = 0.70
+        if dx and dy and (dx ~= 0 or dy ~= 0) then
+            local theta = math.atan2(dy, dx)
+            -- 45-degree nib angle creates calligraphic contrast between thick downstrokes and thin cross-strokes
+            angle_factor = 0.35 + 0.65 * math.abs(math.sin(theta - math.pi / 4))
+        end
+        r = r * angle_factor
+    end
+    return r
 end
 
 --- Paints a single round stamp. Small radii bypass paintCircle, which bails out
@@ -96,11 +106,11 @@ Paints the segment between two points and returns the dirtied rectangle.
 @tparam number x1,y1,p1 end point and its pressure
 @treturn number,number,number,number x, y, w, h of the dirtied area
 --]]
-function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled)
-    local r0 = Renderer.radiusFor(stroke, p0)
-    local r1 = Renderer.radiusFor(stroke, p1)
-
+function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled, grain_x, grain_y)
     local dx, dy = x1 - x0, y1 - y0
+    local r0 = Renderer.radiusFor(stroke, p0, dx, dy)
+    local r1 = Renderer.radiusFor(stroke, p1, dx, dy)
+
     local dist = math.sqrt(dx * dx + dy * dy)
 
     -- Restrict work to samples whose stamp can touch the viewport. Preserve
@@ -159,20 +169,18 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
         -- squares still overlap generously in every direction, while the old
         -- 0.4r spacing blended most pixels several times and made a broad
         -- marker spend CPU on work that could not change the result.
-        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.8)) or 1.0
+        local is_pencil = stroke.pen_style == "pencil"
+        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.8))
+            or (is_pencil and math.max(1.0, math.floor(math.min(r0, r1) * 0.5)) or 1.0)
         local steps = math.max(1, math.ceil(dist / step_dist))
 
         local first = math.max(0, math.floor(first_t * steps))
         local last = math.min(steps, math.ceil(last_t * steps))
         if is_highlight then
             HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1,
-                color, first, last, steps)
+                color, first, last, steps, stroke.live_preview)
         else
-            for i = first, last do
-                local t = i / steps
-                stamp(bb, x0 + dx*t, y0 + dy*t, r0 + (r1-r0)*t,
-                    color, is_rgb_ink)
-            end
+            require("penink").draw(bb,x0,y0,r0,x1,y1,r1,color,is_rgb_ink,is_pencil,grain_x,grain_y)
         end
     end
 
@@ -263,7 +271,7 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
     local bounds = clip and { w = target:getWidth(), h = target:getHeight() }
     local function segment(x0, y0, p0, x1, y1, p1)
         Renderer.drawSegment(target, stroke, x0 - ox, y0 - oy, p0,
-            x1 - ox, y1 - oy, p1, bounds, color_enabled)
+            x1 - ox, y1 - oy, p1, bounds, color_enabled, ox + (stroke.grain_x or 0), oy + (stroke.grain_y or 0))
     end
 
     -- Short strokes have no index and are drawn whole: their bounding box has
@@ -293,9 +301,10 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
             HighlightInk.stamp(target, x - ox, y - oy, r,
                 displayColor(stroke.tint or HIGHLIGHT_TINT, color_enabled))
         else
-            stamp(target, x - ox, y - oy, r, displayColor(stroke.color, color_enabled),
-                color_enabled and type(stroke.color) == "number"
-                    and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF)
+            require("penink").draw(target,x-ox,y-oy,r,x-ox,y-oy,r,
+                displayColor(stroke.color,color_enabled),
+                color_enabled and type(stroke.color)=="number" and stroke.color>=0x1000000,
+                stroke.pen_style=="pencil",ox+(stroke.grain_x or 0),oy+(stroke.grain_y or 0))
         end
         return
     end
@@ -317,6 +326,7 @@ touching a few thousand pixels and four and a half million -- which matters when
 a gallery has to produce one of these per notebook.
 --]]
 function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
+    if #page.strokes == 0 then return end
     ox, oy = ox or 0, oy or 0
     if (not scale or scale == 1) and ox == 0 and oy == 0 then
         for _, stroke in ipairs(page.strokes) do
@@ -326,55 +336,30 @@ function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
     end
     scale = scale or 1
 
+    local clip = {x=0, y=0, w=bb:getWidth(), h=bb:getHeight()}
     for _, stroke in ipairs(page.strokes) do
-        if stroke.text then
-            require("textobject").draw(bb,stroke,scale,ox,oy)
-        else
-        local n = stroke:count()
-        if n > 0 then
-            -- Regular figures remain primitives in the enlarged viewport.
-            -- Replaying their many stored points as round stamps is costly
-            -- during cache rebuilds and makes zoomed circles look uneven.
-            local kind = stroke.shape_kind
-            if kind == "circle" or kind == "rectangle" or kind == "square" then
-                local scaled_shape = {
-                    shape_kind = kind, color = stroke.color,
-                    tool = stroke.tool, tint = stroke.tint,
-                    width = math.max(1, stroke.width * scale),
-                    x_min = stroke.x_min*scale + ox,
-                    y_min = stroke.y_min*scale + oy,
-                    x_max = stroke.x_max*scale + ox,
-                    y_max = stroke.y_max*scale + oy,
-                    count = function() return n end,
-                    getPoint = function(_, i)
+        local pad = math.ceil(stroke.width * scale) + 2
+        if stroke.x_max*scale+ox+pad >= 0 and stroke.y_max*scale+oy+pad >= 0
+            and stroke.x_min*scale+ox-pad < clip.w and stroke.y_min*scale+oy-pad < clip.h then
+            if stroke.text then
+                require("textobject").draw(bb, stroke, scale, ox, oy, clip)
+            else
+                local scaled = {
+                    shape_kind=stroke.shape_kind, filled=stroke.filled,
+                    pen_style=stroke.pen_style, tool=stroke.tool,
+                    color=stroke.color, tint=stroke.tint,
+                    grain_x=-ox, grain_y=-oy,
+                    width=math.max(1, stroke.width*scale),
+                    x_min=stroke.x_min*scale+ox, y_min=stroke.y_min*scale+oy,
+                    x_max=stroke.x_max*scale+ox, y_max=stroke.y_max*scale+oy,
+                    count=function() return stroke:count() end,
+                    getPoint=function(_, i)
                         local x, y, p = stroke:getPoint(i)
-                        return x*scale + ox, y*scale + oy, p
+                        return x*scale+ox, y*scale+oy, p
                     end,
                 }
-                Renderer.drawStroke(bb, scaled_shape, nil, color_enabled)
-            else
-            -- A stand-in carrying the scaled width; the real stroke is untouched.
-            local scaled = {
-                tool = stroke.tool,
-                color = stroke.color,
-                tint = stroke.tint,
-                width = math.max(1, stroke.width * scale),
-            }
-            local px, py, pp = stroke:getPoint(1)
-            if n == 1 then
-                Renderer.drawSegment(bb, scaled, px * scale + ox, py * scale + oy, pp,
-                    px * scale + ox, py * scale + oy, pp, nil, color_enabled)
-            else
-                for i = 2, n do
-                    local x, y, p = stroke:getPoint(i)
-                    Renderer.drawSegment(bb, scaled,
-                        px * scale + ox, py * scale + oy, pp,
-                        x * scale + ox, y * scale + oy, p, nil, color_enabled)
-                    px, py, pp = x, y, p
-                end
+                Renderer.drawStroke(bb, scaled, clip, color_enabled)
             end
-            end
-        end
         end
     end
 end

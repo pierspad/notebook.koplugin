@@ -16,6 +16,8 @@ local function zoomBounds(self, stroke)
 end
 
 function SnapCanvas:_applyShapeSnap(clean, raw)
+    if self.stroke ~= raw and self.zoom_stroke ~= raw then return end
+    self:_restoreLiveInk()
     if self.zoom > 1 and self.zoom_stroke == raw then
         self.zoom_stroke = clean
         local dirty = Rect.grow(nil, zoomBounds(self, raw))
@@ -35,6 +37,7 @@ function SnapCanvas:_applyShapeSnap(clean, raw)
             self:_renderZoom(Screen.bb, true)
         end
         Screen:refreshUI(x, y, w, h)
+        self:_scheduleCleanScreen()
         return
     end
     if self.stroke ~= raw then return end
@@ -51,6 +54,7 @@ function SnapCanvas:_applyShapeSnap(clean, raw)
         self:_accumulate(nx, ny, nw, nh)
     end
     self:_flush()
+    self:_scheduleCleanScreen()
 end
 
 return SnapCanvas

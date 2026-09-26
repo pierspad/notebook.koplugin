@@ -41,7 +41,7 @@ local function parsePO(path)
     -- Flags read from the comment lines that come *before* the entry they
     -- describe, and therefore before the msgid that closes the previous one.
     -- Held separately, or flushing the previous entry would clear them.
-    local next_fuzzy = false
+    local next_fuzzy, next_context = false, false
 
     local function flush()
         if id and id ~= "" and not has_context then ids[id] = true end
@@ -60,12 +60,15 @@ local function parsePO(path)
         if line:match("^%s*#, .*fuzzy") then
             next_fuzzy = true
         elseif line:match("^msgctxt") then
-            has_context = true
+            flush()
+            next_context = true
+            target = nil
         elseif line:match("^msgid_plural") then
             has_context = true
         elseif line:match("^msgid ") then
             flush()
             fuzzy, next_fuzzy = next_fuzzy, false
+            has_context, next_context = next_context, false
             id = unquote(line:sub(7)) or ""
             target = "id"
         elseif line:match("^msgstr ") then
@@ -87,16 +90,15 @@ local function parsePO(path)
     flush()
     file:close()
 
-    -- Escapes, which .po files carry in the same form Lua does.
-    local decoded = {}
-    for key, value in pairs(entries) do
-        decoded[key:gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\")] =
-            value:gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\")
+    -- Decode once: chained substitutions turn a literal backslash+n into
+    -- a backslash followed by a newline. PO uses C-style string escapes.
+    local escapes = {n="\n", r="\r", t="\t", ['"']='"', ["\\"]="\\"}
+    local function decode(value)
+        return (value:gsub("\\(.)", function(c) return escapes[c] or ("\\"..c) end))
     end
-    local decoded_ids={}
-    for key in pairs(ids) do
-        decoded_ids[key:gsub("\\n", "\n"):gsub('\\"', '"'):gsub("\\\\", "\\")]=true
-    end
+    local decoded, decoded_ids = {}, {}
+    for key,value in pairs(entries) do decoded[decode(key)] = decode(value) end
+    for key in pairs(ids) do decoded_ids[decode(key)] = true end
     return decoded,decoded_ids
 end
 
@@ -120,7 +122,7 @@ local function load()
     local dir = localeDir()
     if not dir then return end
 
-    local language = currentLanguage():gsub("[.:].*$", "")
+    local language = currentLanguage():gsub("[.@:].*$", ""):gsub("-", "_")
     local candidates = { language }
     local base = language:match("^(%a+)")
     if base and base ~= language then table.insert(candidates, base) end

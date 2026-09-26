@@ -170,13 +170,18 @@ for _,i in ipairs({2,3,5,6}) do
     nb:_showToolOptions(i)
     menu=rec.shown[#rec.shown]
     assert(menu.anchor==nb.tool_buttons[i].dimen, 'popover anchored to its tool')
-    if i==5 then assert(#menu.actions==12)
+    if i==5 then assert(#menu.actions==13)
     elseif i==6 then assert(#menu.actions==11)
     else assert(menu.footer) end
 end
 nb:_showToolOptions(5)
 local shape_menu=rec.shown[#rec.shown]
-assert(shape_menu.actions[5].selected(), 'black shape color is not preselected')
+assert(shape_menu.actions[5].text=='Filled shape' and shape_menu.actions[5].icon=='notebook.shape',
+    'filled shape option missing')
+assert(not shape_menu.actions[5].selected(), 'filled shape should default to outline')
+shape_menu.actions[5].callback()
+assert(nb.canvas.shape_fill==true, 'filled shape toggle was not applied')
+assert(shape_menu.actions[6].selected(), 'black shape color is not preselected')
 assert(shape_menu.actions[4].text=='Triangle' and shape_menu.actions[4].icon=='notebook.triangle',
     'triangle option missing')
 shape_menu.actions[4].callback()
@@ -199,7 +204,10 @@ nb:_editText(nil,120,220)
 local editor=rec.shown[#rec.shown]
 local styles={}
 for _,row in ipairs(editor.buttons) do
-    for _,button in ipairs(row) do styles[button.text]=button end
+    for _,button in ipairs(row) do
+        if button.text then styles[button.text]=button end
+        if button.id then styles[button.id]=button end
+    end
 end
 assert(#editor.buttons==2 and #editor.buttons[1]==5 and #editor.buttons[2]==5 and editor.text_height==1 and editor.inputtext_class.skip_paint,
     'text editor is not the compact page-preview variant')
@@ -212,12 +220,13 @@ styles.I.callback()
 assert(styles.I.checked_func(),'toggled text style did not remain selected')
 editor.input='Live on page'; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='Live on page','typed text is not previewed on the page')
-styles.White.callback()
+styles.bg_toggle.callback()
 assert(nb.canvas.text_preview.text_background, 'white preview not applied')
-styles.Transparent.callback()
+styles.bg_toggle.callback()
 assert(not nb.canvas.text_preview.text_background, 'transparent preview not applied')
 editor.input='ab'; editor._input_widget={charlist={'a','b'},charpos=2}; editor.strike_callback()
-assert(nb.canvas.text_preview.text=='a│b','page preview does not mirror the input cursor')
+assert(nb.canvas.text_preview.text=='ab' and nb.canvas.text_preview.cursor_pos==2,
+    'cursor must not change the stored text or wrapping')
 styles['✕'].callback()
 assert(not nb.canvas.text_preview and #doc:getPage().strokes==1,
     'cancelling compact text input did not restore the page')

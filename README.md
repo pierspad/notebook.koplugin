@@ -76,6 +76,11 @@ provate e non implicano supporto confermato.
 - Editable text, multiple pages and per-page paper templates.
 - PDF and Xournal++ export; optional LocalSend integration.
 
+Colored pens and pencil use a dark live preview; the highlighter uses a light
+black hatch so text remains readable. After a pause, the selected color appears.
+This keeps slow grayscale/color refreshes out of the moving pen's path. Saved
+notes and exports always retain the selected color and brush.
+
 Hold or double-tap a tool button to open its options. After cutting or copying,
 use the Paste button in the top bar.
 
@@ -95,13 +100,16 @@ test on a color e-ink device.
 
 ## Development
 
-Requires LuaJIT and `luacheck`. For in-depth architectural and engineering documentation, see the [Technical Reference Manual](docs/README.md).
+Requires LuaJIT, `luacheck` and gettext (`msgfmt`). For in-depth architectural and engineering documentation, see the [Technical Reference Manual](docs/README.md).
 
 ```bash
 make verify       # lint and tests
 make ci           # verification plus package checks
 make package      # build the installable zip in build/
 ```
+
+Tests run in separate LuaJIT processes across the available CPU cores. Set
+`TEST_JOBS=4 make test` to limit concurrency.
 
 For device deployment, copy `kindle.env.example` to `kindle.env`, configure the
 device, then run `make deploy`. See `tools/deploy.sh --help` for options.
@@ -122,6 +130,12 @@ Sponsorship is optional and does not unlock features.
 ## LLM Disclosure
 
 This project was developed with the assistance of Large Language Models, used to support code writing and documentation.
+
+---
+
+## Acknowledgements
+
+Inspired by [localsend.koplugin](https://github.com/kaikozlov/localsend.koplugin), [pencil.koplugin](https://github.com/mysticknits/pencil.koplugin), and [ink-away.koplugin](https://github.com/EmirErtorer/ink-away.koplugin).
 
 ---
 

@@ -502,7 +502,7 @@ msgstr "第 %1 頁，共 %2 頁 — %3"
 #~ msgstr "白色背景"
 
 msgid "Triangle"
-msgstr "Triangle"
+msgstr "三角形"
 
 msgid "Side button"
 msgstr "側邊按鈕"
@@ -522,3 +522,6 @@ msgstr "直線"
 
 msgid "Arrow"
 msgstr "箭頭"
+
+msgid "Filled shape"
+msgstr "實心形狀"

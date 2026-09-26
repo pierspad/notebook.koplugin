@@ -525,3 +525,6 @@ msgstr "Ligne"
 
 msgid "Arrow"
 msgstr "Flèche"
+
+msgid "Filled shape"
+msgstr "Forme pleine"

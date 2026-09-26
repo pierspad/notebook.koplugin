@@ -96,7 +96,13 @@ notebook.koplugin/
 ├── lua/                     # Core plugin runtime (packaged and installed to device)
 │   ├── spec/                # Headless unit test suites, mocks, and layout validators
 │   ├── locale/              # Gettext localization catalogues (.po/.pot)
-│   ├── notebooktext.lua     # On-page text editor, two-row controls and live style preview
+│   ├── notebooktext.lua     # On-page text editor and equal-height two-row controls
+│   ├── textpreview.lua      # Immutable background for active text editing
+│   ├── textcache.lua        # Bounded native text widget ownership
+│   ├── penpressure.lua      # Shared stylus/finger pressure response
+│   ├── polygonink.lua       # Filled and outlined transformed polygon scanlines
+│   ├── penink.lua           # Tapered round pen / graphite scanline rasterizer
+│   ├── viewcanvas.lua       # Shared page/screen geometry and overlay restoration
 │   ├── canvas.lua           # Primary canvas widget lifecycle and tool dispatch
 │   ├── canvasrender.lua     # Viewport clipping, dirty bounds, and E-Ink waveform scheduling
 │   ├── erasercanvas.lua     # Swept capsule eraser, undo batching, and shape preservation
@@ -113,6 +119,7 @@ notebook.koplugin/
 │   ├── document.lua         # Document model, page collections, and persistence dispatch
 │   ├── stroke.lua           # Flat-array vector stroke model and chunk bounding indexing
 │   ├── renderer.lua         # Segment dispatch and page rendering
+│   ├── liveink.lua          # Binary feedback and bounded snapshot restoration
 │   ├── highlightink.lua     # Chisel marker pixels and scanline union
 │   ├── geometryink.lua      # Rectangle and circle raster primitives
 │   ├── tuning.lua           # Centralized hardware tuning parameters and calibration
@@ -140,7 +147,7 @@ The canvas subsystem is decomposed into specialized mixin modules loaded into th
 | `stylusinput.lua` | Point filtering, coordinate rotation, and speed gating | Normalizes raw digitizer samples; applies screen rotation; drops physical outliers. |
 | `touchinput.lua` | Multitouch gestures, palm rejection, pan, page flips | Enforces `palm_grace_ms`; claims touch events inside canvas to prevent pass-through to background widgets. |
 | `zoomcanvas.lua` | 2x magnification view and coordinate transformations | Maintains enlarged `Blitbuffer` cache; transforms input coordinates; handles finger pan. |
-| `canvasrender.lua` | Framebuffer blitting, dirty rects, E-Ink waveforms | Bypasses `UIManager` while drawing; manages fast 1-bit (`refreshFast`) and grayscale (`refreshPartial`) refreshes. |
+| `canvasrender.lua` | Framebuffer blitting, dirty rects, E-Ink waveforms | Bypasses `UIManager` while drawing; manages fast 1-bit (`refreshFast`) and idle grayscale/color (`refreshUI`) refreshes. |
 | `erasercanvas.lua` | Continuous capsule eraser and undo grouping | Performs swept segment intersection; batches atomic undos; protects geometric shapes from immediate deletion. |
 | `shapecanvas.lua` | Geometric tools (rect, circle) and resize handles | Uses immutable background snapshots for previews; manages bounding handles and aspect ratios. |
 | `shapesnap.lua` | Hold-to-straighten recognition timer | Debounces pen pauses (`hold_delay_ms`); triggers `Shape.recognize` on endpoint hold. |
@@ -176,13 +183,13 @@ E-Ink displays rely on electrophoretic micro-capsules driven by specific electri
                                                            │
                                                            ▼
 [Pen Lift-Off: Visual Cleanliness Pass]
-  Lift Detected ──> Schedule Timer (reconcile_delay_ms) ──> Screen:refreshPartial() (GC16/REAGL)
+  Lift Detected ──> Schedule Timer (reconcile_delay_ms) ──> Screen:refreshUI() (device-selected waveform)
 ```
 
 1. **Bypassing UIManager**: KOReader's `UIManager` schedules repaints across the entire widget hierarchy on every dirty notification. Triggering `UIManager:setDirty` for individual stylus samples results in severe latency (~150–300 ms lag), making writing unusable. During an active stroke, `canvasrender.lua` renders directly into the screen's hardware blitbuffer (`Screen.bb`) and issues partial ioctl refreshes directly to the Linux frame driver.
 2. **Fast Binary Refresh (`refreshFast`)**: Active ink is updated using 1-bit binary waveforms (A2/DU mode). These waveforms exhibit minimal panel latency (~20–30 ms) but cannot display intermediate gray levels and leave noticeable ghosting.
 3. **Refresh Throttling**: The digitizer reports samples at upwards of 200 Hz, whereas the E-Ink controller cannot process ioctl refresh calls at that rate. Issuing a refresh per sample queues work inside the kernel framebuffer driver, causing ink to lag far behind the physical pen nib. Refreshes are strictly rate-limited to at most one every `refresh_interval_ms` (default: 20 ms).
-4. **Grayscale Reconciliation (`refreshPartial`)**: When the pen lifts, an idle timer (`reconcile_delay_ms`, default: 2000 ms) schedules a high-quality 16-level grayscale pass (REAGL/GC16 mode). This reconciles the 1-bit high-contrast ink with anti-aliasing and clears accumulated panel ghosting.
+4. **Color Reconciliation (`refreshUI`)**: After pen lift, an idle timer (`reconcile_delay_ms`, default 2000 ms, minimum effective delay 600 ms) reveals the authoritative grayscale/color pixels. Active contact postpones this pass. Shape/rotation/menu cleanup requests a single full-screen refresh at rest, rather than flashing every sample.
 5. **Why Grayscale Cannot Run Live**: On Kindle Scribe hardware, invoking `refreshPartial` forces the display driver into `UPDATE_MODE_FULL` and enforces a hardware fence. Successive blit operations block until previous waveform cycles complete, freezing the event loop.
 6. **Boundary Clamping**: The Linux framebuffer driver silently rejects refresh ioctls containing out-of-bounds or negative coordinates. Furthermore, dirty rectangles that intersect the top toolbar trigger visual flickering of UI buttons under fast binary waveforms. All refresh rectangles are strictly clamped against the active canvas content bounding box (`self.content`).
 
@@ -273,17 +280,17 @@ Document Model (Authoritative)
 2. **Coordinate Transformation**: Coordinates are rotated and scaled according to current screen orientation:
    $$\begin{pmatrix} x_{\text{canvas}} \\ y_{\text{canvas}} \end{pmatrix} = \mathcal{R}_{\theta} \begin{pmatrix} x_{\text{raw}} \\ y_{\text{raw}} \end{pmatrix} - \begin{pmatrix} x_{\text{origin}} \\ y_{\text{origin}} \end{pmatrix}$$
 3. **Jitter Floor Filtering**: Points that fall within `jitter_floor_sq` (default: 4 px²) of the previous recorded point are discarded as sensor noise.
-4. **Segment Rasterization**: `renderer.lua` interpolates segments between successive points using anti-aliased Bresenham circles with pressure-interpolated radii.
+4. **Segment Rasterization**: `penink.lua` fills the swept envelope of pressure-interpolated discs with one span per scanline. Pencil grain visits each covered pixel once per segment. The highlighter retains its separate blending rasterizer.
 5. **Chunk Bounding Trees**: Every stroke divides its points into spatial chunks with pre-calculated bounding boxes. During translation or hit testing, intersection tests query chunk bounds before scanning individual points.
 
 ### 3.3 Pen Modalities: Uniform, Fountain, and Pencil
 
 The pen tool supports three distinct rendering dynamics:
 - **Uniform Pen**: Constant stroke width regardless of pressure. Ideal for technical diagrams and standard handwriting.
-- **Fountain Pen**: Stroke width is modulated dynamically by pressure:
-  $$r = r_{\text{base}} \times \left(0.3 + 0.7 \times \frac{P}{4095}\right)$$
-  Yields expressive calligraphy with realistic thick/thin stroke transitions.
-- **Pencil**: Modulates stroke width by pressure and renders in a fixed graphite gray tone (`#707070`). Does not simulate paper grain textures to avoid heavy raster computation.
+- **Fountain Pen**: Pressure controls width, with additional contrast from a 45-degree nib angle relative to each segment. The maximum width remains bounded by the chosen pen size.
+- **Pencil**: Pressure controls width; deterministic paper grain produces a porous stroke. Black uses a softer graphite gray (96/255); other selected colors are preserved. Grain coordinates remain stable across clipped redraws and viewport translations at the same zoom level.
+
+`penpressure.lua` shares sensor normalization and distance-based smoothing between normal and zoomed drawing. Finger input, or a stylus with no pressure source, uses a speed-based fallback. `pen_style` is stored on the stroke and retained by recognition (including arrows), cloning, erasing fragments and scaled rendering. Older strokes without this field retain their previous rendering.
 
 ### 3.4 Highlighter Mechanics & Idempotent Min-Darkening
 
@@ -301,7 +308,7 @@ Second Pass (200) ───────> Unchanged (200)        [min(200, 200) =
 ```
 
 - **Mathematical Idempotence**: $\min(\min(x, t), t) = \min(x, t)$. A user can sweep over a word repeatedly without degrading legibility.
-- **Dual-Phase Rendering**: During active drawing, the live trail is rendered using a darker tone (`live_highlight_tint`, default: 100). This provides tactile feedback when highlighting over previously highlighted passages. Upon pen lift-off, the stroke settles to its true light tint (default: 200) during the background vector reconciliation pass.
+- **Live feedback**: `liveink.lua` gives colored pens a black preview and the marker a sparse black hatch, visible through `refreshFast`. On lift, it restores the touched rectangle from a framebuffer snapshot and paints only the completed stroke in its selected color. `refreshUI` reveals that color after a pause; no full document replay or slow waveform is needed for each sample. This works at 1× and 2×. The snapshot is freed on completion or shape recognition, and neither it nor the preview is serialized. One active snapshot costs one screen buffer (about 4.4 MiB at 1860×2480 in BB8; four times that in RGB32).
 
 ### 3.5 Palm Rejection & Outlier Velocity Filtering
 
@@ -373,13 +380,29 @@ Arrow recognition accommodates open, hand-drawn curves:
 
 ### 4.4 Explicit Shapes & Background Snapshot Caching
 
-Users can select explicit shape tools (rectangle, square, circle) and drag across the canvas.
-- **The Framebuffer Snapshot Cache**: In early implementations, dragging a shape preview re-rasterized all underlying vector strokes on the page for every motion frame (~184 ms per frame on Scribe).
-- **Optimization**: When a shape gesture begins, `shapecanvas.lua` captures a single immutable copy of the active framebuffer:
-  ```lua
-  self.shape_gesture.background = Screen.bb:copy()
-  ```
-  Successive drag frames restore the dirty preview rectangle directly from this memory buffer, blit the new shape, and refresh the screen. CPU rendering overhead dropped from 184 ms/frame to 65 ms/frame. The snapshot buffer is immediately freed upon gesture completion.
+Users can create rectangles, squares, circles and triangles, with outlines or solid fills. `filled` is stored with each stroke and survives transforms, undo, clipboard copies and scaled raster exports.
+
+`geometryink.lua` draws axis-aligned rectangles and circles as primitives. `polygonink.lua` scan-converts rotated polygons and deformed circles from their actual vertices, including filled interiors and rounded outline joins. Recognized pencil/fountain shapes use the brush renderer to retain their style.
+
+Shape manipulation captures one immutable background snapshot. Each preview restores only the union of the old and new bounds. Rotation/resize samples are coalesced at a 50 ms interval; release always commits the latest position and cancels the trailing callback. The snapshot is freed when the gesture ends.
+
+### 4.5 Text editing and zoom redraws
+
+The text editor has two joined rows of five equally sized controls. The background icon toggles white/transparent; borders are painted inside the buttons so icon changes cannot alter their geometry. The preview caret uses the text layout's character coordinates and does not insert a glyph or alter wrapping.
+
+`textpreview.lua` captures the underlying page once per edit. Typing restores dirty pixels and draws only the changing label. `textcache.lua` retains at most 32 native text widgets within an 8-million-pixel budget (except one active oversized label), freeing evicted buffers even when undo history still holds their strokes. Closing the editor cancels the preview; confirming whitespace-only text creates no label, or removes an existing label with undo support. This applies to both white and transparent backgrounds.
+
+Zoom retains the enlarged page cache while erasing. The document returns dirty page bounds; `zoomcache.lua` repairs only that region and copies its visible intersection to the screen. Both cache construction and partial repairs include the PDF background. Pan cleanup reuses the valid cache instead of rerasterizing the page.
+
+Shapes can now be created and rotated directly at 2× zoom: input maps to page coordinates, while handles and the floating menu map back to screen coordinates. Choosing pen, marker, eraser or shapes preserves zoom. Lasso and text editing still switch to the normal page editor; they are not zoom editing tools yet.
+
+Completed zoomed pen strokes are recorded immediately, but their cache rasterization is deferred until that cache is actually needed. The live screen already contains the stroke, so pen-up only flushes pending fast pixels and schedules local reconciliation. Toolbar/clock-only updates paint their own band without rerendering the canvas. Grayscale live updates are throttled separately from binary pen updates.
+
+A closed selection menu restores its screen rectangle synchronously, before a rotation snapshot is captured. Selection cleanup includes the rotation handle outside the bounding box. Shape creation, rotation, menu dismissal and held-arrow recognition request one full-screen cleanup after at least 600 ms of inactivity. A new pen contact postpones it; active dragging, erasing and panning also defer it. This refresh reuses correct framebuffer pixels, without rasterizing the entire page again. Ordinary handwriting keeps local reconciliation rather than flashing after every stroke.
+
+Input jump rejection uses consecutive kernel `slot.timev` timestamps where available, with wall-clock fallback for other input sources. A burst delivered after a slow display update must not make a legitimate fast stroke look like palm interference.
+
+These changes reduce CPU work and avoid redundant display requests. Physical E-Ink refresh latency, ghosting, battery impact and stylus feel still require testing on the target device. The code uses KOReader's `Screen:refreshFast`, `refreshUI` and `refreshFull`; the device backend chooses the actual waveform.
 
 ---
 
@@ -517,9 +540,8 @@ Parameters are persisted in `G_reader_settings` under the `notebook_tuning_*` pr
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Ink** | `refresh_interval_ms` | 20 | 8–120 | 4 | Minimum time between partial screen refreshes during drawing. Matches the ~20 ms A2 waveform hardware latency. Lower values queue backlog in the kernel framebuffer. |
 | **Ink** | `idle_flush_ms` | 35 | 10–200 | 5 | Delay before flushing the final stroke fragment if the pen pauses mid-stroke without lifting. |
-| **Ink** | `reconcile_delay_ms` | 2000 | 200–5000 | 100 | Time after pen lift before triggering the full 16-level grayscale anti-aliasing cleanup pass. |
+| **Ink** | `reconcile_delay_ms` | 2000 | 200–5000 | 100 | Idle delay before revealing final grayscale/color with refreshUI; full refresh is reserved for explicit cleanup. |
 | **Ink** | `jitter_floor_sq` | 4 | 0–64 | 1 | Distance squared below which incoming digitizer samples are discarded as resting sensor noise. |
-| **Ink** | `live_highlight_tint` | 100 | 0–255 | 10 | Darker grayscale tone used for highlighter ink while actively drawing so the stroke is visible over existing marks. |
 | **Eraser** | `eraser_radius` | 12 | 4–80 | 2 | Base spatial collision radius (in pixels) around the eraser path. |
 | **Eraser** | `erase_repaint_ms` | 70 | 16–400 | 10 | Minimum interval between vector repaints while the eraser is sweeping. Prevents CPU saturation during complex page sweeps. |
 | **Lasso** | `drag_repaint_ms` | 60 | 16–400 | 10 | Minimum interval between repaints while translating selected objects. Repaint is timed from the *completion* of the previous frame. |
@@ -552,26 +574,36 @@ This bridges on-device physical calibration directly back to source code definit
 
 Notebook files are stored with the `.scribe` extension in `koreader/notebook/`. The internal format uses KOReader's high-performance binary serializer `bitser` (version 1 schema):
 
-```
-Header: { format_version = 1, generator = "notebook.koplugin" }
-Document:
-  ├── content_origin: { x = 0, y = 72 }  (Toolbar offset boundary)
-  ├── page_index: 1
-  └── pages: Array of Page Tables
-        ├── template: "dotted" | "ruled" | "grid" | "blank"
-        ├── background_pdf: optional path
-        └── strokes: Array of Stroke Tables
-              ├── tool: "pen" | "highlighter" | "eraser"
-              ├── color: integer / table
-              ├── size: number
-              ├── shape_kind: optional string ("rectangle", "circle", etc.)
-              └── points: { x1, y1, p1, x2, y2, p2, ... xn, yn, pn }
+```lua
+{
+    version = 1,
+    current_page = 1,
+    template = "grid",
+    content_origin = { x = 0, y = 72 },
+    page_size = { w = 1860, h = 2400 }, -- optional
+    pages = {
+        {
+            template = nil, -- inherits document template
+            background = nil, -- or {file=pdf_path, page=1, size={w=...,h=...}}
+            strokes = {
+                {
+                    tool = "pen", width = 3, color = 0,
+                    pen_style = "fountain", -- optional; nil keeps legacy appearance
+                    filled = false, shape_kind = nil,
+                    n = 2, pts = {100,100,0.5, 120,130,0.8},
+                    -- Text strokes also store text, font_size, font_family,
+                    -- text_bold, text_italic, text_underline, text_background.
+                },
+            },
+        },
+    },
+}
 ```
 
 ### 9.2 Atomic Persistence Guarantee
 
 Directly overwriting an active notebook file risks corruption if battery failure or process termination occurs mid-write:
-1. The document is serialized into a temporary sibling file: `filename.scribe.tmp`.
+1. The document is serialized into a temporary sibling file: `filename.scribe.saving`.
 2. Explicit `file:write()` and `file:close()` return codes are asserted.
 3. An atomic filesystem rename (`os.rename`) replaces the original file with the temporary sibling.
 4. If saving fails, the canvas remains open, preserving ink in memory and presenting an explicit error dialog.
@@ -692,3 +724,38 @@ Automated deployment and hardware verification scripts reside in `tools/`:
   Executed natively via LuaJIT on the Kindle. Constructs real KOReader widgets, exercises blitbuffers, tests physical `EVIOCGABS` pressure queries, and exports test PDFs in offscreen memory.
 - **`tools/bench-render.lua` & `tools/bench-drag.lua`**:
   Measures microsecond-level CPU performance on physical hardware, evaluating viewport clipping efficiency and drag queue coalescing.
+
+### Interaction regression checks
+
+`make verify` includes pixel comparisons for filled transforms, scaled brush styles, clipped pencil grain, cached erasing, text deletion/undo and bounded text cache ownership. Mock widgets do not establish compatibility with KOReader's real layout.
+
+For native widget validation, run from a disposable KOReader SDL runtime (create the output directory first):
+
+```sh
+./luajit /path/notebook.koplugin/tools/check-interaction.lua /path/notebook.koplugin/lua /tmp/notebook-qa
+```
+
+This writes toolbar/caret screenshots and checks real input, confirmation, dismissal and button dimensions. It also compares the geometric and brush fallback paths on the same large rotated rectangle. Desktop timings measure CPU rasterization only, not Kindle refresh performance.
+
+The editable XOPP exporter still approximates brushes as ordinary vector strokes; PDF raster export uses Notebook's renderer and preserves the visual brush/fill appearance. XOPP fidelity needs separate work and is not a guarantee of this update.
+
+For follow-up interaction checks, `tools/check-gestures.lua` runs in the same disposable SDL runtime and verifies that closing the real floating menu removes its pixels before rotation, then exercises raw stylus shape creation at zoom and a switch back to pen. `tools/bench-pen.lua` measures long strokes offscreen and optionally accepts a baseline renderer file as its second argument. Neither benchmark measures panel latency or battery consumption.
+
+### Parallel regression checks
+
+`make test` runs each named suite in an independent LuaJIT process, using the
+available logical CPU count and unique temporary log directories. `TEST_JOBS`
+can cap concurrency. Failures preserve their full output and fail the command;
+all suites finish so one failure does not conceal others. Device rendering stays
+on KOReader's event loop: minimizing raster work and display requests avoids the
+synchronization and memory costs of competing framebuffer workers.
+
+`tools/check-live-ink.lua` runs against real KOReader BB8 and RGB32 buffers and
+compares completed colored pen, fountain, pencil and marker strokes with a full
+reference render at both zoom levels. The unit suite also covers arrow snapping,
+cleanup, stored brush metadata and deferred refreshes. These checks do not
+measure a physical panel's input-to-display latency.
+
+All 13 shipped catalogs are checked for missing entries and substitution fields.
+The PO reader skips unsupported contexts/plurals and decodes escapes in one
+pass; locale aliases such as `pt-BR` and `it_IT@euro` resolve correctly.

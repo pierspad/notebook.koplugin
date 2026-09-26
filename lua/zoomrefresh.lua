@@ -19,6 +19,7 @@ function ZoomRefresh:setupZoomRefresh()
         self:_flushZoomPan()
     end
     self.zoom_pan_settle_cb = function() self:_settleZoomPan() end
+    self.zoom_erase_cb = function() self:_flushZoomErase() end
     self.zoom_ink_cb = function()
         self.zoom_ink_scheduled = false
         self:_flushZoomInk()
@@ -26,6 +27,8 @@ function ZoomRefresh:setupZoomRefresh()
 end
 
 function ZoomRefresh:_cancelZoomRefresh()
+    UIManager:unschedule(self.zoom_erase_cb)
+    self.zoom_erase_scheduled=false
     UIManager:unschedule(self.zoom_pan_cb)
     UIManager:unschedule(self.zoom_pan_settle_cb)
     UIManager:unschedule(self.zoom_ink_cb)
@@ -42,6 +45,7 @@ function ZoomRefresh:_zoomPan(dx, dy)
     local next_y = Zoom.clamp(self.zoom_y - dy / self.zoom, c.y, c.h, self.zoom)
     if math.floor(next_x*self.zoom) == math.floor(self.zoom_x*self.zoom)
         and math.floor(next_y*self.zoom) == math.floor(self.zoom_y*self.zoom) then return end
+    if self.selected_strokes then self:_deselectLasso() end
     self.zoom_x, self.zoom_y = next_x, next_y
     self.zoom_pan_dirty = true
     local now = time.now()
@@ -89,10 +93,15 @@ function ZoomRefresh:_settleZoomPan()
     self.zoom_pan_scheduled = false
     self.zoom_pan_dirty = false
     -- Restore authoritative grayscale pixels before the full waveform.
-    self:_renderZoom(Screen.bb, true)
+    self:_renderZoom(Screen.bb)
     local c = self.content
     Screen:refreshFull(c.x, c.y, c.w, c.h)
     self.zoom_pan_needs_settle = false
+    -- A full pan cleanup also satisfies a pending shape/menu cleanup.
+    if self.reconcile_full then
+        self.reconcile_full=nil;self.reconcile=nil
+        UIManager:unschedule(self.reconcile_cb)
+    end
 end
 
 function ZoomRefresh:_queueZoomInk(x, y, w, h, mode)

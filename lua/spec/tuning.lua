@@ -186,8 +186,6 @@ test("every tuning default is intentional and accounted for", function()
         idle_flush_ms        = 35,
         reconcile_delay_ms   = 2000,
         jitter_floor_sq      = 4,
-        live_highlight_tint  = 100,
-        live_highlight_refresh_ms = 20,
         eraser_radius        = 12,
         erase_repaint_ms     = 70,
         drag_repaint_ms      = 60,

@@ -61,6 +61,7 @@ local Canvas = InputContainer:extend{
     pen_style = "fineliner",
     line_style = "line",
     shape_kind = "rectangle",
+    shape_fill = false,
     shape_color = 0,
     highlighter_width = 24,
     -- Highlighter tint in packed RGB form; rendered as gray on monochrome.
@@ -159,7 +160,8 @@ function Canvas:init()
 
     -- Background auto-save on writing pause
     self.autosave_cb = function()
-        if self.stroke or self.erasing or self.dragging_selection or self.shape_gesture then
+        if self.stroke or self.erasing or self.dragging_selection or self.shape_gesture
+            or self.transform_gesture or self.zoom_stroke or self.zoom_erasing or self.text_preview then
             UIManager:scheduleIn(2.5, self.autosave_cb)
             return
         end
@@ -177,6 +179,7 @@ function Canvas:init()
     -- Palm rejection, second line: see _isOutlier.
     self.jump_base = Screen:scaleBySize(Tuning.jump_base)
     self.last_point_at = nil
+    self.last_sample_at=nil
     self.outliers = 0
 
     -- Last point the eraser was applied at, so it can rub continuously along
@@ -192,14 +195,15 @@ function Canvas:init()
         self:_flushEraseWork()
     end
     self.shape_preview_cb = function() self:_paintShape() end
+    self.transform_preview_cb = function() self:_paintShapeTransform() end
     self.drag_step_cb = function()
         self.drag_step_scheduled = false
         if self.dragging_selection then self:_maybeDragStep() end
     end
 
     for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
-        "erase_flush_cb", "drag_step_cb", "shape_preview_cb", "zoom_pan_cb",
-        "zoom_pan_settle_cb", "zoom_ink_cb"}) do
+        "erase_flush_cb", "drag_step_cb", "shape_preview_cb", "transform_preview_cb", "zoom_pan_cb",
+        "zoom_pan_settle_cb", "zoom_ink_cb", "zoom_erase_cb"}) do
         self[name] = Safe.wrap("canvas:" .. name, self[name])
     end
 
@@ -292,7 +296,12 @@ function Canvas:_isOutlier(x, y, px, py)
 
     local limit = self.jump_base
     if self.last_point_at then
-        local ms = time.to_ms(time.now() - self.last_point_at)
+        -- Queued kernel samples may be processed back-to-back after a slow
+        -- refresh. Wall-clock processing time would reject a real fast line.
+        local ms = self.sample_time and self.last_sample_at
+            and time.to_ms(self.sample_time-self.last_sample_at)
+            or time.to_ms(time.now()-self.last_point_at)
+        ms=math.max(0,ms)
         if ms > Tuning.max_jump_gap_ms then ms = Tuning.max_jump_gap_ms end
         if ms > 0 then limit = limit + ms * Tuning.max_pen_speed end
     end
@@ -321,6 +330,10 @@ end
 for name, method in pairs(require("snapcanvas")) do
     Canvas[name] = method
 end
+
+for name, method in pairs(require("liveink")) do Canvas[name]=method end
+
+for name, method in pairs(require("viewcanvas")) do Canvas[name]=method end
 
 for name, method in pairs(require("shapecanvas")) do
     Canvas[name] = method
@@ -378,28 +391,26 @@ function Canvas:_beginStroke(tool, x, y, p)
 
     self.stroke = Stroke:new{
         tool = tool,
+        pen_style = tool == "pen" and self.pen_style or nil,
         width = self:widthFor(tool),
         color = tool == "pen" and self:_penColor() or 0,
     }
-    -- Grayscale marker pixels are not reliably visible through the binary DU
-    -- waveform. Use AUTO for the marker, but at its own slower cadence, so the
-    -- band follows the nib with a small bounded delay instead of disappearing
-    -- until lift-off or building an ever-growing refresh queue.
-    self.refresh_mode = (tool == "highlighter" or self.stroke.color ~= 0) and "ui" or "fast"
-    -- While it is being drawn the highlighter lays down a darker tint than the
-    -- one it settles to when the pen lifts; see Tuning.live_highlight_tint.
-    self.stroke.tint = tool == "highlighter" and Tuning.live_highlight_tint or nil
+    if tool == "highlighter" then self.stroke.tint = self.highlighter_color end
+    self:_beginLiveInk(self.stroke)
+    self.refresh_mode = "fast"
     self.stroke:addPoint(x, y, p)
     self.last_x, self.last_y, self.last_p = x, y, p
     self.last_point_at = time.now()
+    self.last_sample_at=self.sample_time
     self.outliers = 0
 
     self.shape_snap:begin(self.stroke, x, y, self.line_style)
 
 
     -- Put down the initial dot so a tap leaves a mark rather than nothing.
-    local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
+    local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self:_liveBrush(self.stroke),
         x, y, p, x, y, p, nil, Screen.isColorEnabled and Screen:isColorEnabled())
+    self:_trackLiveInk(rx, ry, rw, rh)
     self:_accumulate(rx, ry, rw, rh)
     self:_maybeFlush()
 end
@@ -436,6 +447,7 @@ function Canvas:_extendStroke(x, y, p)
         return
     end
     self.last_point_at = time.now()
+    self.last_sample_at=self.sample_time
 
 
     -- Wobble under a resting nib is not movement, and stamping it costs a
@@ -445,13 +457,14 @@ function Canvas:_extendStroke(x, y, p)
     local jdy = y - self.last_y
     if jdx * jdx + jdy * jdy < Tuning.jitter_floor_sq then return end
 
-    local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self.stroke,
+    local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self:_liveBrush(self.stroke),
         self.last_x, self.last_y, self.last_p, x, y, p, nil,
         Screen.isColorEnabled and Screen:isColorEnabled())
     self.stroke:addPoint(x, y, p)
     self.last_x, self.last_y, self.last_p = x, y, p
     self.shape_snap:moved(x, y)
 
+    self:_trackLiveInk(rx, ry, rw, rh)
     self:_accumulate(rx, ry, rw, rh)
     self:_maybeFlush()
 end
@@ -487,6 +500,7 @@ function Canvas:_endStroke()
     self.stroke = nil
     self.last_x, self.last_y, self.last_p = nil, nil, nil
     self.last_point_at = nil
+    self.last_sample_at=nil
 
     self:_flush()
 
@@ -510,21 +524,8 @@ function Canvas:_endStroke()
             return
         end
 
-        local was_live_highlight = stroke.tint ~= nil
-        -- What is stored is the ordinary highlight; the darker tint belonged to
-        -- the drawing of it, not to the mark.
-        stroke.tint = nil
-        if stroke.tool == "highlighter" and Screen:isColorEnabled() then
-            stroke.tint = self.highlighter_color
-        end
         self.document:addStroke(stroke)
-        if stroke.tool == "highlighter" then
-            -- Repaint the band from the model, which takes the live tint back
-            -- down to the one every other highlight is drawn at.
-            if was_live_highlight then
-                self:_repaintRegion(stroke:getBounds())
-            end
-        else
+        if not self:_finishLiveInk(stroke) then
             self:_scheduleReconcile(stroke:getBounds())
         end
 
@@ -607,11 +608,13 @@ function Canvas:stop()
     Safe.clearShutdown("canvas:input")
     require("stylusbridge").stop(self)
     for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
-        "erase_flush_cb", "drag_step_cb", "shape_preview_cb", "zoom_pan_cb",
-        "zoom_pan_settle_cb", "zoom_ink_cb"}) do
+        "erase_flush_cb", "drag_step_cb", "shape_preview_cb", "transform_preview_cb", "zoom_pan_cb",
+        "zoom_pan_settle_cb", "zoom_ink_cb", "zoom_erase_cb"}) do
         if self[name] then UIManager:unschedule(self[name]) end
     end
     self:_endStroke()
+    self:_endShapeTransform()
+    require("textcache").clear()
     require("pdfbackground").clear()
     if self.background_cache then self.background_cache:free(); self.background_cache=nil end
     self.background_cache_key=nil

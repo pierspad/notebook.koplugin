@@ -48,6 +48,8 @@ function Stroke:new(opts)
         color = opts.color or 0,
         -- Highlighter tint; nil means the renderer's default.
         tint = opts.tint,
+        pen_style = opts.pen_style,
+        filled = opts.filled == true,
         shape_kind = opts.shape_kind,
         text = opts.text,
         font_size = opts.font_size,
@@ -209,6 +211,8 @@ function Stroke:clone()
         width = self.width,
         color = self.color,
         tint = self.tint,
+        pen_style = self.pen_style,
+        filled = self.filled,
         shape_kind = self.shape_kind,
         text = self.text, font_size = self.font_size,
         font_family = self.font_family, text_bold = self.text_bold,
@@ -221,6 +225,10 @@ function Stroke:clone()
     copy.x_min, copy.y_min = self.x_min, self.y_min
     copy.x_max, copy.y_max = self.x_max, self.y_max
     return copy
+end
+
+function Stroke:freeCache()
+    require("textcache").remove(self)
 end
 
 --- Returns the number of points.
@@ -476,7 +484,9 @@ function Stroke:splitAlongPath(path, r)
             width = self.width,
             color = self.color,
             tint = self.tint,
-        shape_kind = self.shape_kind,
+            pen_style = self.pen_style,
+            filled = self.filled,
+            shape_kind = self.shape_kind,
         }
         table.insert(fragments, current)
         return current
@@ -551,6 +561,8 @@ end
 function Stroke:serialize()
     return {
         tool = self.tool,
+        pen_style = self.pen_style,
+        filled = self.filled,
         width = self.width,
         color = self.color,
         tint = self.tint,
@@ -566,7 +578,8 @@ end
 
 --- Rebuilds a stroke from serialized data.
 function Stroke:deserialize(data)
-    local o = Stroke:new{ tool = data.tool, width = data.width, color = data.color,
+    local o = Stroke:new{ tool = data.tool, pen_style = data.pen_style,
+        filled = data.filled, width = data.width, color = data.color,
         tint = data.tint, shape_kind = data.shape_kind, text=data.text, font_size=data.font_size,
         font_family=data.font_family, text_bold=data.text_bold,
         text_italic=data.text_italic, text_underline=data.text_underline,

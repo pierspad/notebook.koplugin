@@ -89,6 +89,38 @@ test("a fuzzy entry is left to the source string", function()
     assertTrue(entries["Open"] == nil, "a fuzzy translation was used")
 end)
 
+test("contexts and plurals never override plain labels", function()
+    local path = writeTemp([=[msgid "Open"
+msgstr "Apri"
+msgctxt "verb"
+msgid "Open"
+msgstr "Contestuale"
+
+msgid "Page"
+msgid_plural "Pages"
+msgstr[0] "Pagina"
+msgstr[1] "Pagine"
+
+msgid "Save"
+msgstr "Salva"
+]=])
+    local entries, ids = Text.parse(path)
+    os.remove(path)
+    assertEq(entries.Open, "Apri", "plain entry before a context")
+    assertEq(entries.Page, nil, "plural entry")
+    assertEq(ids.Page, nil, "unsupported plural id")
+    assertEq(entries.Save, "Salva", "entry after plural")
+end)
+
+test("escaped backslashes are not decoded twice", function()
+    local path = writeTemp([=[msgid "literal\\n"
+msgstr "a\\n\tb\r\"c\""
+]=])
+    local entries = Text.parse(path)
+    os.remove(path)
+    assertEq(entries["literal\\n"], "a\\n\tb\r\"c\"", "single-pass escape decoding")
+end)
+
 test("a missing catalogue is nothing, not an error", function()
     assertTrue(Text.parse("/nowhere/xx.po") == nil, "expected nil")
 end)
@@ -248,7 +280,7 @@ test("KOReader language settings activate every shipped catalogue", function()
     end
     -- These are real variants from KOReader's language menu. They deliberately
     -- share a base catalogue instead of duplicating 132 strings per region.
-    local aliases={it_IT="it",pt_PT="pt",pl_PL="pl",["zh_TW.Big5"]="zh_TW"}
+    local aliases={it_IT="it",pt_PT="pt",pl_PL="pl",["zh_TW.Big5"]="zh_TW",["pt-BR"]="pt_BR",["it_IT@euro"]="it"}
     for setting,catalogue_name in pairs(aliases) do
         G_reader_settings={readSetting=function(_,key)
             return key=="language" and setting or nil

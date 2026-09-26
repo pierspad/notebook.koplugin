@@ -54,17 +54,8 @@ function CanvasRender:_flush()
     local x, y, w, h = Rect.clamp(p.x, p.y, p.w, p.h, self.content)
     if not x then return end
 
-    -- Waveform choice while a stroke is live.
-    --
-    --  * refreshPartial (grayscale/REAGL) is forced to UPDATE_MODE_FULL by the
-    --    driver, and full updates are fenced, so every segment blocks on the
-    --    previous one and the ink crawls behind the nib.
-    --  * refreshFast (DU) is binary, so it cannot reveal grayscale marker ink.
-    --    The highlighter uses refreshUI at a separately throttled cadence and
-    --    is redrawn at its lighter resting tint on lift.
-    --
-    -- refreshUI (AUTO) also remains necessary for pencil gray. Calling it for
-    -- every raw sample queues work; _maybeFlush coalesces marker samples.
+    -- All live ink has a binary preview. Gray/color reconciliation runs once
+    -- at rest, so slow waveforms cannot accumulate behind the moving nib.
     if self.refresh_mode == "ui" then
         Screen:refreshUI(x, y, w, h)
     else
@@ -75,8 +66,8 @@ end
 --- Flushes now if enough time has passed, otherwise arranges for it to happen.
 function CanvasRender:_maybeFlush()
     local now = time.now()
-    local interval = self.stroke and self.stroke.tool == "highlighter"
-        and Tuning.live_highlight_refresh_ms or Tuning.refresh_interval_ms
+    local interval = self.refresh_mode == "ui"
+        and 80 or Tuning.refresh_interval_ms
     local elapsed = self.last_refresh and time.to_ms(now - self.last_refresh) or interval
     if not self.last_refresh
         or elapsed >= interval then
@@ -108,13 +99,29 @@ function CanvasRender:_scheduleReconcile(x, y, w, h)
     self.reconcile = Rect.grow(self.reconcile, x, y, w, h)
 
     UIManager:unschedule(self.reconcile_cb)
-    UIManager:scheduleIn(Tuning.reconcile_delay_ms / 1000, self.reconcile_cb)
+    UIManager:scheduleIn(math.max(0.6,Tuning.reconcile_delay_ms / 1000), self.reconcile_cb)
+end
+
+function CanvasRender:_scheduleCleanScreen()
+    self.reconcile_full=true
+    self:_scheduleReconcile(self.content.x,self.content.y,self.content.w,self.content.h)
 end
 
 function CanvasRender:_runReconcile()
     local r = self.reconcile
     if not r then return end
+    local recent_pan=self.last_zoom_pan_refresh and time.to_ms(time.now()-self.last_zoom_pan_refresh)<600
+    if self.pen_down or self.stroke or self.zoom_stroke or self.transform_gesture or self.shape_gesture
+        or self.dragging_selection or self.erasing or self.zoom_erasing or self.zoom_pan_dirty or recent_pan then
+        UIManager:scheduleIn(0.6,self.reconcile_cb)
+        return
+    end
     self.reconcile = nil
+    if self.reconcile_full then
+        self.reconcile_full=nil
+        Screen:refreshFull(0,0,Screen:getWidth(),Screen:getHeight())
+        return
+    end
 
     local x, y, w, h = Rect.clamp(r.x, r.y, r.w, r.h, self.content)
     if not x then return end
@@ -145,13 +152,8 @@ end
 -- and two overlapping refreshes would flicker.
 function CanvasRender:_repaintRegion(x, y, w, h, defer_refresh)
     if self.zoom > 1 then
-        self:_clearZoomCache()
-        self:_renderZoom(Screen.bb)
-        if not defer_refresh then
-            local c = self.content
-            Screen:refreshUI(c.x, c.y, c.w, c.h)
-        end
-        return
+        local sx,sy=self:_viewPoint(x,y)
+        return self:_repaintScreenRegion(sx,sy,w*self.zoom,h*self.zoom,defer_refresh)
     end
     x, y, w, h = Rect.clamp(x, y, w, h, self.content)
     if not x then return end
@@ -201,9 +203,11 @@ function CanvasRender:paintTo(bb, x, y)
         self.background_cache=bb:copy()
         self.background_cache_key=cache_key
     end
-    for _,stroke in ipairs(self.document:getPage().strokes) do
+    for _,stroke in ipairs(self:_visiblePage().strokes) do
         if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
     end
+    local preview=self.transform_gesture and self.transform_gesture.preview or self.stroke
+    if preview then Renderer.drawStroke(bb,preview,nil,Screen.isColorEnabled and Screen:isColorEnabled()) end
     if self.text_preview then Renderer.drawStroke(bb,self.text_preview,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
 end
 

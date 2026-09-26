@@ -26,7 +26,10 @@ end
 
 function ZoomCanvas:_endZoomContact()
     self.shape_snap:cancel()
+    self:_flushZoomInk()
     self:_clearZoomInk()
+    if self.transform_gesture then self:_endShapeTransform() end
+    if self.shape_gesture then self:_endShape() end
     local changed, changed_box, changed_tool
     if self.zoom_stroke then
         local stroke = self.zoom_stroke
@@ -34,6 +37,7 @@ function ZoomCanvas:_endZoomContact()
         if stroke:count() > 0 then
             if stroke.tool == "highlighter" then stroke.tint = self.highlighter_color end
             self.document:addStroke(stroke)
+            self:_finishLiveInk(stroke)
             changed, changed_tool = true, stroke.tool
             local sx, sy, sw, sh = stroke:getBounds()
             if sx then
@@ -43,10 +47,8 @@ function ZoomCanvas:_endZoomContact()
                     w=sw*self.zoom, h=sh*self.zoom}
             end
             if self.zoom_cache and self.zoom_cache_page == self.document:getPage() then
-                local c = self.content
-                Renderer.drawPage(self.zoom_cache, {strokes={stroke}}, self.zoom,
-                    -c.x*self.zoom, -c.y*self.zoom,
-                    Screen.isColorEnabled and Screen:isColorEnabled())
+                self.zoom_cache_pending=self.zoom_cache_pending or {}
+                self.zoom_cache_pending[#self.zoom_cache_pending+1]=stroke
             else
                 self:_clearZoomCache()
             end
@@ -58,7 +60,7 @@ function ZoomCanvas:_endZoomContact()
     if self.zoom_erasing then
         changed, changed_tool = true, "eraser"
         self.document:commitBatch()
-        self:_clearZoomCache()
+        self:_flushZoomErase()
         if self.document.dirty then
             UIManager:unschedule(self.autosave_cb)
             UIManager:scheduleIn(2.5, self.autosave_cb)
@@ -67,26 +69,17 @@ function ZoomCanvas:_endZoomContact()
         self.zoom_last_x, self.zoom_last_y = nil, nil
     end
     self.pen_down = false
-    if self.zoom > 1 and changed then
+    self.zoom_point_at=nil
+    if self.zoom > 1 and changed and changed_tool ~= "eraser" then
         local c = self.content
-        if changed_tool == "eraser" or not changed_box then
+        if not changed_box then
             self:_renderZoom(Screen.bb, not self.zoom_cache)
             Screen:refreshUI(c.x, c.y, c.w, c.h)
         else
             local x, y, w, h = Rect.clamp(changed_box.x, changed_box.y,
                 changed_box.w, changed_box.h, c)
             if x then
-                if self.zoom_cache then
-                    -- The live pen pixels are already correct. Only the
-                    -- marker's temporary dark tint needs replacing, and it
-                    -- takes one small blit rather than a viewport-sized one.
-                    if changed_tool == "highlighter" then
-                        self:_blitZoomCacheRegion(x, y, w, h)
-                    end
-                elseif changed_tool == "highlighter" then
-                    self:_renderZoom(Screen.bb, true)
-                end
-                Screen:refreshUI(x, y, w, h)
+                self:_scheduleReconcile(x,y,w,h)
             end
         end
         self.zoom_erase_dirty = false
@@ -99,6 +92,9 @@ function ZoomCanvas:_zoomStylus(slot, tool)
     if slot.id ~= -1 then self:_flushZoomPan() end
     if slot.id == -1 then
         local was_drawing = self.zoom_stroke ~= nil or self.zoom_erasing ~= nil
+            or self.shape_gesture ~= nil or self.transform_gesture ~= nil
+        self.pen_down=false
+        self.pen_left_at=time.now()
         if was_drawing then self:_endZoomContact() end
         return was_drawing
     end
@@ -109,8 +105,25 @@ function ZoomCanvas:_zoomStylus(slot, tool)
         if self.zoom_stroke or self.zoom_erasing then self:_endZoomContact() end
         return false
     end
+    if not self.transform_gesture and self.lasso_menu and self.lasso_menu.dimen then
+        local m=self.lasso_menu.dimen
+        if x>=m.x and x<m.x+m.w and y>=m.y and y<m.y+m.h then return false end
+    end
+    local new_contact=not self.pen_down
     self.pen_down = true
+    self.pen_left_at=nil
+    UIManager:unschedule(self.reconcile_cb)
     local px, py = Zoom.toPage(x, y, c, self.zoom, self.zoom_x, self.zoom_y)
+    if self.transform_gesture then self:_extendShapeTransform(px,py); return true end
+    if self.shape_gesture then self:_extendShape(px,py); return true end
+    if new_contact and self.selected_strokes then
+        local selected=#self.selected_strokes==1 and self.selected_strokes[1]
+        local handle=selected and self:_shapeHandleAt(selected,px,py)
+        if handle then self:_beginShapeTransform(selected,handle,px,py); return true end
+        self:_deselectLasso()
+    end
+    if tool=="shape" then self:_beginShape(px,py); return true end
+    if tool ~= "pen" and tool ~= "highlighter" and tool ~= "eraser" then return false end
     if tool == "eraser" then
         self.shape_snap:cancel()
         if self.zoom_stroke then self:_endZoomContact(); self.pen_down = true end
@@ -120,26 +133,24 @@ function ZoomCanvas:_zoomStylus(slot, tool)
         end
         local lx, ly = self.zoom_last_x or px, self.zoom_last_y or py
         local path = {lx, ly, px, py}
-        local hit
+        local hit, ex, ey, ew, eh
         if self.eraser_mode == "area" then
-            hit = self.document:eraseAreaAlongPath(path, self.eraser_size)
+            hit, ex, ey, ew, eh = self.document:eraseAreaAlongPath(path, self.eraser_size)
         else
-            hit = self.document:eraseAlongPath(path, self.eraser_size)
+            hit, ex, ey, ew, eh = self.document:eraseAlongPath(path, self.eraser_size)
         end
         self.zoom_last_x, self.zoom_last_y = px, py
         if hit then
             self.zoom_erase_dirty = true
-            if self.zoom_cache then self:_clearZoomCache() end
+            self.zoom_erase_region = Rect.grow(self.zoom_erase_region, ex, ey, ew, eh)
             local now = time.now()
-            if not self.last_zoom_erase_refresh
-                or time.to_ms(now - self.last_zoom_erase_refresh) >= Tuning.erase_repaint_ms then
-                -- Render only the visible viewport while the rubber moves.
-                -- Rebuilding the enlarged full-page cache here costs four
-                -- screenfuls per update; it is rebuilt once on lift-off.
-                self:_renderZoom(Screen.bb, true)
-                Screen:refreshUI(c.x, c.y, c.w, c.h)
-                self.last_zoom_erase_refresh = now
-                self.zoom_erase_dirty = false
+            local elapsed=self.last_zoom_erase_refresh
+                and time.to_ms(now-self.last_zoom_erase_refresh) or Tuning.erase_repaint_ms
+            if elapsed >= Tuning.erase_repaint_ms then
+                self:_flushZoomErase()
+            elseif not self.zoom_erase_scheduled then
+                self.zoom_erase_scheduled=true
+                UIManager:scheduleIn((Tuning.erase_repaint_ms-elapsed)/1000,self.zoom_erase_cb)
             end
             if self.on_change then self:on_change() end
         end
@@ -150,11 +161,17 @@ function ZoomCanvas:_zoomStylus(slot, tool)
         self:_endZoomContact()
         self.pen_down = true
     end
-    local pressure = slot.pressure and math.max(0, math.min(1, slot.pressure / 4095)) or 1
+    local raw_pressure=slot.pressure
+    if raw_pressure == nil and tool == "pen" and self.pen_style ~= "fineliner" and self.pressure_sensor then
+        raw_pressure=self.pressure_sensor:read()
+    end
+    local pressure=require("penpressure").sample(tool == "pen" and self.pen_style or nil,
+        self.zoom_stroke,px,py,raw_pressure,self.zoom_point_at and time.to_ms(time.now()-self.zoom_point_at))
     if not self.zoom_stroke then
-        self.zoom_stroke = Stroke:new{tool=tool, width=self:widthFor(tool),
+        self.zoom_stroke = Stroke:new{tool=tool, pen_style=tool == "pen" and self.pen_style or nil, width=self:widthFor(tool),
             color=tool == "pen" and self:_penColor() or 0,
-            tint=tool == "highlighter" and Tuning.live_highlight_tint or nil}
+            tint=tool == "highlighter" and self.highlighter_color or nil}
+        self:_beginLiveInk(self.zoom_stroke)
         self.shape_snap:begin(self.zoom_stroke, px, py, self.line_style)
     end
     local stroke = self.zoom_stroke
@@ -165,19 +182,22 @@ function ZoomCanvas:_zoomStylus(slot, tool)
     if n > 0 and lx == px and ly == py then return true end
     if n == 0 or lx ~= px or ly ~= py then
         stroke:addPoint(px, py, pressure)
+        self.zoom_point_at=time.now()
         self.shape_snap:moved(px, py)
     end
     local view = Screen.bb:viewport(c.x, c.y, c.w, c.h)
-    local scaled = {tool=stroke.tool, color=stroke.color, tint=stroke.tint,
-        width=stroke.width * self.zoom}
+    local brush = self:_liveBrush(stroke)
+    local scaled = {tool=brush.tool, pen_style=brush.pen_style, color=brush.color, tint=brush.tint,
+        live_preview=brush.live_preview, width=brush.width * self.zoom}
     local x0, y0 = (lx - self.zoom_x) * self.zoom, (ly - self.zoom_y) * self.zoom
     local x1, y1 = (px - self.zoom_x) * self.zoom, (py - self.zoom_y) * self.zoom
     local rx, ry, rw, rh = Renderer.drawSegment(view, scaled, x0, y0, lp,
         x1, y1, pressure, {x=0,y=0,w=c.w,h=c.h},
-        Screen.isColorEnabled and Screen:isColorEnabled())
+        Screen.isColorEnabled and Screen:isColorEnabled(),
+        self.zoom_x*self.zoom, self.zoom_y*self.zoom)
     if rx then
-        self:_queueZoomInk(c.x+rx, c.y+ry, rw, rh,
-            (tool == "highlighter" or stroke.color ~= 0) and "ui" or "fast")
+        self:_trackLiveInk(c.x+rx,c.y+ry,rw,rh)
+        self:_queueZoomInk(c.x+rx, c.y+ry, rw, rh, "fast")
     end
     return true
 end

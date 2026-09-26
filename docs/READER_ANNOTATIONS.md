@@ -12,6 +12,16 @@ reliable EPUB annotations.
   both reader and notebook surfaces use one input owner.
 - Stroke geometry, colors, erasing, smoothing, and the fast framebuffer drawing
   path should live in reusable modules with no ReaderUI or gallery dependency.
+- Preserve `pen_style`, `filled` and text background/style fields when adapting
+  or migrating strokes. Missing brush metadata retains the legacy appearance.
+- Reuse `penink.lua` for bounded scanline pen rendering and `viewcanvas.lua`
+  coordinate mapping rather than duplicating zoom-specific tool logic.
+- Keep page geometry independent of viewport origin: grain, fill and stroke
+  width must agree between full paints and partial dirty-region repairs.
+- The notebook's text preview snapshot is valid only while its page is stable.
+  A reader controller must invalidate it on navigation/reflow and release
+  native text caches on close. Current canvas responsiveness improvements do
+  not themselves implement reader annotations.
 - Rendering and export can consume the same stroke model, with a versioned
   document format and a migration path from Pencil's `pencil_strokes.lua`.
 

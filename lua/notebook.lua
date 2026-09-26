@@ -287,6 +287,7 @@ end
 
 --- Opens the page overview.
 function Notebook:_finishInteraction()
+    if self.canvas.zoom > 1 then self.canvas:_endZoomContact() end
     self.canvas:_endStroke()
     self.canvas:_endErase()
     self.canvas.erasing = false
@@ -455,7 +456,8 @@ end
 function Notebook:_selectTool(index)
     self:_finishInteraction()
     if self.canvas.zoom > 1 and TOOLS[index].tool ~= "pen"
-        and TOOLS[index].tool ~= "highlighter" and TOOLS[index].tool ~= "eraser" then
+        and TOOLS[index].tool ~= "highlighter" and TOOLS[index].tool ~= "eraser"
+        and TOOLS[index].tool ~= "shape" then
         self.canvas:setZoom(1)
         self.zoom_button:setIcon("notebook.zoom-in", self.zoom_button.width)
     end
@@ -477,7 +479,7 @@ function Notebook:_toggleZoom()
     end
     local scale = self.canvas.zoom == 1 and 2 or 1
     if scale > 1 and self.canvas.tool ~= "pen" and self.canvas.tool ~= "highlighter"
-        and self.canvas.tool ~= "eraser" then
+        and self.canvas.tool ~= "eraser" and self.canvas.tool ~= "shape" then
         self:_selectTool(1)
     end
     self.canvas:setZoom(scale)
@@ -614,6 +616,9 @@ function Notebook:_showToolOptions(index)
                 text=option[2], selected=function() return self.canvas.shape_kind == kind end,
                 callback=function() self:_setSetting("shape_kind", kind) end})
         end
+        table.insert(actions, {icon="notebook.shape",
+            text=_("Filled shape"), selected=function() return self.canvas.shape_fill == true end,
+            callback=function() self:_setSetting("shape_fill", not self.canvas.shape_fill) end})
         local colors = self:_colorActions("shape_color", index)
         for _, action in ipairs(colors) do actions[#actions + 1] = action end
         return self:_showToolMenu(index, _("Shapes"), actions)
@@ -642,8 +647,8 @@ function Notebook:_showToolOptions(index)
                 end})
         end
         for _index, option in ipairs({
-            { true, _("White"), "notebook.page", _("Background") },
-            { false, _("Transparent"), "texture-box" },
+            { true, _("White"), "notebook.bg-white", _("Background") },
+            { false, _("Transparent"), "notebook.bg-none" },
         }) do
             local value = option[1]
             table.insert(actions, {
@@ -682,6 +687,7 @@ function Notebook:_loadSettings()
     canvas.pen_style = (style == "fountain" or style == "pencil") and style or "fineliner"
     canvas.line_style = get("line_style", "line") == "arrow" and "arrow" or "line"
     canvas.shape_kind        = get("shape_kind", "rectangle")
+    canvas.shape_fill        = get("shape_fill", false) == true
     canvas.shape_color       = get("shape_color", 0)
     canvas.pen_width         = get("pen_width", canvas.pen_width)
     local pen_color = get("pen_color", 0)
@@ -713,7 +719,8 @@ function Notebook:_refreshToolbar()
     self:_updatePageText()
     self.undo_state = self.document:canUndo()
     self.redo_state = self.document:canRedo()
-    UIManager:setDirty(self, "ui", self.toolbar.dimen)
+    self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
+    UIManager:setDirty(nil,"ui",self.toolbar.dimen)
 end
 
 function Notebook:onClipboardChanged(message)
@@ -865,7 +872,8 @@ function Notebook:onShow()
         -- canvas child or a transient overlay even while this screen is shown,
         -- which left the displayed time frozen at the opening minute.
         self.clock_text:setText(os.date("%H:%M"))
-        UIManager:setDirty(self, "ui", self.toolbar.dimen)
+        self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
+        UIManager:setDirty(nil,"ui",self.toolbar.dimen)
         UIManager:scheduleIn(math.max(1, 60 - os.time() % 60), self.clock_tick)
     end)
     Safe.onShutdown("notebook:clock", function() UIManager:unschedule(self.clock_tick) end)

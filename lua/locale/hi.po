@@ -502,7 +502,7 @@ msgstr "पृष्ठ %1 / %2 — %3"
 #~ msgstr "सफ़ेद पृष्ठभूमि"
 
 msgid "Triangle"
-msgstr "Triangle"
+msgstr "त्रिभुज"
 
 msgid "Side button"
 msgstr "साइड बटन"
@@ -522,3 +522,6 @@ msgstr "रेखा"
 
 msgid "Arrow"
 msgstr "तीर"
+
+msgid "Filled shape"
+msgstr "भरी हुई आकृति"

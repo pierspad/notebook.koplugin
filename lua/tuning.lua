@@ -49,19 +49,6 @@ Tuning.spec = {
             .. "sample is wobble. Measured from the last point actually taken, "
             .. "so it can only round the path, never sample it.",
     },
-    live_highlight_tint = {
-        default = 100, min = 0, max = 255, step = 10,
-        doc = "The gray the highlighter paints with while the stroke is still "
-            .. "being drawn. Darker than the tint it settles to, so a pass over "
-            .. "already-highlighted text is visible under the tip.",
-    },
-    live_highlight_refresh_ms = {
-        default = 20, min = 20, max = 200, step = 5,
-        doc = "Minimum gap between visible highlighter updates. The marker "
-            .. "needs a grayscale waveform to remain visible while moving; "
-            .. "spacing those slower updates keeps them from queuing behind the nib.",
-    },
-
     -- Eraser ------------------------------------------------------------------
     eraser_radius = {
         default = 12, min = 4, max = 80, step = 2,
@@ -155,7 +142,7 @@ the same movement of the hand, so a tab is one sitting.
 Tuning.tabs = {
     { id = "ink", keys = {
         "refresh_interval_ms", "idle_flush_ms", "reconcile_delay_ms",
-        "jitter_floor_sq", "live_highlight_tint", "live_highlight_refresh_ms",
+        "jitter_floor_sq",
     } },
     { id = "eraser", keys = {
         "eraser_radius", "erase_repaint_ms",

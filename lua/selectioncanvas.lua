@@ -154,7 +154,11 @@ function Canvas:_showLassoMenu(selected)
     local bbox = Lasso.getSelectionBounds(selected)
     self.selection_bbox = bbox
 
+    local display=bbox and {x=bbox.x,y=bbox.y,w=bbox.w*self.zoom,h=bbox.h*self.zoom}
+    if display then display.x,display.y=self:_viewPoint(bbox.x,bbox.y) end
+    self.selection_overlay=display and {x=display.x-8,y=display.y-8,w=display.w+16,h=display.h+16}
     -- Draw dashed selection outline
+    bbox=display
     if bbox then
         Renderer.drawDashedRect(Screen.bb, bbox.x - 6, bbox.y - 6, bbox.w + 12, bbox.h + 12)
         self:_refreshNow(bbox.x - 8, bbox.y - 8, bbox.w + 16, bbox.h + 16)
@@ -165,9 +169,10 @@ function Canvas:_showLassoMenu(selected)
         local size = math.max(6, Screen:scaleBySize(12))
         local dirty
         for _, handle in ipairs(self:shapeHandles(shape)) do
-            local hx, hy = math.floor(handle[2]), math.floor(handle[3])
+            local hx,hy=self:_viewPoint(handle[2],handle[3])
+            hx,hy=math.floor(hx),math.floor(hy)
             if handle[1] == "rotate" then
-                local from = math.floor(shape.x_max+size/2)
+                local from = math.floor(bbox.x+bbox.w+size/2)
                 Screen.bb:paintRect(from, hy, math.max(0,hx-from-size/2), 1, Blitbuffer.COLOR_BLACK)
                 Screen.bb:paintCircle(hx, hy, math.floor(size/2), Blitbuffer.COLOR_BLACK)
                 Screen.bb:paintCircle(hx, hy, math.max(1,math.floor(size/2)-2), Blitbuffer.COLOR_WHITE)
@@ -182,11 +187,18 @@ function Canvas:_showLassoMenu(selected)
                 dirty = Rect.grow(dirty, left, top, size, size)
             end
         end
-        if dirty then self:_refreshNow(dirty.x, dirty.y, dirty.w, dirty.h, "ui") end
+        if dirty then
+            self.selection_overlay=Rect.grow(self.selection_overlay,dirty.x,dirty.y,dirty.w,dirty.h)
+            self:_refreshNow(dirty.x, dirty.y, dirty.w, dirty.h,"ui")
+        end
     end
 
     self.lasso_menu = LassoMenu:new{
-        bbox = bbox or { x = self.content.x + 100, y = self.content.y + 100, w = 200, h = 100 },
+        on_dismiss=function(area)
+            self:_repaintScreenRegion(area.x,area.y,area.w,area.h)
+            self:_scheduleCleanScreen()
+        end,
+        bbox = display or { x = self.content.x + 100, y = self.content.y + 100, w = 200, h = 100 },
         has_clipboard = Canvas.clipboard ~= nil and #Canvas.clipboard > 0,
         on_edit = #selected == 1 and selected[1].text and self.on_edit_text and function()
             local text = selected[1]
@@ -297,6 +309,12 @@ a full-page refresh -- the two operations that most obviously ought to be
 instant were the two slowest things the lasso could do.
 --]]
 function Canvas:_repaintSelection(box)
+    if self.selection_overlay then
+        local overlay=self.selection_overlay
+        self.selection_overlay=nil
+        self:_repaintScreenRegion(overlay.x,overlay.y,overlay.w,overlay.h)
+        return
+    end
     if not box then
         return self:_repaintRegion(self.content.x, self.content.y,
             self.content.w, self.content.h)

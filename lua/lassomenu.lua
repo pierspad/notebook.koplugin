@@ -214,8 +214,13 @@ function LassoMenu:init()
     }
 end
 
+function LassoMenu:onCloseWidget()
+    if self.on_dismiss then self.on_dismiss(self.dimen) end
+end
+
 function LassoMenu:paintTo(bb, x, y)
     self.content_frame:paintTo(bb, self.dimen.x, self.dimen.y)
 end
 
-return Safe.widget(LassoMenu, "lassomenu")
+-- Closing restores vector pixels; keep JIT enabled for that bounded raster work.
+return Safe.widget(LassoMenu, "lassomenu", false)

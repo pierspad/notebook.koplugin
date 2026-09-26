@@ -374,7 +374,7 @@ local function detectPolygon(points, total_len)
 end
 
 --- Creates a regular, axis-aligned shape inside a dragged rectangle.
-function Shape.create(kind, x0, y0, x1, y1, width, color)
+function Shape.create(kind, x0, y0, x1, y1, width, color, filled)
     if kind ~= "rectangle" and kind ~= "square" and kind ~= "circle" and kind ~= "triangle" then return nil end
     local w, h = math.abs(x1-x0), math.abs(y1-y0)
     if kind == "square" or kind == "circle" then
@@ -384,7 +384,7 @@ function Shape.create(kind, x0, y0, x1, y1, width, color)
     end
     local left, right = math.min(x0,x1), math.max(x0,x1)
     local top, bottom = math.min(y0,y1), math.max(y0,y1)
-    local stroke = Stroke:new{tool="pen", width=width, color=color, shape_kind=kind}
+    local stroke = Stroke:new{tool="pen", width=width, color=color, shape_kind=kind, filled=filled == true}
     if kind == "triangle" then
         for _, point in ipairs({{left,bottom},{(left+right)/2,top},{right,bottom},{left,bottom}}) do
             stroke:addPoint(point[1],point[2],1)
@@ -419,7 +419,8 @@ function Shape.transform(original, handle, x, y, start_x, start_y)
         if handle:find("s", 1, true) then bottom = math.max(y, top + 8) end
     end
     local result = Stroke:new{tool=original.tool, width=original.width,
-        color=original.color, shape_kind=original.shape_kind}
+        color=original.color, shape_kind=original.shape_kind,
+        pen_style=original.pen_style, filled=original.filled}
     local old_w = math.max(1, original.x_max - original.x_min)
     local old_h = math.max(1, original.y_max - original.y_min)
     local c, s = math.cos(angle), math.sin(angle)
@@ -489,8 +490,9 @@ function Shape.recognize(raw_stroke, line_style)
     if shape_type == "quadrilateral" or shape_type == "rectangle" or shape_type == "square" then
         local kind = shape_type == "square" and "square" or "rectangle"
         local clean = Shape.create(kind, raw_stroke.x_min, raw_stroke.y_min,
-            raw_stroke.x_max, raw_stroke.y_max, raw_stroke.width, raw_stroke.color)
+            raw_stroke.x_max, raw_stroke.y_max, raw_stroke.width, raw_stroke.color, raw_stroke.filled)
         clean.tint = raw_stroke.tint
+        clean.pen_style = raw_stroke.pen_style
         return clean, kind
     end
     if shape_type == "line" and line_style == "arrow" then
@@ -513,6 +515,8 @@ function Shape.recognize(raw_stroke, line_style)
         local clean_stroke = Stroke:new{
             shape_kind = shape_type,
             tool = raw_stroke.tool,
+            pen_style = raw_stroke.pen_style,
+            filled = raw_stroke.filled,
             width = raw_stroke.width,
             color = raw_stroke.color,
             -- Carried, so a shape snapped mid-stroke keeps being drawn in the
