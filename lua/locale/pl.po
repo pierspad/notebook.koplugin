@@ -314,14 +314,8 @@ msgstr "Koło"
 msgid "Shapes"
 msgstr "Kształty"
 
-msgid "Small"
-msgstr "Mały"
 
-msgid "Medium"
-msgstr "Średni"
 
-msgid "Large"
-msgstr "Duży"
 
 msgid "Sans-serif"
 msgstr "Bezszeryfowy"
@@ -527,3 +521,18 @@ msgstr "Strzałka"
 
 msgid "Filled shape"
 msgstr "Wypełniony kształt"
+
+msgid "Stroke style"
+msgstr "Styl linii"
+
+msgid "Fill"
+msgstr "Wypełnienie"
+
+msgid "Font family"
+msgstr "Krój pisma"
+
+msgid "Text style"
+msgstr "Styl tekstu"
+
+msgid "Text size"
+msgstr "Rozmiar tekstu"

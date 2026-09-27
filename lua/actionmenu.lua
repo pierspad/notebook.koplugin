@@ -101,10 +101,11 @@ local Row = InputContainer:extend{
 }
 
 function Row:init()
+    local row_h = self.row_height or ROW_H
     local pad = Size.padding.large
     self:_buildIcon()
     self.icon_holder = CenterContainer:new{
-        dimen = Geom:new{ w = ICON_SZ, h = ROW_H },
+        dimen = Geom:new{ w = ICON_SZ, h = row_h },
         self.icon_widget,
     }
     self.label = TextWidget:new{
@@ -128,7 +129,7 @@ function Row:init()
             LeftContainer:new{
                 -- Left-aligned: a column of centred labels of different lengths
                 -- reads as ragged, and the eye has no edge to run down.
-                dimen = Geom:new{ w = self.width - ICON_SZ - 3 * pad, h = ROW_H },
+                dimen = Geom:new{ w = self.width - ICON_SZ - 3 * pad, h = row_h },
                 self.label,
             },
             HorizontalSpan:new{ width = pad },
@@ -167,6 +168,7 @@ function Row:setSelected(selected)
     self.frame.background = selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
     self.label.fgcolor = selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
     self.label.bold = selected
+    if self.icon_widget then self.icon_widget:free() end
     self:_buildIcon()
     self.icon_holder[1] = self.icon_widget
 end
@@ -193,6 +195,7 @@ function ActionMenu:init()
 
     local width = self.width or math.floor(Screen:getWidth() * 0.62)
     local content = VerticalGroup:new{ align = "left" }
+    local row_h = self.row_height or ROW_H
     self.action_rows = {}
 
     if self.title then
@@ -210,12 +213,14 @@ function ActionMenu:init()
         })
     end
 
+    if self.header then table.insert(content, self.header) end
+
     local i = 1
     while i <= #(self.actions or {}) do
         local action = self.actions[i]
         if action.section then
             table.insert(content, CenterContainer:new{
-                dimen = Geom:new{w=width, h=math.floor(ROW_H * 0.7)},
+                dimen = Geom:new{w=width, h=math.floor(row_h * 0.7)},
                 TextWidget:new{text=action.section, face=Font:getFace("cfont", 17), bold=true},
             })
         end
@@ -228,6 +233,7 @@ function ActionMenu:init()
         local pair = action.swatch and self.actions[i + 1] and self.actions[i + 1].swatch
         local function makeRow(item)
         local row = Row:new{
+            row_height = row_h,
             icon = item.icon,
             icon_selected = item.icon_selected,
             swatch = item.swatch,
@@ -327,6 +333,7 @@ function ActionMenu:_refreshRows()
     for _, item in ipairs(self.action_rows) do
         item.row:setSelected(actionIsSelected(item.action))
     end
+    if self.on_options_changed then self:on_options_changed() end
     UIManager:setDirty(self, "ui", self.panel.dimen)
 end
 
@@ -379,6 +386,7 @@ function ActionMenu:onShow()
 end
 
 function ActionMenu:onCloseWidget()
+    if not self._menu_freed then self._menu_freed=true; self:free() end
     -- What was underneath may have been painted outside UIManager's accounting,
     -- so ask for the area back rather than assuming it will be restored.
     UIManager:setDirty(nil, "ui")

@@ -303,14 +303,8 @@ msgstr ""
 msgid "Shapes"
 msgstr ""
 
-msgid "Small"
-msgstr ""
 
-msgid "Medium"
-msgstr ""
 
-msgid "Large"
-msgstr ""
 
 msgid "Sans-serif"
 msgstr ""
@@ -503,4 +497,19 @@ msgid "Arrow"
 msgstr ""
 
 msgid "Filled shape"
+msgstr ""
+
+msgid "Stroke style"
+msgstr ""
+
+msgid "Fill"
+msgstr ""
+
+msgid "Font family"
+msgstr ""
+
+msgid "Text style"
+msgstr ""
+
+msgid "Text size"
 msgstr ""

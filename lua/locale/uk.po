@@ -313,14 +313,8 @@ msgstr "Коло"
 msgid "Shapes"
 msgstr "Фігури"
 
-msgid "Small"
-msgstr "Малий"
 
-msgid "Medium"
-msgstr "Середній"
 
-msgid "Large"
-msgstr "Великий"
 
 msgid "Sans-serif"
 msgstr "Без зарубок"
@@ -526,3 +520,18 @@ msgstr "Стрілка"
 
 msgid "Filled shape"
 msgstr "Залита фігура"
+
+msgid "Stroke style"
+msgstr "Тип лінії"
+
+msgid "Fill"
+msgstr "Заливка"
+
+msgid "Font family"
+msgstr "Родина шрифтів"
+
+msgid "Text style"
+msgstr "Накреслення тексту"
+
+msgid "Text size"
+msgstr "Розмір тексту"

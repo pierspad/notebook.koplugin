@@ -315,14 +315,8 @@ msgstr "Círculo"
 msgid "Shapes"
 msgstr "Formas"
 
-msgid "Small"
-msgstr "Pequeno"
 
-msgid "Medium"
-msgstr "Médio"
 
-msgid "Large"
-msgstr "Grande"
 
 msgid "Sans-serif"
 msgstr "Sem serifa"
@@ -528,3 +522,18 @@ msgstr "Seta"
 
 msgid "Filled shape"
 msgstr "Forma preenchida"
+
+msgid "Stroke style"
+msgstr "Tipo de traço"
+
+msgid "Fill"
+msgstr "Preenchimento"
+
+msgid "Font family"
+msgstr "Família de letra"
+
+msgid "Text style"
+msgstr "Estilo do texto"
+
+msgid "Text size"
+msgstr "Tamanho do texto"

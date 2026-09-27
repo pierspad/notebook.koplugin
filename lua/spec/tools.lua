@@ -172,7 +172,7 @@ for _,i in ipairs({2,3,5,6}) do
     menu=rec.shown[#rec.shown]
     assert(menu.anchor==nb.tool_buttons[i].dimen, 'popover anchored to its tool')
     if i==5 then assert(#menu.actions==13)
-    elseif i==6 then assert(#menu.actions==11)
+    elseif i==6 then assert(#menu.actions==8 and menu.header)
     else assert(menu.footer) end
 end
 nb:_showToolOptions(5)
@@ -191,14 +191,14 @@ nb:_showToolOptions(2)
 local marker_menu=rec.shown[#rec.shown]
 assert(marker_menu.actions[7].selected(), 'yellow marker color is not preselected')
 local text_menu=menu
-local expected_icons={'a','A','A','E','E','M','B','I','U̲'}
+local expected_icons={'E','E','M','B','I','U̲'}
 for i,expected in ipairs(expected_icons) do
     assert(text_menu.actions[i].icon_text==expected,
         'text option '..i..' has no specific icon')
 end
-assert(text_menu.actions[10].section=='Background'
-    and text_menu.actions[10].text=='White'
-    and text_menu.actions[11].text=='Transparent',
+assert(text_menu.actions[7].section=='Background'
+    and text_menu.actions[7].text=='White'
+    and text_menu.actions[8].text=='Transparent',
     'text background is not an explicit two-choice section')
 nb.canvas.text_bold=true
 nb:_editText(nil,120,220)

@@ -312,14 +312,8 @@ msgstr "वृत्त"
 msgid "Shapes"
 msgstr "आकृतियाँ"
 
-msgid "Small"
-msgstr "छोटा"
 
-msgid "Medium"
-msgstr "मध्यम"
 
-msgid "Large"
-msgstr "बड़ा"
 
 msgid "Sans-serif"
 msgstr "सैंस-सेरिफ़"
@@ -525,3 +519,18 @@ msgstr "तीर"
 
 msgid "Filled shape"
 msgstr "भरी हुई आकृति"
+
+msgid "Stroke style"
+msgstr "रेखा शैली"
+
+msgid "Fill"
+msgstr "भराव"
+
+msgid "Font family"
+msgstr "फ़ॉन्ट परिवार"
+
+msgid "Text style"
+msgstr "पाठ शैली"
+
+msgid "Text size"
+msgstr "पाठ का आकार"

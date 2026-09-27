@@ -82,7 +82,8 @@ the selected color is refreshed (plus the panel’s own update time).
 This keeps slow grayscale/color refreshes out of the moving pen's path. Saved
 notes and exports always retain the selected color and brush.
 
-Hold or double-tap a tool button to open its options. After cutting or copying,
+Hold or double-tap a tool button to open its options. Text options include a
+10–96 pt size selector with −/+ buttons and a live typography sample. After cutting or copying,
 use the Paste button in the top bar.
 
 ### Custom pen icons

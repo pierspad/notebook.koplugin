@@ -314,14 +314,8 @@ msgstr "円"
 msgid "Shapes"
 msgstr "図形"
 
-msgid "Small"
-msgstr "小"
 
-msgid "Medium"
-msgstr "中"
 
-msgid "Large"
-msgstr "大"
 
 msgid "Sans-serif"
 msgstr "ゴシック体 (サンセリフ)"
@@ -527,3 +521,18 @@ msgstr "矢印"
 
 msgid "Filled shape"
 msgstr "塗りつぶした図形"
+
+msgid "Stroke style"
+msgstr "線の種類"
+
+msgid "Fill"
+msgstr "塗りつぶし"
+
+msgid "Font family"
+msgstr "フォント"
+
+msgid "Text style"
+msgstr "文字スタイル"
+
+msgid "Text size"
+msgstr "文字サイズ"

@@ -317,14 +317,8 @@ msgstr "Kreis"
 msgid "Shapes"
 msgstr "Formen"
 
-msgid "Small"
-msgstr "Klein"
 
-msgid "Medium"
-msgstr "Mittel"
 
-msgid "Large"
-msgstr "Groß"
 
 msgid "Sans-serif"
 msgstr "Sans Serif"
@@ -530,3 +524,18 @@ msgstr "Pfeil"
 
 msgid "Filled shape"
 msgstr "Gefüllte Form"
+
+msgid "Stroke style"
+msgstr "Strichart"
+
+msgid "Fill"
+msgstr "Füllung"
+
+msgid "Font family"
+msgstr "Schriftfamilie"
+
+msgid "Text style"
+msgstr "Schriftstil"
+
+msgid "Text size"
+msgstr "Schriftgröße"

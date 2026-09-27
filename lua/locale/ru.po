@@ -313,14 +313,8 @@ msgstr "Круг"
 msgid "Shapes"
 msgstr "Фигуры"
 
-msgid "Small"
-msgstr "Маленький"
 
-msgid "Medium"
-msgstr "Средний"
 
-msgid "Large"
-msgstr "Большой"
 
 msgid "Sans-serif"
 msgstr "Без засечек"
@@ -526,3 +520,18 @@ msgstr "Стрелка"
 
 msgid "Filled shape"
 msgstr "Залитая фигура"
+
+msgid "Stroke style"
+msgstr "Тип линии"
+
+msgid "Fill"
+msgstr "Заливка"
+
+msgid "Font family"
+msgstr "Семейство шрифтов"
+
+msgid "Text style"
+msgstr "Начертание текста"
+
+msgid "Text size"
+msgstr "Размер текста"

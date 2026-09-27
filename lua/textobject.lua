@@ -1,4 +1,8 @@
 local Text = {}
+-- Some KOReader blitbuffer versions fill a whole physical stride when a
+-- rectangle spans a narrow viewport. Decorations must stay within the clip;
+-- a pixel setter bypasses that full-row fast path for these thin lines.
+local function decorationPixel(bb,x,y,color) bb:setPixel(x,y,color) end
 
 function Text.hasContent(value)
     if not value then return false end
@@ -32,17 +36,20 @@ function Text.widget(stroke,scale)
     }
 end
 
+-- Keep references to layout inputs: concatenating a long label into a new
+-- key on every repaint was avoidable work. Background, underline and caret
+-- are composited separately and do not invalidate the glyph layout.
 local function cacheKey(stroke, scale)
-    return (stroke.text or "") .. "\0" ..
-        (stroke.font_family or "sans") .. "\0" ..
-        tostring(stroke.font_size) .. "\0" ..
-        tostring(scale) .. "\0" ..
-        tostring(stroke.text_bold) .. "\0" ..
-        tostring(stroke.text_italic) .. "\0" ..
-        tostring(stroke.text_underline) .. "\0" ..
-        tostring(stroke.text_background) .. "\0" ..
-        tostring(stroke.color or 0) .. "\0" ..
-        tostring(stroke.x_max - stroke.x_min)
+    return {text=stroke.text, family=stroke.font_family, size=stroke.font_size,
+        scale=scale, bold=stroke.text_bold, italic=stroke.text_italic,
+        color=stroke.color, width=stroke.x_max-stroke.x_min}
+end
+
+local function cacheMatches(key, stroke, scale)
+    return key and key.text == stroke.text and key.family == stroke.font_family
+        and key.size == stroke.font_size and key.scale == scale
+        and key.bold == stroke.text_bold and key.italic == stroke.text_italic
+        and key.color == stroke.color and key.width == stroke.x_max-stroke.x_min
 end
 
 function Text.freeCache(stroke)
@@ -66,15 +73,26 @@ function Text.create(text,x,y,width,size,style)
     return stroke
 end
 
+local function caretMetrics(stroke, widget, scale)
+    if not stroke.cursor_pos or not widget or not widget._getXYForCharPos then return end
+    local x,y=widget:_getXYForCharPos(stroke.cursor_pos)
+    local w=math.max(1,math.floor(scale))
+    return math.min(x,math.max(0,widget:getSize().w-w)),y,w,widget.line_height_px or stroke.font_size*scale
+end
+
+function Text.caretBounds(stroke)
+    local x,y,w,h=caretMetrics(stroke,stroke._text_widget,1)
+    if x then return math.floor(stroke.x_min)+x,math.floor(stroke.y_min)+y,w,h end
+end
+
 function Text.draw(bb,stroke,scale,ox,oy,clip)
     scale,ox,oy=scale or 1,ox or 0,oy or 0
-    local key = cacheKey(stroke, scale)
     local widget = stroke._text_widget
-    if not widget or stroke._text_cache_key ~= key then
+    if not widget or not cacheMatches(stroke._text_cache_key,stroke,scale) then
         Text.freeCache(stroke)
         widget = Text.widget(stroke, scale)
         stroke._text_widget = widget
-        stroke._text_cache_key = key
+        stroke._text_cache_key = cacheKey(stroke,scale)
     end
     require("textcache").touch(stroke)
     local target=bb
@@ -103,23 +121,25 @@ function Text.draw(bb,stroke,scale,ox,oy,clip)
             widget:paintTo(target,px,py)
         end
     end
-    if stroke.cursor_pos and widget._getXYForCharPos then
-        local cx,cy=widget:_getXYForCharPos(stroke.cursor_pos)
-        local caret_w=math.max(1,math.floor(scale))
-        local caret_h=widget.line_height_px or stroke.font_size*scale
-        cx=math.min(cx, math.max(0,widget:getSize().w-caret_w))
+    local cx,cy,caret_w,caret_h=caretMetrics(stroke,widget,scale)
+    if cx then
         local rx,ry,rw,rh=require("rect").clamp(px+cx,py+cy,caret_w,caret_h,
             {x=0,y=0,w=target:getWidth(),h=target:getHeight()})
-        if rx then target:paintRect(rx,ry,rw,rh,require("ffi/blitbuffer").COLOR_BLACK) end
+        if rx then target:paintRect(rx,ry,rw,rh,require("ffi/blitbuffer").COLOR_BLACK,decorationPixel) end
     end
     if stroke.text_underline then
         local size=widget:getSize()
         local line_h=widget.line_height_px or math.max(5,stroke.font_size*scale)
-        local yy=py+line_h-2
-        while yy < py+size.h do
-            target:paintRect(px,yy,size.w,math.max(1,math.floor(scale)),
-                require("ffi/blitbuffer").Color8(stroke.color or 0))
-            yy=yy+line_h
+        local lines=widget.vertical_string_list
+        local count=lines and #lines or math.ceil(size.h/line_h)
+        for i=1,count do
+            local line=lines and lines[i]
+            local width=line and line.width or size.w
+            if width>0 then
+                target:paintRect(px+math.floor(line and line.x_start or 0),py+i*line_h-2,
+                    math.ceil(width),math.max(1,math.floor(scale)),
+                    require("ffi/blitbuffer").Color8(stroke.color or 0),decorationPixel)
+            end
         end
     end
 end

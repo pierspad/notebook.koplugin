@@ -19,6 +19,7 @@ function Cache.remove(stroke)
 end
 
 function Cache.touch(stroke)
+    if entries[#entries] and entries[#entries].stroke == stroke then return end
     for i=#entries,1,-1 do
         if entries[i].stroke == stroke then
             table.insert(entries,table.remove(entries,i))

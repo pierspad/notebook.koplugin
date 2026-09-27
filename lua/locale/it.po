@@ -317,14 +317,8 @@ msgstr "Cerchio"
 msgid "Shapes"
 msgstr "Forme"
 
-msgid "Small"
-msgstr "Piccolo"
 
-msgid "Medium"
-msgstr "Medio"
 
-msgid "Large"
-msgstr "Grande"
 
 msgid "Sans-serif"
 msgstr "Senza grazie"
@@ -530,3 +524,18 @@ msgstr "Freccia"
 
 msgid "Filled shape"
 msgstr "Forma piena"
+
+msgid "Stroke style"
+msgstr "Tipo di tratto"
+
+msgid "Fill"
+msgstr "Riempimento"
+
+msgid "Font family"
+msgstr "Carattere"
+
+msgid "Text style"
+msgstr "Stile del testo"
+
+msgid "Text size"
+msgstr "Dimensione del testo"

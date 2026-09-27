@@ -789,3 +789,26 @@ members, delete-all, batches, undo and redo.
 The clock borrows a small inset from the gap immediately after it, leaving the
 other controls' positions and sizes unchanged. `tools/check-toolbar.lua` can
 compare their real KOReader coordinates with a prior `notebook.lua` revision.
+
+### Text options and editing layout
+
+Tool menus separate pen type from stroke style, geometric shape from fill,
+and text font family from style and background. Text presets are replaced by
+a 10–96 pt selector in 2 pt steps, with a live sample rendered by `textobject.lua`.
+Text menu rows are compact enough to retain the complete menu on a 600×800
+portrait viewport, including the largest sample. New headings are translated
+in every shipped catalog.
+
+`textdialog.lua` owns the keyboard dialog's visual structure; `notebooktext.lua`
+owns preview, cursor, style and commit/cancel behavior. Moving the caret reuses
+the existing shaped text and repaints only the union of the old/new caret
+rectangles. Unchanged input notifications do no painting. Underline/background
+changes reuse glyph layout; changes to content, family, weight, italic, size,
+width or zoom invalidate it. Cache keys retain field references rather than
+concatenating a whole label on each draw.
+
+Underlines use each shaped line's width and horizontal origin. Thin decorations
+use a bounded pixel setter to avoid older blitbuffer full-stride fill shortcuts
+escaping narrow viewports. Native regression checks compare partial caret
+updates pixel-for-pixel with a full label redraw. Menu close and row selection
+release native preview/icon buffers rather than leaving them to collection.

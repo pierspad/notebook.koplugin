@@ -312,14 +312,8 @@ msgstr "圓形"
 msgid "Shapes"
 msgstr "形狀"
 
-msgid "Small"
-msgstr "小"
 
-msgid "Medium"
-msgstr "中"
 
-msgid "Large"
-msgstr "大"
 
 msgid "Sans-serif"
 msgstr "無襯線"
@@ -525,3 +519,18 @@ msgstr "箭頭"
 
 msgid "Filled shape"
 msgstr "實心形狀"
+
+msgid "Stroke style"
+msgstr "筆畫樣式"
+
+msgid "Fill"
+msgstr "填滿"
+
+msgid "Font family"
+msgstr "字型"
+
+msgid "Text style"
+msgstr "文字樣式"
+
+msgid "Text size"
+msgstr "文字大小"

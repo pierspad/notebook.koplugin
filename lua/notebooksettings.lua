@@ -45,7 +45,7 @@ function Notebook:_showPenOptions()
         { "pen_style", "fineliner", _("Fineliner"), "notebook.fineliner" },
         { "pen_style", "fountain", _("Fountain pen"), "notebook.fountain" },
         { "pen_style", "pencil", _("Pencil"), "notebook.pencil" },
-        { "line_style", "line", _("Line"), "notebook.line" },
+        { "line_style", "line", _("Line"), "notebook.line", _("Stroke style") },
         { "line_style", "arrow", _("Arrow"), "notebook.arrow" },
     }) do
         local key, value, label = option[1], option[2], option[3]
@@ -74,7 +74,20 @@ function Notebook:_showToolMenu(index, title, actions, key)
         self.canvas.tool = TOOLS[index].tool
         if menu then UIManager:setDirty(menu, "ui", menu.panel.dimen) end
     end, menu_width)
+    local text_size
+    if TOOLS[index].tool == "text" then
+        text_size = require("textsizepicker"):new{
+            width=menu_width, canvas=self.canvas,
+            on_change=function(value)
+                self:_setSetting("text_size",value)
+                if menu then UIManager:setDirty(menu,"ui",menu.panel.dimen) end
+            end,
+        }
+    end
     menu = ActionMenu:new{
+        header=text_size,
+        row_height=text_size and Screen:scaleBySize(40) or nil,
+        on_options_changed=text_size and function() text_size:updatePreview() end or nil,
         title=title, actions=actions, footer=footer,
         width=menu_width,
         anchor=self.tool_buttons[index].dimen,
@@ -116,7 +129,7 @@ function Notebook:_showToolOptions(index)
                 text=option[2], selected=function() return self.canvas.shape_kind == kind end,
                 callback=function() self:_setSetting("shape_kind", kind) end})
         end
-        table.insert(actions, {icon="notebook.shape",
+        table.insert(actions, {icon="notebook.shape", section=_("Fill"),
             text=_("Filled shape"), selected=function() return self.canvas.shape_fill == true end,
             callback=function() self:_setSetting("shape_fill", not self.canvas.shape_fill) end})
         local colors = self:_colorActions("shape_color", index)
@@ -124,23 +137,19 @@ function Notebook:_showToolOptions(index)
         return self:_showToolMenu(index, _("Shapes"), actions)
     end
     if tool == "text" then
-        for _index, option in ipairs({{18, _("Small"), "a", 15}, {26, _("Medium"), "A", 20},
-                                  {36, _("Large"), "A", 25}}) do
-            table.insert(actions, {icon_text=option[3], icon_size=option[4], text=option[2],
-                selected=function() return self.canvas.text_size == option[1] end,
-                callback=function() self:_setSetting("text_size", option[1]) end})
-        end
         for _index, option in ipairs({{"sans", _("Sans-serif"), "E", "cfont"},
                                   {"serif", _("Serif"), "E", "ffont"},
                                   {"mono", _("Monospace"), "M", "infont"}}) do
-            table.insert(actions, {icon_text=option[3], icon_font=option[4], icon_size=18, text=option[2],
+            table.insert(actions, {section=_index == 1 and _("Font family") or nil,
+                icon_text=option[3], icon_font=option[4], icon_size=18, text=option[2],
                 selected=function() return (self.canvas.text_font or "sans") == option[1] end,
                 callback=function() self:_setSetting("text_font", option[1]) end})
         end
         for _index, option in ipairs({{"text_bold", _("Bold"), "B", true},
                                   {"text_italic", _("Italic"), "I"},
                                   {"text_underline", _("Underline"), "U̲"}}) do
-            table.insert(actions, {icon_text=option[3], icon_bold=option[4], text=option[2],
+            table.insert(actions, {section=_index == 1 and _("Text style") or nil,
+                icon_text=option[3], icon_bold=option[4], text=option[2],
                 selected=function() return self.canvas[option[1]] == true end,
                 callback=function()
                     self:_setSetting(option[1], not self.canvas[option[1]])
