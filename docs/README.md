@@ -104,7 +104,11 @@ notebook.koplugin/
 │   ├── penink.lua           # Tapered round pen / graphite scanline rasterizer
 │   ├── viewcanvas.lua       # Shared page/screen geometry and overlay restoration
 │   ├── canvas.lua           # Primary canvas widget lifecycle and tool dispatch
-│   ├── canvasrender.lua     # Viewport clipping, dirty bounds, and E-Ink waveform scheduling
+│   ├── canvasrender.lua     # Page/background pixels and clipped repaint
+│   ├── canvasrefresh.lua    # Dirty rectangles, cadence and idle color cleanup
+│   ├── notebooktoolbar.lua  # Toolbar widgets and layout
+│   ├── notebooksettings.lua # Tool menus and persistent settings
+│   ├── galleryexport.lua    # Export/share jobs and progress
 │   ├── erasercanvas.lua     # Swept capsule eraser, undo batching, and shape preservation
 │   ├── selectioncanvas.lua  # Lasso selection, bounding box translation, and clipboard
 │   ├── shapecanvas.lua      # Explicit geometric shape instantiation, resize, and preview
@@ -147,7 +151,8 @@ The canvas subsystem is decomposed into specialized mixin modules loaded into th
 | `stylusinput.lua` | Point filtering, coordinate rotation, and speed gating | Normalizes raw digitizer samples; applies screen rotation; drops physical outliers. |
 | `touchinput.lua` | Multitouch gestures, palm rejection, pan, page flips | Enforces `palm_grace_ms`; claims touch events inside canvas to prevent pass-through to background widgets. |
 | `zoomcanvas.lua` | 2x magnification view and coordinate transformations | Maintains enlarged `Blitbuffer` cache; transforms input coordinates; handles finger pan. |
-| `canvasrender.lua` | Framebuffer blitting, dirty rects, E-Ink waveforms | Bypasses `UIManager` while drawing; manages fast 1-bit (`refreshFast`) and idle grayscale/color (`refreshUI`) refreshes. |
+| `canvasrender.lua` | Page pixels and clipped repaint | Background cache and authoritative rendering. |
+| `canvasrefresh.lua` | Dirty rectangles and E-Ink scheduling | Fast live feedback, idle color reveal and full cleanup after transformations. |
 | `erasercanvas.lua` | Continuous capsule eraser and undo grouping | Performs swept segment intersection; batches atomic undos; protects geometric shapes from immediate deletion. |
 | `shapecanvas.lua` | Geometric tools (rect, circle) and resize handles | Uses immutable background snapshots for previews; manages bounding handles and aspect ratios. |
 | `shapesnap.lua` | Hold-to-straighten recognition timer | Debounces pen pauses (`hold_delay_ms`); triggers `Shape.recognize` on endpoint hold. |
@@ -186,10 +191,10 @@ E-Ink displays rely on electrophoretic micro-capsules driven by specific electri
   Lift Detected ──> Schedule Timer (reconcile_delay_ms) ──> Screen:refreshUI() (device-selected waveform)
 ```
 
-1. **Bypassing UIManager**: KOReader's `UIManager` schedules repaints across the entire widget hierarchy on every dirty notification. Triggering `UIManager:setDirty` for individual stylus samples results in severe latency (~150–300 ms lag), making writing unusable. During an active stroke, `canvasrender.lua` renders directly into the screen's hardware blitbuffer (`Screen.bb`) and issues partial ioctl refreshes directly to the Linux frame driver.
+1. **Bypassing UIManager**: KOReader's `UIManager` schedules repaints across the entire widget hierarchy on every dirty notification. Triggering `UIManager:setDirty` for individual stylus samples results in severe latency (~150–300 ms lag), making writing unusable. During an active stroke, `renderer.lua` draws directly into the screen buffer (`Screen.bb`); `canvasrefresh.lua` coalesces the refresh requests passed to KOReader's device backend.
 2. **Fast Binary Refresh (`refreshFast`)**: Active ink is updated using 1-bit binary waveforms (A2/DU mode). These waveforms exhibit minimal panel latency (~20–30 ms) but cannot display intermediate gray levels and leave noticeable ghosting.
 3. **Refresh Throttling**: The digitizer reports samples at upwards of 200 Hz, whereas the E-Ink controller cannot process ioctl refresh calls at that rate. Issuing a refresh per sample queues work inside the kernel framebuffer driver, causing ink to lag far behind the physical pen nib. Refreshes are strictly rate-limited to at most one every `refresh_interval_ms` (default: 20 ms).
-4. **Color Reconciliation (`refreshUI`)**: After pen lift, an idle timer (`reconcile_delay_ms`, default 2000 ms, minimum effective delay 600 ms) reveals the authoritative grayscale/color pixels. Active contact postpones this pass. Shape/rotation/menu cleanup requests a single full-screen refresh at rest, rather than flashing every sample.
+4. **Color Reconciliation (`refreshUI`)**: After pen lift, an idle timer reveals the authoritative grayscale/color pixels. Colored previews cap the configured delay at 800 ms (minimum effective delay 600 ms); ordinary cleanup retains `reconcile_delay_ms`, default 2000 ms. Active contact postpones this pass. Shape/rotation/menu cleanup requests a single full-screen refresh at rest, rather than flashing every sample.
 5. **Why Grayscale Cannot Run Live**: On Kindle Scribe hardware, invoking `refreshPartial` forces the display driver into `UPDATE_MODE_FULL` and enforces a hardware fence. Successive blit operations block until previous waveform cycles complete, freezing the event loop.
 6. **Boundary Clamping**: The Linux framebuffer driver silently rejects refresh ioctls containing out-of-bounds or negative coordinates. Furthermore, dirty rectangles that intersect the top toolbar trigger visual flickering of UI buttons under fast binary waveforms. All refresh rectangles are strictly clamped against the active canvas content bounding box (`self.content`).
 
@@ -396,7 +401,7 @@ Zoom retains the enlarged page cache while erasing. The document returns dirty p
 
 Shapes can now be created and rotated directly at 2× zoom: input maps to page coordinates, while handles and the floating menu map back to screen coordinates. Choosing pen, marker, eraser or shapes preserves zoom. Lasso and text editing still switch to the normal page editor; they are not zoom editing tools yet.
 
-Completed zoomed pen strokes are recorded immediately, but their cache rasterization is deferred until that cache is actually needed. The live screen already contains the stroke, so pen-up only flushes pending fast pixels and schedules local reconciliation. Toolbar/clock-only updates paint their own band without rerendering the canvas. Grayscale live updates are throttled separately from binary pen updates.
+Completed zoomed pen strokes are recorded immediately, but their cache rasterization is deferred until that cache is actually needed. The live screen already contains the stroke, so pen-up only flushes pending fast pixels and schedules local reconciliation. Toolbar/clock-only updates paint their own band without rerendering the canvas. Colored tools use binary live previews too; slow color reconciliation waits for an idle period.
 
 A closed selection menu restores its screen rectangle synchronously, before a rotation snapshot is captured. Selection cleanup includes the rotation handle outside the bounding box. Shape creation, rotation, menu dismissal and held-arrow recognition request one full-screen cleanup after at least 600 ms of inactivity. A new pen contact postpones it; active dragging, erasing and panning also defer it. This refresh reuses correct framebuffer pixels, without rasterizing the entire page again. Ordinary handwriting keeps local reconciliation rather than flashing after every stroke.
 
@@ -759,3 +764,28 @@ measure a physical panel's input-to-display latency.
 All 13 shipped catalogs are checked for missing entries and substitution fields.
 The PO reader skips unsupported contexts/plurals and decodes escapes in one
 pass; locale aliases such as `pt-BR` and `it_IT@euro` resolve correctly.
+
+### Focused performance and module maintenance
+
+The notebook screen owns lifecycle and history; toolbar construction and tool
+settings now live in `notebooktoolbar.lua` and `notebooksettings.lua`. Gallery
+export/share jobs live in `galleryexport.lua`. Moving methods preserves their
+existing interfaces and private loader isolation; file splitting alone is not
+claimed as a speed improvement.
+
+Constant-width marker sweeps calculate each scanline's first and last covering
+stamp directly. This avoids allocating a table for every row and visiting that
+row repeatedly for overlapping stamps. Pressure-varying markers retain the
+existing path. Regression tests compare 600 fractional/clipped/reversed sweeps
+and their binary previews with independent square stamping. The native
+`tools/bench-marker.lua` comparison measures CPU work only; panel latency is
+not part of the benchmark.
+
+Lasso cut/delete uses a membership set and stable compaction instead of nested
+selection searches and repeated array shifts. Recorded original indices remain
+in descending order for undo. Tests include large selections, duplicate/stale
+members, delete-all, batches, undo and redo.
+
+The clock borrows a small inset from the gap immediately after it, leaving the
+other controls' positions and sizes unchanged. `tools/check-toolbar.lua` can
+compare their real KOReader coordinates with a prior `notebook.lua` revision.

@@ -53,3 +53,25 @@ for _ = 1, 120 do
     check(x0,y0,x1,y1,r0,r1,steps,0,steps)
 end
 print("marker raster matches overlapping stamps and preserves dark ink")
+
+-- Fractional coordinates/widths, clipping and reversed paths exercise the
+-- direct constant-width scanline bounds against independent square stamping.
+for _=1,600 do
+    local x0,y0=math.random(-400,1000)/10,math.random(-400,1000)/10
+    local x1,y1=math.random(-400,1000)/10,math.random(-400,1000)/10
+    local radius=math.random(20,350)/10
+    local steps=math.max(1,math.ceil(math.sqrt((x1-x0)^2+(y1-y0)^2)/math.max(2,math.floor(radius*.8))))
+    local first,last=math.random(0,math.floor(steps/2)),math.random(math.ceil(steps/2),steps)
+    check(x0,y0,x1,y1,radius,radius,steps,first,last)
+    local actual,mask=FakeBB.new(96,88),FakeBB.new(96,88)
+    for i=first,last do
+        local t=i/steps
+        HighlightInk.stamp(mask,x0+(x1-x0)*t,y0+(y1-y0)*t,radius,0)
+    end
+    HighlightInk.drawSegment(actual,x0,y0,radius,x1,y1,radius,160,first,last,steps,true)
+    for y=0,87 do for x=0,95 do
+        local expected=mask:get(x,y)==0 and (x+y)%4==0 and 0 or 255
+        assert(actual:get(x,y)==expected,'binary marker scanline changed coverage')
+    end end
+end
+print('marker: 600 fractional/clipped/reversed sweeps and binary previews match reference stamps')

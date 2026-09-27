@@ -77,7 +77,8 @@ provate e non implicano supporto confermato.
 - PDF and Xournal++ export; optional LocalSend integration.
 
 Colored pens and pencil use a dark live preview; the highlighter uses a light
-black hatch so text remains readable. After a pause, the selected color appears.
+black hatch so text remains readable. After roughly 0.8 seconds of inactivity,
+the selected color is refreshed (plus the panel’s own update time).
 This keeps slow grayscale/color refreshes out of the moving pen's path. Saved
 notes and exports always retain the selected color and brush.
 

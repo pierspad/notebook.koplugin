@@ -99,7 +99,7 @@ function ZoomRefresh:_settleZoomPan()
     self.zoom_pan_needs_settle = false
     -- A full pan cleanup also satisfies a pending shape/menu cleanup.
     if self.reconcile_full then
-        self.reconcile_full=nil;self.reconcile=nil
+        self.reconcile_full=nil;self.reconcile=nil;self.reconcile_color=nil
         UIManager:unschedule(self.reconcile_cb)
     end
 end

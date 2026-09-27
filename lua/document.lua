@@ -210,15 +210,25 @@ function Document:removeStrokes(strokes)
     -- multiple deletion was refilled from the wrong end: deleting the second
     -- and fourth of five strokes and taking it back put the fourth after the
     -- fifth, and the order the page is drawn in was quietly wrong from then on.
-    local removed = {}
-    for i = #page.strokes, 1, -1 do
-        for _, victim in ipairs(strokes) do
-            if page.strokes[i] == victim then
-                table.insert(removed, { index = i, stroke = victim })
-                table.remove(page.strokes, i)
-                break
-            end
+    local victims = {}
+    for _,stroke in ipairs(strokes) do victims[stroke] = true end
+    local removed, list = {}, page.strokes
+    local count, write = #list, 1
+    -- Stable compaction: one membership lookup per stroke, no repeated array
+    -- shifts when deleting a large selection. Keep the page list's identity.
+    for i=1,count do
+        local stroke = list[i]
+        if victims[stroke] then
+            removed[#removed+1] = {index=i,stroke=stroke}
+        else
+            list[write] = stroke
+            write = write+1
         end
+    end
+    for i=write,count do list[i] = nil end
+    for i=1,math.floor(#removed/2) do
+        local j = #removed-i+1
+        removed[i],removed[j] = removed[j],removed[i]
     end
     if #removed == 0 then return end
 

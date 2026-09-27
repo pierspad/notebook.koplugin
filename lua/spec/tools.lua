@@ -84,8 +84,9 @@ UI.getTopmostVisibleWidget=function() return {} end
 assert(not cb(nil,{id=1,x=15,y=15}), 'pen must reach dialog over gallery')
 g:onCloseWidget(); assert(not Device.input.stylus_callback, 'gallery unregisters callback')
 local nb=require('notebook'):new{document=doc}
-local gaps={nb.toolbar_content[2].width,nb.toolbar_content[5].width,
-    nb.toolbar_content[9].width,nb.toolbar_content[15].width}
+assert(nb.clock_inset.width > 0, "clock has no leading space")
+local gaps={nb.clock_inset.width+nb.toolbar_content[3].width,nb.toolbar_content[6].width,
+    nb.toolbar_content[10].width,nb.toolbar_content[16].width}
 table.sort(gaps)
 assert(gaps[4]-gaps[1] <= 1, 'toolbar surplus was not split evenly')
 assert(nb.canvas.pen_color==0 and nb.canvas.shape_color==0

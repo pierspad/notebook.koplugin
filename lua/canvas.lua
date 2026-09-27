@@ -538,6 +538,8 @@ function Canvas:_endStroke()
     if self.on_change then self:on_change() end
 end
 
+for name, method in pairs(require("canvasrefresh")) do Canvas[name] = method end
+
 for name, method in pairs(require("canvasrender")) do
     Canvas[name] = method
 end

@@ -3,7 +3,7 @@ require("spec/uistubs").install({})
 local stale = {legacy=true}
 package.loaded.canvas = stale
 package.loaded.document = stale
-for _,name in ipairs({'liveink','geometryink','penpressure','polygonink','textcache','textpreview',
+for _,name in ipairs({'notebooktoolbar','notebooksettings','galleryexport','canvasrefresh','liveink','geometryink','penpressure','polygonink','textcache','textpreview',
     'zoomcache','zoomcanvas','zoomrefresh','shapecanvas','canvasrender','notebooktext'}) do
     package.loaded[name]=stale
 end

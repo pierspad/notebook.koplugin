@@ -42,7 +42,7 @@ function LiveInk:_finishLiveInk(stroke)
     local box = self:_restoreLiveInk()
     if not box then return false end
     self:_drawViewStroke(stroke)
-    self:_scheduleReconcile(box.x,box.y,box.w,box.h)
+    self:_scheduleReconcile(box.x,box.y,box.w,box.h,true)
     return true
 end
 
