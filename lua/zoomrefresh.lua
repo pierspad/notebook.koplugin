@@ -1,4 +1,4 @@
--- Refresh cadence for zoom panning and live ink. Full E-Ink cleanup runs only
+-- Refresh cadence for zoom panning and live ink. Grayscale cleanup runs only
 -- after a finger has stopped moving; live marker updates are coalesced.
 local Device = require("device")
 local Rect = require("rect")
@@ -10,7 +10,7 @@ local time = require("ui/time")
 local Screen = Device.screen
 local ZoomRefresh = {}
 local PAN_INTERVAL = 35
-local PAN_SETTLE_SECONDS = 0.4
+local PAN_SETTLE_SECONDS = 1.2
 local MARKER_INTERVAL = 80
 
 function ZoomRefresh:setupZoomRefresh()
@@ -35,6 +35,8 @@ function ZoomRefresh:_cancelZoomRefresh()
     self.zoom_pan_scheduled = false
     self.zoom_pan_dirty = false
     self.zoom_pan_needs_settle = false
+    self.zoom_touch_active = false
+    self.zoom_touch_x, self.zoom_touch_y = nil, nil
     self.zoom_ink_scheduled = false
     self.zoom_ink_pending = nil
 end
@@ -82,25 +84,29 @@ end
 
 function ZoomRefresh:_settleZoomPan()
     if self.zoom <= 1 or not self.zoom_pan_needs_settle then return end
-    -- Some quick drags end as a swipe, without pan_release. A remembered
-    -- touch coordinate must not postpone cleanup forever. Movement itself
-    -- restarts the debounce; a resting finger does not prevent a redraw.
-    if self.pen_down then
+    -- A new contact cancels the idle window even before its first pan sample.
+    -- Never run a slow waveform underneath a resting finger or an active tool.
+    if self.zoom_touch_active or self.pen_down or self.zoom_stroke or self.stroke
+        or self.shape_gesture or self.transform_gesture or self.zoom_erasing
+        or self.erasing or self.dragging_selection then
         UIManager:scheduleIn(PAN_SETTLE_SECONDS, self.zoom_pan_settle_cb)
         return
     end
     UIManager:unschedule(self.zoom_pan_cb)
     self.zoom_pan_scheduled = false
-    self.zoom_pan_dirty = false
-    -- Restore authoritative grayscale pixels before the full waveform.
-    self:_renderZoom(Screen.bb)
-    local c = self.content
-    Screen:refreshFull(c.x, c.y, c.w, c.h)
+    -- The last fast frame already copied authoritative pixels. Only a pending
+    -- coalesced frame needs rendering; do not copy the viewport again at rest.
+    self:_flushZoomPan()
     self.zoom_pan_needs_settle = false
-    -- A full pan cleanup also satisfies a pending shape/menu cleanup.
     if self.reconcile_full then
-        self.reconcile_full=nil;self.reconcile=nil;self.reconcile_color=nil
-        UIManager:unschedule(self.reconcile_cb)
+        -- A shape/menu cleanup includes the toolbar, unlike a pan refresh.
+        self:_runReconcile()
+    else
+        local c = self.content
+        Screen:refreshUI(c.x, c.y, c.w, c.h)
+        -- The viewport update also covers any pending local ink cleanup.
+        self.reconcile, self.reconcile_color = nil, nil
+        if self.reconcile_cb then UIManager:unschedule(self.reconcile_cb) end
     end
 end
 

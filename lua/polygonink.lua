@@ -1,3 +1,4 @@
+local Raster = require("raster")
 -- Scanline rasterization for transformed figures. Work scales with edge height,
 -- not edge length times brush area as it does for overlapping pen stamps.
 local PolygonInk = {}
@@ -12,8 +13,8 @@ function PolygonInk.draw(bb, stroke, clip, color, color_enabled)
     local function span(y, a, b)
         a, b = math.max(left, math.ceil(a)), math.min(right, math.floor(b))
         if a <= b then
-            if rgb then bb:paintRectRGB32(a,y,b-a+1,1,color)
-            else bb:paintRect(a,y,b-a+1,1,color) end
+            if rgb then Raster.rect(bb,a,y,b-a+1,1,color,true)
+            else Raster.rect(bb,a,y,b-a+1,1,color) end
         end
     end
     local function fill(points)

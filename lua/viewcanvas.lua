@@ -1,3 +1,4 @@
+local Raster = require("raster")
 -- Page/screen mapping shared by geometric tools and dirty-region restoration.
 local Device=require("device")
 local Renderer=require("renderer")
@@ -41,7 +42,7 @@ function View:_repaintScreenRegion(x,y,w,h,defer)
     x,y,w,h=Rect.clamp(x,y,w,h,c)
     if not x then return end
     local view=Screen.bb:viewport(x,y,w,h)
-    view:paintRect(0,0,w,h,require("ffi/blitbuffer").COLOR_WHITE)
+    Raster.rect(view,0,0,w,h,require("ffi/blitbuffer").COLOR_WHITE)
     local ox=c.x-self.zoom_x*self.zoom-x
     local oy=c.y-self.zoom_y*self.zoom-y
     self:_drawZoomPaper(view,{x=c.x*self.zoom+ox,y=c.y*self.zoom+oy,w=c.w*self.zoom,h=c.h*self.zoom})

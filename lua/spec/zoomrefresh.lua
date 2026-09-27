@@ -8,7 +8,8 @@ local pending = {}
 UI.scheduleIn = function(_, delay, fn) pending[fn] = delay end
 UI.unschedule = function(_, fn) pending[fn] = nil end
 local screen = require("device").screen
-local refreshes, renders, full = 0, 0, 0
+local refreshes, renders, full, ui = 0, 0, 0, 0
+screen.refreshUI = function() ui=ui+1 end
 screen.refreshFast = function() refreshes = refreshes+1 end
 screen.refreshFull = function() full = full+1 end
 local Refresh = require("zoomrefresh")
@@ -24,14 +25,34 @@ assert(pending[canvas.zoom_pan_cb] == 0.035, "pan has no trailing frame")
 now = 35
 canvas.zoom_pan_cb()
 assert(renders == 2 and refreshes == 2, "trailing frame did not render the latest position")
-canvas.zoom_touch_x = 10 -- missing pan_release must not block cleanup
+assert(pending[canvas.zoom_pan_settle_cb]==1.2, "pan cleanup is too eager")
+local Touch=require("touchinput")
+canvas._touchIsPalm=function() return false end
+canvas._debugEvent=function() end
+canvas._touchPoint=Touch._touchPoint
+canvas.onTouchRelease=Touch.onTouchRelease
+Touch.onTouchStart(canvas,nil,{pos={x=80,y=80}})
 canvas:_settleZoomPan()
-assert(renders == 3, "settled pan did not redraw grayscale pixels")
-assert(full == 1, "settled pan did not perform full cleanup")
-canvas:_zoomPan(-2,-2)
+assert(ui==0 and full==0 and renders==2,"cleanup interrupted the next finger contact")
+Touch.onTouchPan(canvas,nil,{pos={x=60,y=60}})
+Touch.onTouchRelease(canvas)
+assert(not canvas.zoom_touch_active,"pan release retained finger contact")
+assert(canvas.zoom_x==31 and canvas.zoom_y==31,"consecutive pan lost movement")
+assert(full==0 and ui==0,"release forced a cleanup")
+canvas:_settleZoomPan()
+assert(renders==3 and ui==1 and full==0,"idle pan should refresh grayscale without recopy/full flash")
+canvas:_settleZoomPan();assert(ui==1,"idle cleanup repeated")
+-- Stationary taps/holds end too; swipe paths must not leave a stuck contact.
+Touch.onTouchStart(canvas,nil,{pos={x=80,y=80}})
+Touch.onZoomTouchEnd(canvas)
+assert(not canvas.zoom_touch_active,"tap/hold release blocked later cleanup")
+Touch.onTouchStart(canvas,nil,{pos={x=80,y=80}})
+Touch.onPageSwipe(canvas,nil,{pos={x=80,y=80},end_pos={x=60,y=60}})
+assert(not canvas.zoom_touch_active and canvas.zoom_x==41,"swipe lost movement/contact end")
 canvas:_cancelZoomRefresh()
-canvas.zoom_pan_cb()
-assert(renders == 3, "cancelled pan still rendered")
+local before=renders
+canvas.zoom_pan_cb();canvas.zoom_pan_settle_cb()
+assert(renders==before and ui==1,"cancelled pan still rendered")
 print("pan coalesces viewport copies and preserves the final position")
 
 local ink_refreshes = 0
@@ -51,3 +72,19 @@ now=182
 canvas:_queueZoomInk(25,10,5,5,"ui")
 assert(pending[canvas.zoom_ink_cb] > 0.07 and ink_refreshes==2,
     "marker refreshes escaped their intended cadence")
+
+-- Other active tools also postpone pan cleanup. A pending full-screen menu
+-- repair must include the toolbar, not be consumed by a viewport-only update.
+canvas.zoom_pan_needs_settle=true
+for _,flag in ipairs({'pen_down','stroke','zoom_stroke','shape_gesture','transform_gesture',
+    'erasing','zoom_erasing','dragging_selection'}) do
+ local before_ui=ui
+ canvas[flag]=true;canvas:_settleZoomPan();canvas[flag]=nil
+ assert(full==0 and ui==before_ui,'pan cleanup interrupted '..flag)
+end
+canvas._runReconcile=require('canvasrefresh')._runReconcile
+canvas.reconcile={x=0,y=0,w=400,h=600};canvas.reconcile_full=true
+canvas.reconcile_cb=function() end
+now=3000;canvas:_settleZoomPan()
+assert(full==1 and not canvas.reconcile_full and not canvas.reconcile,
+    'pan cleanup lost a pending whole-screen menu repair')

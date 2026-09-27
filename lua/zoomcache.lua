@@ -1,3 +1,4 @@
+local Raster = require("raster")
 -- Enlarged page cache and viewport copies. Interaction and refresh cadence
 -- are owned by zoomcanvas.lua and zoomrefresh.lua respectively.
 local Blitbuffer = require("ffi/blitbuffer")
@@ -57,7 +58,7 @@ function ZoomCache:_flushZoomErase()
             dirty.w*scale,dirty.h*scale,{x=0,y=0,w=bb:getWidth(),h=bb:getHeight()})
         if not x then return end
         local view=bb:viewport(x,y,w,h)
-        view:paintRect(0,0,w,h,Blitbuffer.COLOR_WHITE)
+        Raster.rect(view,0,0,w,h,Blitbuffer.COLOR_WHITE)
         self:_drawZoomPaper(view,{x=(c.x-origin_x)*scale-x,y=(c.y-origin_y)*scale-y,
             w=c.w*scale,h=c.h*scale})
         Renderer.drawPage(view,self.document:getPage(),scale,-origin_x*scale-x,-origin_y*scale-y,
@@ -87,7 +88,7 @@ function ZoomCache:_renderZoom(bb, direct)
         self:_clearZoomCache()
         local w, h = c.w * self.zoom, c.h * self.zoom
         self.zoom_cache = Blitbuffer.new(w, h, bb:getType())
-        self.zoom_cache:paintRect(0, 0, w, h, Blitbuffer.COLOR_WHITE)
+        Raster.rect(self.zoom_cache,0, 0, w, h, Blitbuffer.COLOR_WHITE)
         self:_drawZoomPaper(self.zoom_cache, {x=0,y=0,w=w,h=h})
         Renderer.drawPage(self.zoom_cache, draw_page, self.zoom,
             -c.x * self.zoom, -c.y * self.zoom,
@@ -100,7 +101,7 @@ function ZoomCache:_renderZoom(bb, direct)
             math.floor((self.zoom_y-c.y)*self.zoom), c.w, c.h)
     else
         -- Small in-memory test buffers do not implement getType.
-        view:paintRect(0, 0, c.w, c.h, Blitbuffer.COLOR_WHITE)
+        Raster.rect(view,0, 0, c.w, c.h, Blitbuffer.COLOR_WHITE)
         local area = {x=(c.x-self.zoom_x)*self.zoom,
             y=(c.y-self.zoom_y)*self.zoom, w=c.w*self.zoom, h=c.h*self.zoom}
         self:_drawZoomPaper(view, area)

@@ -1,3 +1,4 @@
+local Raster = require("raster")
 --[[--
 Page backgrounds: ruled lines, grids, dot grids.
 
@@ -120,7 +121,7 @@ local function paint(bb, x, y, w, h, clip, ink)
         w, h = x1 - x, y1 - y
         if w <= 0 or h <= 0 then return end
     end
-    bb:paintRect(x, y, w, h, ink)
+    Raster.rect(bb,x, y, w, h, ink)
 end
 
 --- A hollow box, clipped, as four sides.

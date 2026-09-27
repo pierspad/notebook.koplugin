@@ -6,7 +6,7 @@ return function(directory)
     local cache = {}
     local own = {}
     for name in ("actionmenu canvas document export gallery i18n lassomenu lasso launcherbar library " ..
-        "newnotebook notebook pagepanel papersample pdfbackground pressure rect renderer safe settings shape share " ..
+        "newnotebook notebook pagepanel papersample pdfbackground pressure rect raster renderer safe settings shape share " ..
         "stroke textobject textpreview textcache textdialog textsizepicker polygonink penpressure penink liveink viewcanvas xopp exportprogress " ..
         "canvasrender canvasrefresh notebooktoolbar notebooksettings galleryexport " ..
         "erasercanvas geometryink highlightink notebooktext selectioncanvas shapecanvas " ..

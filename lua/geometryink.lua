@@ -1,3 +1,4 @@
+local Raster = require("raster")
 -- Fast rasterization of axis-aligned geometric figures. A normal stroke
 -- renderer keeps the fallback for rotated or irregular figures.
 local GeometryInk = {}
@@ -39,8 +40,8 @@ function GeometryInk.draw(bb, stroke, clip, color, color_enabled)
         local function span(y,a,b)
             a,b=math.max(left,math.ceil(a)),math.min(right,math.floor(b))
             if b>=a and y>=top and y<=bottom then
-                if rgb then bb:paintRectRGB32(a,y,b-a+1,1,color)
-                else bb:paintRect(a,y,b-a+1,1,color) end
+                if rgb then Raster.rect(bb,a,y,b-a+1,1,color,true)
+                else Raster.rect(bb,a,y,b-a+1,1,color) end
             end
         end
         if kind == "circle" then
@@ -68,8 +69,8 @@ function GeometryInk.draw(bb, stroke, clip, color, color_enabled)
                 a, b = math.max(left, math.ceil(a)), math.min(right, math.floor(b))
                 first, last = math.max(top, first), math.min(bottom, last)
                 if a > b or first > last then return end
-                if rgb then bb:paintRectRGB32(a, first, b-a+1, last-first+1, color)
-                else bb:paintRect(a, first, b-a+1, last-first+1, color) end
+                if rgb then Raster.rect(bb,a, first, b-a+1, last-first+1, color,true)
+                else Raster.rect(bb,a, first, b-a+1, last-first+1, color) end
             end
             local first, last = math.ceil(y0-r), math.floor(y1+r)
             if stroke.filled then

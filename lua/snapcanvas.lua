@@ -19,6 +19,7 @@ function SnapCanvas:_applyShapeSnap(clean, raw)
     if self.stroke ~= raw and self.zoom_stroke ~= raw then return end
     self:_restoreLiveInk()
     if self.zoom > 1 and self.zoom_stroke == raw then
+        self:_clearZoomInk()
         self.zoom_stroke = clean
         local dirty = Rect.grow(nil, zoomBounds(self, raw))
         dirty = Rect.grow(dirty, zoomBounds(self, clean))
@@ -37,7 +38,6 @@ function SnapCanvas:_applyShapeSnap(clean, raw)
             self:_renderZoom(Screen.bb, true)
         end
         Screen:refreshUI(x, y, w, h)
-        self:_scheduleCleanScreen()
         return
     end
     if self.stroke ~= raw then return end
@@ -53,8 +53,12 @@ function SnapCanvas:_applyShapeSnap(clean, raw)
             Screen.isColorEnabled and Screen:isColorEnabled())
         self:_accumulate(nx, ny, nw, nh)
     end
+    -- Replacing pixels needs a grayscale waveform: fast ink updates leave
+    -- remnants of the old shaft and cannot resolve pencil/color detail.
+    local mode = self.refresh_mode
+    self.refresh_mode = "ui"
     self:_flush()
-    self:_scheduleCleanScreen()
+    self.refresh_mode = mode
 end
 
 return SnapCanvas

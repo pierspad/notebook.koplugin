@@ -1,3 +1,4 @@
+local Raster = require("raster")
 -- Rasterize the union of pressure-interpolated discs with one span per row.
 -- A long sweep never stamps the same interior pixel hundreds of times.
 local bit=require("bit")
@@ -63,9 +64,9 @@ function PenInk.draw(bb,x0,y0,r0,x1,y1,r1,color,rgb,pencil,gx,gy)
                     end
                 end
             elseif rgb and bb.paintRectRGB32 then
-                bb:paintRectRGB32(left,y,right-left+1,1,color)
+                Raster.rect(bb,left,y,right-left+1,1,color,true)
             else
-                bb:paintRect(left,y,right-left+1,1,color)
+                Raster.rect(bb,left,y,right-left+1,1,color)
             end
         end
     end

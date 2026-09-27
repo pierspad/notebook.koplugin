@@ -16,7 +16,7 @@ assert(scheduled[c.reconcile_cb]==0.8,'color still waits two seconds')
 c:_scheduleReconcile(10,20,60,40)
 assert(scheduled[c.reconcile_cb]==0.8,'zoom/black stroke postponed pending color')
 for _,flag in ipairs({'pen_down','stroke','zoom_stroke','transform_gesture','shape_gesture',
-    'dragging_selection','erasing','zoom_erasing','zoom_pan_dirty'}) do
+    'dragging_selection','erasing','zoom_erasing','zoom_pan_dirty','zoom_touch_active','zoom_pan_needs_settle'}) do
     c[flag]=true;c:_runReconcile();c[flag]=nil
     assert(ui==0 and full==0 and c.reconcile_color,'refresh interrupted '..flag)
     assert(scheduled[c.reconcile_cb]==0.6,'active contact was not rescheduled')

@@ -1,3 +1,4 @@
+local Raster = require("raster")
 --[[--
 Stroke rasterizer.
 
@@ -80,7 +81,7 @@ local function stamp(bb, x, y, r, color, color_enabled)
         if color_enabled and bb.setPixelClamped then
             bb:setPixelClamped(x, y, color)
         else
-            bb:paintRect(x, y, 1, 1, color)
+            Raster.rect(bb,x, y, 1, 1, color)
         end
     else
         -- w defaults to r, which gives a filled disc.
@@ -211,7 +212,7 @@ function Renderer.drawDashedRect(bb, x, y, w, h, color)
     local max_y = bb:getHeight() - 1
     local function span(px, py, width, height)
         if bb.paintRect then
-            bb:paintRect(px, py, width, height, color)
+            Raster.rect(bb,px, py, width, height, color)
         elseif width > 1 then
             for dx = 0, width - 1 do bb:setPixel(px+dx, py, color) end
         else

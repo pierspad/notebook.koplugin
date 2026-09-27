@@ -8,7 +8,8 @@ package.loaded["ffi/blitbuffer"].new = function(w, h) return support.FakeBB.new(
 local Device = require("device")
 Device.screen.bb = support.FakeBB.new(400, 600)
 Device.screen.refreshFast = function() end
-Device.screen.refreshUI = function() end
+local ui_refreshes = 0
+Device.screen.refreshUI = function() ui_refreshes=ui_refreshes+1 end
 local full_refreshes = 0
 Device.screen.refreshFull = function(_, x, y, w, h)
     assert(x == 0 and y == 0 and w == 400 and h == 600)
@@ -55,8 +56,9 @@ canvas.pen_down = true
 canvas:_settleZoomPan()
 assert(full_refreshes == 0, "full refresh interrupted finger pan")
 canvas.pen_down = false
+local before_ui=ui_refreshes
 canvas:_settleZoomPan()
-assert(full_refreshes == 1 and not canvas.zoom_pan_needs_settle,
+assert(full_refreshes == 0 and ui_refreshes==before_ui+1 and not canvas.zoom_pan_needs_settle,
     "settled pan did not clean the viewport exactly once")
 canvas:_zoomStylus({id=1,x=100,y=120},"pen")
 canvas:_zoomStylus({id=-1},"pen")

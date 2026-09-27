@@ -48,3 +48,27 @@ assert(result and result.shape_kind == "line" and result.tool == "highlighter",
     "marker hold did not preserve the marker tool")
 
 print("hold-to-straighten timing and pen/marker recognition passed")
+
+-- Replacing freehand ink must cancel any trailing fast frame and use a local
+-- grayscale refresh before the held nib is lifted, without a full-screen flash.
+local Refresh=require("canvasrefresh")
+local SnapCanvas=require("snapcanvas")
+local screen=require("device").screen
+local modes={}
+screen.refreshUI=function() modes[#modes+1]="ui" end
+screen.refreshFast=function() modes[#modes+1]="fast" end
+local raw=stroke
+local clean=require("shape").recognize(raw,"arrow")
+local canvas={stroke=raw,zoom=1,content={x=0,y=0,w=600,h=800},refresh_mode="fast",
+    idle_flush_cb=function() end,_restoreLiveInk=function() end,_repaintRegion=function() end}
+setmetatable(canvas,{__index=function(_,key) return Refresh[key] or SnapCanvas[key] end})
+local renderer=require("renderer");local draw=renderer.drawStroke
+renderer.drawStroke=function() end
+canvas:_accumulate(95,195,10,10)
+pending[canvas.idle_flush_cb]=0.02
+canvas:_applyShapeSnap(clean,raw)
+renderer.drawStroke=draw
+assert(canvas.stroke==clean and modes[1]=="ui" and #modes==1,"snap used fast/full waveform")
+assert(not pending[canvas.idle_flush_cb] and not canvas.pending,"obsolete raw ink refresh survived snap")
+assert(canvas.refresh_mode=="fast" and not canvas.reconcile_full,"snap changed live ink policy")
+print("recognized arrow refresh replaces raw ink immediately with a local grayscale update")

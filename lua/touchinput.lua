@@ -57,6 +57,8 @@ function TouchInput:onTouchStart(_, ges)
     if self.zoom > 1 then
         if self:_touchIsPalm() then return true end
         self.zoom_touch_x, self.zoom_touch_y = self:_touchPoint(ges)
+        self.zoom_touch_active = self.zoom_touch_x ~= nil
+        if self.zoom_pan_needs_settle then self:_scheduleZoomPanSettle() end
         self.zoom_touch_moved = false
         return true
     end
@@ -131,6 +133,7 @@ function TouchInput:onTouchPan(_, ges)
             self.zoom_touch_moved = true
         end
         self.zoom_touch_x, self.zoom_touch_y = x, y
+        self.zoom_touch_active = x ~= nil
         return true
     end
     if self:_touchIsPalm() then return true end
@@ -169,11 +172,18 @@ function TouchInput:onTouchPan(_, ges)
     return true
 end
 
+-- A stationary touch ends as tap/hold_release rather than pan_release.
+function TouchInput:onZoomTouchEnd(_, ges)
+    if self.zoom <= 1 then return false end
+    return self:onTouchRelease(_, ges)
+end
+
 function TouchInput:onTouchRelease(_, ges)
     self:_debugEvent("touch-release", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
         self:_flushZoomPan()
+        self.zoom_touch_active = false
         self.zoom_touch_x, self.zoom_touch_y = nil, nil
         if self.zoom_pan_needs_settle then self:_scheduleZoomPanSettle() end
         return true
@@ -226,6 +236,7 @@ function TouchInput:onPageSwipe(_, ges)
             self:_zoomPan(last.x-first.x, last.y-first.y)
         end
         self:_flushZoomPan()
+        self.zoom_touch_active = false
         self.zoom_touch_x, self.zoom_touch_y = nil, nil
         if self.zoom_pan_needs_settle then self:_scheduleZoomPanSettle() end
         return true

@@ -111,7 +111,8 @@ function Refresh:_runReconcile()
     if not r then return end
     local recent_pan=self.last_zoom_pan_refresh and time.to_ms(time.now()-self.last_zoom_pan_refresh)<600
     if self.pen_down or self.stroke or self.zoom_stroke or self.transform_gesture or self.shape_gesture
-        or self.dragging_selection or self.erasing or self.zoom_erasing or self.zoom_pan_dirty or recent_pan then
+        or self.dragging_selection or self.erasing or self.zoom_erasing or self.zoom_pan_dirty
+        or self.zoom_touch_active or self.zoom_pan_needs_settle or recent_pan then
         UIManager:scheduleIn(0.6,self.reconcile_cb)
         return
     end
