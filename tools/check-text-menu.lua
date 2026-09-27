@@ -14,7 +14,7 @@ local Screen=Device.screen;Screen.refreshFast=function() end;Screen.refreshUI=fu
 local nb=load('notebook'):new{document=load('document'):new('/tmp/text-menu.scribe')}
 nb:paintTo(Screen.bb,0,0)
 local menu;local UI=require('ui/uimanager');UI.show=function(_,w) menu=w end
-for _,index in ipairs({1,5,6}) do
+for _,index in ipairs({1,2,5,6}) do
  nb:paintTo(Screen.bb,0,0)
  nb:_showToolOptions(index)
  menu:paintTo(Screen.bb,0,0)
@@ -22,6 +22,17 @@ for _,index in ipairs({1,5,6}) do
  assert(d.x>=0 and d.y>=0 and d.x+d.w<=Screen:getWidth() and d.y+d.h<=Screen:getHeight(),
     string.format('menu %d outside screen: %d,%d %dx%d',index,d.x,d.y,d.w,d.h))
  Screen.bb:writePNG(out..'/menu-'..index..'-'..Screen:getWidth()..'.png')
+ -- Exercise every colour with real KOReader widgets, including deselection
+ -- of the previous colour. Base Widget deliberately has no free() method.
+ for _,item in ipairs(menu.action_rows) do
+    if item.action.swatch then
+        local swatch=item.row.icon_widget
+        assert(not swatch.free,'native swatch unexpectedly owns a buffer')
+        item.row:onTap()
+        assert(item.row.icon_widget==swatch and swatch.selected,'colour selection failed')
+        menu:paintTo(Screen.bb,0,0)
+    end
+ end
  if index==6 then
     local picker=menu.header
     local initial=picker.sample._text_widget
@@ -38,6 +49,8 @@ for _,index in ipairs({1,5,6}) do
     local glyphs=picker.sample._text_widget
     menu:onCloseWidget()
     assert(not glyphs._bb and not picker.sample,'closing menu leaked the sample')
+ else
+    menu:onCloseWidget()
  end
 end
 nb:paintTo(Screen.bb,0,0)

@@ -28,6 +28,23 @@ nb:_showToolOptions(1)
 assert(rec.shown[#rec.shown].actions[4].section=='Stroke style','line/arrow section missing')
 nb:_showToolOptions(5)
 assert(rec.shown[#rec.shown].actions[5].section=='Fill','fill section missing')
+-- Base KOReader Widget has no free(); the generic UI stub does. Make that
+-- distinction explicit so procedural colour swatches cannot hide this crash.
+for _,index in ipairs({1,2,5}) do
+    nb:_showToolOptions(index)
+    local colors=rec.shown[#rec.shown]
+    for _,item in ipairs(colors.action_rows) do
+        if item.action.swatch then
+            local swatch=item.row.icon_widget
+            swatch.free=false
+            item.row:onTap()
+            assert(item.row.icon_widget==swatch and swatch.selected,
+                'colour selection replaced or failed to select procedural swatch')
+            item.row:onTap()
+            assert(item.row.icon_widget==swatch,'repeated selection allocated a swatch')
+        end
+    end
+end
 nb:_showToolOptions(6)
 local menu=rec.shown[#rec.shown];local picker=menu.header
 assert(menu.actions[1].section=='Font family' and menu.actions[4].section=='Text style','text sections missing')

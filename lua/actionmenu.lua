@@ -168,9 +168,15 @@ function Row:setSelected(selected)
     self.frame.background = selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
     self.label.fgcolor = selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
     self.label.bold = selected
-    if self.icon_widget then self.icon_widget:free() end
-    self:_buildIcon()
-    self.icon_holder[1] = self.icon_widget
+    if self.swatch then
+        -- Procedural swatches own no native buffer and Widget has no free().
+        -- Keep the same widget: only its selected ring needs to change.
+        self.icon_widget.selected = selected
+    else
+        if self.icon_widget and self.icon_widget.free then self.icon_widget:free() end
+        self:_buildIcon()
+        self.icon_holder[1] = self.icon_widget
+    end
 end
 
 function Row:onTap()
