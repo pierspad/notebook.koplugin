@@ -87,6 +87,9 @@ function ZoomCanvas:_endZoomContact()
 end
 
 function ZoomCanvas:_zoomStylus(slot, tool)
+    -- A pen sequence (including lift) starts a fresh quiet window. A retry
+    -- timer must not flash immediately after the nib leaves the screen.
+    if self.zoom_pan_needs_settle then self:_scheduleZoomPanSettle() end
     -- Finish a pending finger frame before putting ink at the new origin.
     -- A later pan callback must never overwrite the start of a pen stroke.
     if slot.id ~= -1 then self:_flushZoomPan() end

@@ -290,17 +290,14 @@ msgstr "Kolor"
 msgid "Pen type"
 msgstr "Typ pióra"
 
-msgid "Marker size"
-msgstr "Rozmiar zakreślacza"
-
 msgid "Whole strokes"
 msgstr "Całe pociągnięcia"
 
 msgid "Part of a stroke"
 msgstr "Część pociągnięcia"
 
-msgid "Eraser size"
-msgstr "Rozmiar gumki"
+msgid "Eraser type"
+msgstr "Typ gumki"
 
 msgid "Square"
 msgstr "Kwadrat"
@@ -505,9 +502,6 @@ msgstr "Przycisk boczny"
 
 msgid "Highlighter"
 msgstr "Zakreślacz"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "Powiększanie zaimportowanych stron PDF nie jest jeszcze dostępne."
 
 
 

@@ -170,13 +170,44 @@ function Template.draw(bb, id, area, scale, clip)
         -- the lines use it was there but not visible, which is the same as not
         -- being there.
         local r = math.max(3, math.floor(4 * scale + 0.5))
+        if not clip and area.x >= 0 and area.y >= 0
+            and area.x + area.w <= bb:getWidth() and area.y + area.h <= bb:getHeight() then
+            -- Whole pages dominate cache construction/export. Keep their
+            -- tight stamp loop free of per-dot visibility checks.
+            local y = y0
+            while y <= y0 + h do
+                local x = x0
+                while x <= x0 + w do
+                    paint(bb, math.floor(x - r / 2), math.floor(y - r / 2),
+                        r, r, nil, DOT_INK)
+                    x = x + step
+                end
+                y = y + step
+            end
+            return
+        end
+        -- Region repairs and zoom viewports often show only a small part of
+        -- the paper. Reject whole offscreen rows before walking their dots.
+        -- Keep repeated addition (rather than jumping to n*step): fractional
+        -- spacing must round exactly as it does in a full reference render.
+        local left = math.max(0, clip and clip.x or 0)
+        local top = math.max(0, clip and clip.y or 0)
+        local right = math.min(bb:getWidth(), clip and clip.x + clip.w or bb:getWidth())
+        local bottom = math.min(bb:getHeight(), clip and clip.y + clip.h or bb:getHeight())
         local y = y0
         while y <= y0 + h do
-            local x = x0
-            while x <= x0 + w do
-                paint(bb, math.floor(x - r / 2), math.floor(y - r / 2),
-                    r, r, clip, DOT_INK)
-                x = x + step
+            local py = math.floor(y - r / 2)
+            if py >= bottom then break end
+            if py + r > top then
+                local x = x0
+                while x <= x0 + w do
+                    local px = math.floor(x - r / 2)
+                    if px >= right then break end
+                    if px + r > left then
+                        paint(bb, px, py, r, r, clip, DOT_INK)
+                    end
+                    x = x + step
+                end
             end
             y = y + step
         end

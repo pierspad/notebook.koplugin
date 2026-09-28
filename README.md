@@ -19,9 +19,7 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 
 1. Download the latest `notebook.koplugin-<version>.zip` from
    [Releases](https://github.com/pierspad/notebook.koplugin/releases/latest).
-2. Extract `notebook.koplugin` into KOReader's plugin directory:
-   - Kindle: `/mnt/us/koreader/plugins/`
-   - Kobo: `/.adds/koreader/plugins/`
+2. Extract `notebook.koplugin` into KOReader's plugin directory
 3. Restart KOReader, then open **Tools → More tools → Notebook**.
 
 Notebooks are stored in `koreader/notebook/`.
@@ -39,70 +37,69 @@ rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too. Together
 the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_`
 marker file) and reopen Notebook to stop logging. You can then delete both log files.
 
-## Dispositivi
-
-### Testati
-
-- Amazon Kindle Scribe (1ª generazione)
-
-### Da verificare
-
-- Altri modelli Kindle Scribe
-- Dispositivi KOReader con penna/stilo
-
-Notebook è un plugin di KOReader; la compatibilità non dipende dal launcher
-(per esempio ZenUI o Simple UI). Le voci “da verificare” non sono ancora state
-provate e non implicano supporto confermato.
-
 > [!TIP]
 > You can also place Notebook directly on KOReader's bottom navigation bar using [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) (Custom quick actions → Plugin → Notebook, icon `F405`).
 
 ## Features
 
-- Fineliner, pressure-sensitive fountain pen and pencil, with a color palette.
-- Highlighter; whole-stroke and partial-stroke erasers.
-- A configurable pen button: use it for the highlighter or the eraser.
-- Experimental 2× writing view on ordinary notebook pages: tap `2×` in the
-  toolbar, drag with a finger to move around, and tap `1×` to return. Pen,
-  highlighter and eraser work in this view; selecting another tool returns to
-  the normal view. Imported PDF backgrounds and larger virtual page sizes are
-  not yet supported by this first zoom trial.
-- Palm rejection and direct stylus input.
-- Explicit triangles, rectangles, squares and circles. Hold the pen or marker
-  still at the end of a stroke to straighten a line or regularise a shape.
-  In the notebook's gear menu, **Hold to straighten** turns this on or off;
-  **Straight stroke** chooses a line or an arrow. It is enabled by default.
-- Lasso selection with move, cut, copy, paste and delete.
-- Editable text, multiple pages and per-page paper templates.
-- PDF and Xournal++ export; optional LocalSend integration.
+- **Versatile Pen Tools**:
+  - **Fineliner** (uniform line width), pressure-sensitive **Fountain pen**, and textured **Pencil**.
+  - 5 stroke widths and an 8-color palette (Black, White, Red, Blue, Orange, Green, Yellow, Purple) with instant live preview and deferred e-ink color refresh.
+- **Highlighter**: Semi-transparent marker with color options and light hatched live preview so underlying text remains readable.
+- **Flexible Eraser Modes**:
+  - **Whole strokes**: Erase entire strokes at once on contact.
+  - **Part of a stroke**: Precise segment erasing that removes only the ink directly touched by the eraser.
+  - 5 eraser size choices.
+- **Shapes & Straight Strokes**:
+  - Draw explicit shapes: **Square**, **Rectangle**, **Circle**, and **Triangle**, with outline or solid **Filled shape** options.
+  - **Hold to straighten**: Hold the pen still at the end of a stroke to automatically snap into a straight line or an arrow (configurable in settings, enabled by default).
+- **2× Writing Zoom**: Available on notebooks and imported PDF pages. Tap `2×` on the toolbar for high-precision writing, drag with a finger to pan across the page, and tap `1×` to return, with automatic background cleanup at rest.
+- **Lasso Selection & Clipboard**: Select strokes and text objects with a freehand boundary to move, cut, copy, paste, duplicate, or delete them.
+- **Rich Text Tool**:
+  - Insert editable on-page text with **Sans-serif**, **Serif**, or **Monospace** font families.
+  - Typography styles: **Bold**, **Italic**, **Underline**, and **White** or **Transparent** background.
+  - 10–96 pt font size selector with −/+ stepper buttons and live sample preview.
+- **Hardware Stylus Integration**: Direct digitizer event processing, palm rejection, and configurable stylus barrel button (toggle highlighter or eraser).
+- **Multi-page Notebooks & Paper Templates**:
+  - Multi-page management with visual thumbnail gallery and reordering.
+  - Built-in paper templates: Blank, Lined, Narrow lined, Grid, Dot grid, Checklist, and custom PDF page backgrounds.
+- **Export & Sync**: PDF export using the page renderer and editable Xournal++ (`.xopp`) export, with optional wireless file transfer via LocalSend.
 
-Colored pens and pencil use a dark live preview; the highlighter uses a light
-black hatch so text remains readable. After roughly 0.8 seconds of inactivity,
-the selected color is refreshed (plus the panel’s own update time).
-This keeps slow grayscale/color refreshes out of the moving pen's path. Saved
-notes and exports always retain the selected color and brush.
+Hold or double-tap any tool button to open its options popover. After cutting or copying, use the Paste button in the top bar.
 
-Hold or double-tap a tool button to open its options. Text options include a
-10–96 pt size selector with −/+ buttons and a live typography sample. After cutting or copying,
-use the Paste button in the top bar.
+### Custom icons
 
-### Custom pen icons
+All icons used across Notebook (toolbar tools, pen styles, shapes, lasso actions, gallery buttons, etc.) are standard SVGs and can be easily replaced.
 
-KOReader looks in its user `icons` directory before bundled icons. On Kindle,
-place your SVGs in `/mnt/us/koreader/icons/` with these exact names:
-`notebook.pen.svg` (toolbar), `notebook.fineliner.svg` (Fineliner option), and
-`notebook.pencil.svg` (Pencil option). The current fountain pen icon is
-`notebook.fountain.svg` if you ever want to replace it too. Use a square
-`viewBox="0 0 24 24"`, then restart KOReader so its icon cache sees the files.
-These files stay outside the plugin directory when the plugin is updated.
+#### Icon directories
 
-The KOReader desktop emulator can check the color palette and grayscale
-fallback, but its display is monochrome. To confirm actual color rendering,
-test on a color e-ink device.
+KOReader resolves icons from two locations:
+1. **Plugin directory**: `koreader/plugins/notebook.koplugin/icons/` (in this source repo: `lua/icons/`).
+2. **KOReader user icons directory**: `<koreader-dir>/icons/` (e.g., `/mnt/us/koreader/icons/` on Kindle, or `/.adds/koreader/icons/` on Kobo).
+
+On startup, Notebook automatically synchronizes its bundled icons into the KOReader user `icons/` folder so that KOReader's `IconWidget` can resolve them. You can customize any icon by replacing the SVG file in `koreader/plugins/notebook.koplugin/icons/` and/or in `<koreader-dir>/icons/`.
+
+#### SVG requirements
+
+- **Renderer compatibility**: KOReader uses NanoSVG; use standard SVG elements (`<path>`, `<rect>`, `<circle>`, `<polygon>`) with `fill` and `stroke`. Avoid CSS styles, `<mask/>`, or `<clipPath/>`.
+- **ViewBox**: Use a square `viewBox="0 0 24 24"` or `viewBox="0 0 32 32"`.
+- **Coloring**: Draw icons in solid black (`#000` or `black`) on a transparent background. KOReader automatically inverts the icon to white when selected on the toolbar or menus, and when night mode is active.
+- **Cache**: Restart KOReader after modifying or adding icons so its icon cache reloads them.
+
+#### Available icons
+
+- **Toolbar tools**: `notebook.pen.svg`, `notebook.marker.svg`, `notebook.eraser.svg`, `notebook.lasso.svg`, `notebook.shape.svg`, `notebook.text.svg`
+- **Pen styles & strokes**: `notebook.fineliner.svg`, `notebook.fountain.svg`, `notebook.pencil.svg`, `notebook.line.svg`, `notebook.arrow.svg`
+- **Shapes & Fill**: `notebook.square.svg`, `notebook.rectangle.svg`, `notebook.circle.svg`, `notebook.triangle.svg`, `notebook.shape.svg` (toolbar & Filled shape option)
+- **Lasso & clipboard**: `notebook.cut.svg`, `notebook.copy.svg`, `notebook.paste.svg`, `notebook.duplicate.svg`, `notebook.delete.svg`
+- **Navigation & history**: `notebook.undo.svg`, `notebook.redo.svg`, `notebook.zoom-in.svg`, `notebook.zoom-out.svg`
+- **Gallery & pages**: `notebook.page.svg`, `notebook.folder.svg`, `notebook.open.svg`, `notebook.rename.svg`, `notebook.share.svg`, `notebook.export.svg`, `notebook.refresh.svg`, `notebook.bg-white.svg`, `notebook.bg-none.svg`
 
 ## Development
 
-Requires LuaJIT, `luacheck` and gettext (`msgfmt`). For in-depth architectural and engineering documentation, see the [Technical Reference Manual](docs/README.md).
+Requires LuaJIT, `luacheck` and gettext (`msgfmt`). For architecture, input, rendering and tests, see the [Technical Reference Manual](docs/README.md).
+Reader overlays are future work described in the [Reader Annotations Plan](docs/READER_ANNOTATIONS.md); importing a PDF as notebook paper already supports 2× zoom.
+For language catalogs, see [Translating Notebook](lua/locale/README.md).
 
 ```bash
 make verify       # lint and tests

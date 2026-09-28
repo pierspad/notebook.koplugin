@@ -340,7 +340,9 @@ function stubs.install(fs)
     function GestureRange:match(ges)
         if self.ges and ges.ges and self.ges ~= ges.ges then return false end
         local r, pos = self.range, ges.pos
+        if type(r) == "function" then r = r() end
         if not r or not pos then return true end
+        if r.contains then return r:contains(pos) end
         return pos.x >= (r.x or 0) and pos.x <= (r.x or 0) + (r.w or 0)
            and pos.y >= (r.y or 0) and pos.y <= (r.y or 0) + (r.h or 0)
     end

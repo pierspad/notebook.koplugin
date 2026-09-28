@@ -26,7 +26,6 @@ you write.
 @module notebook.canvas
 --]]--
 
-local DataStorage = require("datastorage")
 local Device = require("device")
 local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
@@ -120,7 +119,7 @@ end
 function Canvas:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
     self.shape_snap = ShapeSnap.new(function(clean, raw)
-        self:_applyShapeSnap(clean, raw)
+        if not self:_isDisplayPaused() then self:_applyShapeSnap(clean, raw) end
     end)
     self:setupZoomRefresh()
 
@@ -161,7 +160,8 @@ function Canvas:init()
     -- Background auto-save on writing pause
     self.autosave_cb = function()
         if self.stroke or self.erasing or self.dragging_selection or self.shape_gesture
-            or self.transform_gesture or self.zoom_stroke or self.zoom_erasing or self.text_preview then
+            or self.transform_gesture or self.zoom_stroke or self.zoom_erasing or self.text_preview
+            or self.zoom_touch_active or self.zoom_pan_dirty then
             UIManager:scheduleIn(2.5, self.autosave_cb)
             return
         end
@@ -201,29 +201,43 @@ function Canvas:init()
         if self.dragging_selection then self:_maybeDragStep() end
     end
 
-    for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
-        "erase_flush_cb", "drag_step_cb", "shape_preview_cb", "transform_preview_cb", "zoom_pan_cb",
-        "zoom_pan_settle_cb", "zoom_ink_cb", "zoom_erase_cb"}) do
-        self[name] = Safe.wrap("canvas:" .. name, self[name])
+    for _, name in ipairs(self.lifecycle_callbacks) do
+        local callback = self[name]
+        self[name] = Safe.wrap("canvas:" .. name, function(...)
+            -- ScreenSaver may already be visible before Suspend is broadcast.
+            if self:_isDisplayPaused() then return end
+            return callback(...)
+        end)
     end
 
     if Device:isTouchDevice() then
+        -- KOReader locates pan/hold releases at the final finger position.
+        -- Keep ownership of a zoom drag across the toolbar boundary; new
+        -- contacts outside the page still belong to the toolbar.
+        -- Edge releases may carry a last raw coordinate just outside the
+        -- display. Once owned, a contact must end regardless of its position.
+        local owned_zoom_contact = { contains = function() return true end }
+        local function zoom_contact_range()
+            return self.zoom > 1 and self.zoom_touch_active and owned_zoom_contact or self.content
+        end
         self.ges_events = {
             TouchStart        = { GestureRange:new{ ges = "touch",            range = self.content } },
-            TouchPan          = { GestureRange:new{ ges = "pan",              range = self.content } },
-            TouchRelease      = { GestureRange:new{ ges = "pan_release",      range = self.content } },
+            TouchPan          = { GestureRange:new{ ges = "pan",              range = zoom_contact_range } },
+            TouchRelease      = { GestureRange:new{ ges = "pan_release",      range = zoom_contact_range } },
+            ZoomHold          = { GestureRange:new{ ges = "hold", range = zoom_contact_range } },
+            ZoomHoldPan       = { GestureRange:new{ ges = "hold_pan", range = zoom_contact_range } },
             ZoomTouchEnd      = {
-                GestureRange:new{ ges = "tap", range = self.content },
-                GestureRange:new{ ges = "hold_release", range = self.content },
-                GestureRange:new{ ges = "double_tap", range = self.content },
-                GestureRange:new{ ges = "two_finger_tap", range = self.content },
-                GestureRange:new{ ges = "two_finger_pan_release", range = self.content },
-                GestureRange:new{ ges = "two_finger_hold_release", range = self.content },
-                GestureRange:new{ ges = "two_finger_hold_pan_release", range = self.content },
+                GestureRange:new{ ges = "tap", range = zoom_contact_range },
+                GestureRange:new{ ges = "hold_release", range = zoom_contact_range },
+                GestureRange:new{ ges = "double_tap", range = zoom_contact_range },
+                GestureRange:new{ ges = "two_finger_tap", range = zoom_contact_range },
+                GestureRange:new{ ges = "two_finger_pan_release", range = zoom_contact_range },
+                GestureRange:new{ ges = "two_finger_hold_release", range = zoom_contact_range },
+                GestureRange:new{ ges = "two_finger_hold_pan_release", range = zoom_contact_range },
             },
-            PageSwipe         = { GestureRange:new{ ges = "swipe",            range = self.content } },
-            PageMultiSwipe    = { GestureRange:new{ ges = "multiswipe",       range = self.content } },
-            PageTwoFingerSwipe = { GestureRange:new{ ges = "two_finger_swipe", range = self.content } },
+            PageSwipe         = { GestureRange:new{ ges = "swipe",            range = zoom_contact_range } },
+            PageMultiSwipe    = { GestureRange:new{ ges = "multiswipe",       range = zoom_contact_range } },
+            PageTwoFingerSwipe = { GestureRange:new{ ges = "two_finger_swipe", range = zoom_contact_range } },
         }
     end
 end
@@ -573,79 +587,7 @@ with `true` silenced the notebook's own handler -- and with it the full refresh
 that puts the notebook on the panel. Lifecycle that the parent drives should be
 called by the parent, not arrived at through event propagation.
 --]]
-function Canvas:_resolveDebugLogPath()
-    local debug_root = DataStorage:getDataDir() .. "/notebook"
-    if self.document and self.document.path then
-        local p = self.document.path:lower()
-        if p:match("[/\\]_debug_%.scribe$") or p:match("[/\\]_debug_$") then
-            return debug_root .. "/notebook-debug.log"
-        end
-    end
-    for _, name in ipairs({ "_debug_", "_debug_.scribe" }) do
-        local f = io.open(debug_root .. "/" .. name, "r")
-        if f then
-            f:close()
-            return debug_root .. "/notebook-debug.log"
-        end
-    end
-    return nil
-end
-
-function Canvas:start()
-    self.stopping = false
-    self.debug_log_path = self:_resolveDebugLogPath()
-    if self.debug_log_path then
-        self:_debugEvent("session-start", nil, nil, nil, self.tool)
-    end
-    -- The patches below are KOReader's, not ours, and they outlive any screen
-    -- of ours that is holding them. A fault closes this plugin without ever
-    -- reaching onCloseWidget, so the undoing is registered here as well rather
-    -- than left to the normal path alone; see Safe.onShutdown.
-    Safe.onShutdown("canvas:input", function() self:stop() end)
-
-    require("stylusbridge").start(self)
-end
-
-function Canvas:stop()
-    if self.zoom > 1 then self:_endZoomContact() end
-    self:_clearZoomCache()
-    self:_cancelZoomRefresh()
-    self.shape_snap:cancel()
-    self:_debugEvent("session-stop", nil, nil, nil, self.tool)
-    self.debug_log_path = nil
-    self.stopping = true
-    -- Whichever path got here first is the one that does it; the other must not
-    -- run again and put the patches back on top of the restored handlers.
-    Safe.clearShutdown("canvas:input")
-    require("stylusbridge").stop(self)
-    for _, name in ipairs({"idle_flush_cb", "reconcile_cb", "autosave_cb",
-        "erase_flush_cb", "drag_step_cb", "shape_preview_cb", "transform_preview_cb", "zoom_pan_cb",
-        "zoom_pan_settle_cb", "zoom_ink_cb", "zoom_erase_cb"}) do
-        if self[name] then UIManager:unschedule(self[name]) end
-    end
-    self:_endStroke()
-    self:_endShapeTransform()
-    require("textcache").clear()
-    require("pdfbackground").clear()
-    if self.background_cache then self.background_cache:free(); self.background_cache=nil end
-    self.background_cache_key=nil
-    self:_endErase()
-    self.physical_pen_tool = nil
-    self.barrel_down = false
-    self.zoom_pan_dirty = false
-    self:_deselectLasso()
-    UIManager:unschedule(self.drag_step_cb)
-    UIManager:unschedule(self.erase_flush_cb)
-    UIManager:unschedule(self.reconcile_cb)
-    UIManager:unschedule(self.autosave_cb)
-    if self.document and self.document.dirty then
-        self.document:save()
-    end
-    if self.idle_flush_cb then
-        UIManager:unschedule(self.idle_flush_cb)
-    end
-    self:_flush()
-end
+for name, method in pairs(require("canvaslifecycle")) do Canvas[name] = method end
 
 --[[--
 Protected like every other screen, but without the watchdog.

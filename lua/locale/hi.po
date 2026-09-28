@@ -288,17 +288,14 @@ msgstr "रंग"
 msgid "Pen type"
 msgstr "पेन का प्रकार"
 
-msgid "Marker size"
-msgstr "मार्कर का आकार"
-
 msgid "Whole strokes"
 msgstr "संपूर्ण स्ट्रोक"
 
 msgid "Part of a stroke"
 msgstr "स्ट्रोक का हिस्सा"
 
-msgid "Eraser size"
-msgstr "इरेज़र का आकार"
+msgid "Eraser type"
+msgstr "रबड़ का प्रकार"
 
 msgid "Square"
 msgstr "वर्ग"
@@ -503,9 +500,6 @@ msgstr "साइड बटन"
 
 msgid "Highlighter"
 msgstr "हाइलाइटर"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "आयात किए गए PDF पृष्ठों पर ज़ूम अभी उपलब्ध नहीं है।"
 
 
 

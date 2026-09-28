@@ -1,5 +1,9 @@
 # Reader annotations: integration plan
 
+This is a design plan, not an implemented reader feature. For the current
+plugin architecture and tests, see the [Technical Reference Manual](README.md);
+for installation and supported tools, see the [project README](../README.md).
+
 Notebook's canvas is a full-screen document editor. Pencil is a reader overlay:
 it participates in ReaderUI's paint cycle, observes page changes, and stores
 annotations in a book sidecar. Moving one widget into the other will not provide
@@ -8,7 +12,7 @@ reliable EPUB annotations.
 ## What can be shared
 
 - Pen input and ownership of KOReader's single stylus callback. Notebook now
-  restores the callback it replaced on close; a shared lease API would make
+  restores the callback it replaced on close and yields ownership on suspend; a shared lease API would make
   both reader and notebook surfaces use one input owner.
 - Stroke geometry, colors, erasing, smoothing, and the fast framebuffer drawing
   path should live in reusable modules with no ReaderUI or gallery dependency.
@@ -29,9 +33,18 @@ reliable EPUB annotations.
 
 The reader needs its own small controller, loaded only for a document. It must
 leave KOReader's navigation available while drawing is off, and register pen
-input only while drawing is on. Save an in-progress stroke before page changes,
-suspend, and close. Render stored ink through ReaderUI's paint cycle and use
+input only while drawing is on. Define and test completion of an in-progress stroke before page changes and
+close. On suspend, pause input and every direct framebuffer writer before the
+cover is shown; persist committed strokes and retain unfinished interaction
+state until the cover is dismissed, as Notebook currently does. Timers must
+respect screensaver/lock flags and cannot restore page snapshots over the cover. Render stored ink through ReaderUI's paint cycle and use
 Notebook's low-latency path only for the active stroke.
+
+Imported PDF backgrounds already support Notebook's 2× zoom, finger pan,
+eraser repair and cleanup after release, including contacts ending at the screen
+edge. This edits a standalone `.scribe` notebook; it does not provide a ReaderUI
+overlay or change the original PDF. Hold-to-straighten only handles lines and
+arrows; geometric figures remain freehand unless the explicit shape tool is used.
 
 PDF pages have stable page coordinates. EPUB pagination changes with font,
 margin, orientation, and screen size. A page number and raw screen coordinates
@@ -55,7 +68,3 @@ Notebook can promise reliable reflow.
 4. Add native KOReader text highlighting separately from freehand ink.
 5. Only after on-device validation, offer an explicit one-way import with a
    backup of the Pencil source file. Never auto-delete Pencil data.
-
-ZenOS does not require a Notebook-specific API: Notebook registers a standard
-KOReader menu action, and ZenOS's App Launcher scans those actions. The emulator
-scripts install only one UI at a time and keep separate `KO_HOME` settings.

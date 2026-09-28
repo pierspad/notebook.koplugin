@@ -1,16 +1,14 @@
 --[[--
 Geometric shape recognizer for handwriting strokes.
 
-Recognizes lines/arrows and regular circles, squares and rectangles. Four-sided
-loops are aligned to the page axes. Unsupported triangles and ellipses stay
-freehand. Explicit shapes use the same vector stroke model and optional metadata
-so selection, resizing, erasing and persistence agree about their identity.
+Straightens lines and adds arrowheads to open strokes on endpoint hold.
+Freehand geometric figures are never regularized. Explicit shapes use the
+same vector stroke model for selection, erasing and persistence.
 
 @module notebook.shape
 --]]--
 
 local Stroke = require("stroke")
-local Tuning = require("tuning")
 
 local Shape = {}
 
@@ -121,258 +119,6 @@ local function filterClusters(points)
     return filtered
 end
 
---- Tests if a stroke forms a circle or ellipse.
-local function detectCircleOrEllipse(points, total_len)
-    if #points < 6 then return nil end
-    local first = points[1]
-    local last = points[#points]
-    local close_dist = math.sqrt((last.x - first.x)^2 + (last.y - first.y)^2)
-
-    -- Must be closed or near-closed (gap <= 35% of path length)
-    if close_dist > total_len * 0.35 then return nil end
-
-    -- The average sample position shifts towards the slow part of a gesture.
-    -- Extents do not depend on how long the writer paused on either side.
-    local xmin, ymin, xmax, ymax = math.huge, math.huge, -math.huge, -math.huge
-    for _, pt in ipairs(points) do
-        xmin, ymin = math.min(xmin, pt.x), math.min(ymin, pt.y)
-        xmax, ymax = math.max(xmax, pt.x), math.max(ymax, pt.y)
-    end
-    local cx, cy = (xmin+xmax)/2, (ymin+ymax)/2
-
-    -- Compute radii from centroid
-    local radii = {}
-    local r_mean = 0
-    local r_min, r_max = math.huge, 0
-    for _, pt in ipairs(points) do
-        local r = math.sqrt((pt.x - cx)^2 + (pt.y - cy)^2)
-        table.insert(radii, r)
-        r_mean = r_mean + r
-        if r < r_min then r_min = r end
-        if r > r_max then r_max = r end
-    end
-    r_mean = r_mean / #points
-    if r_mean < 10 then return nil end
-
-    -- Radial standard deviation
-    local var = 0
-    for _, r in ipairs(radii) do
-        var = var + (r - r_mean)^2
-    end
-    local std = math.sqrt(var / #points)
-
-    -- A single closed loop has length roughly equal to its circumference ~ 2*pi*r_mean.
-    -- Multi-turn spirals have path length much greater than one circumference.
-    local expected_circumference = 2 * math.pi * r_mean
-    if total_len > 1.45 * expected_circumference
-        or total_len < 0.78 * expected_circumference then return nil end
-
-    -- Bounding box
-    local min_x, min_y, max_x, max_y = math.huge, math.huge, -math.huge, -math.huge
-    for _, pt in ipairs(points) do
-        if pt.x < min_x then min_x = pt.x end
-        if pt.y < min_y then min_y = pt.y end
-        if pt.x > max_x then max_x = pt.x end
-        if pt.y > max_y then max_y = pt.y end
-    end
-    local w = max_x - min_x
-    local h = max_y - min_y
-    local aspect = (w > 0 and h > 0) and (math.min(w, h) / math.max(w, h)) or 1
-
-    -- Circle check: tight radial variance and radius range
-    if std / r_mean <= 0.18 and (r_max - r_min) / r_mean <= 0.32 and aspect >= 0.75 then
-        local circle_pts = {}
-        local num_segs = 36
-        for i = 0, num_segs do
-            local theta = (i / num_segs) * 2 * math.pi
-            table.insert(circle_pts, {
-                x = math.floor(cx + r_mean * math.cos(theta) + 0.5),
-                y = math.floor(cy + r_mean * math.sin(theta) + 0.5),
-                p = 1
-            })
-        end
-        return "circle", circle_pts
-    end
-
-    -- Ellipse check
-    local rx = w / 2
-    local ry = h / 2
-    if rx >= 10 and ry >= 10 then
-        local ell_var = 0
-        for _, pt in ipairs(points) do
-            local norm_dist = ((pt.x - cx)/rx)^2 + ((pt.y - cy)/ry)^2
-            ell_var = ell_var + (norm_dist - 1)^2
-        end
-        if math.sqrt(ell_var / #points) <= 0.35 then
-            local ell_pts = {}
-            local num_segs = 36
-            for i = 0, num_segs do
-                local theta = (i / num_segs) * 2 * math.pi
-                table.insert(ell_pts, {
-                    x = math.floor(cx + rx * math.cos(theta) + 0.5),
-                    y = math.floor(cy + ry * math.sin(theta) + 0.5),
-                    p = 1
-                })
-            end
-            return "ellipse", ell_pts
-        end
-    end
-
-    return nil
-end
-
---- True if the four vertices of `simp` have corners near enough to square.
-local function isRectangular(simp)
-    for i = 1, 4 do
-        local prev = simp[(i - 2) % 4 + 1]
-        local cur = simp[i]
-        local next_pt = simp[i % 4 + 1]
-
-        local ax, ay = prev.x - cur.x, prev.y - cur.y
-        local bx, by = next_pt.x - cur.x, next_pt.y - cur.y
-        local la = math.sqrt(ax * ax + ay * ay)
-        local lb = math.sqrt(bx * bx + by * by)
-        -- A vertex on top of its neighbour has no angle to measure, and a
-        -- quadrilateral with one is not a rectangle.
-        if la == 0 or lb == 0 then return false end
-
-        local cos_a = (ax * bx + ay * by) / (la * lb)
-        if cos_a < -1 then cos_a = -1 elseif cos_a > 1 then cos_a = 1 end
-        if math.abs(math.deg(math.acos(cos_a)) - 90) > Tuning.rect_angle_tolerance then
-            return false
-        end
-    end
-    return true
-end
-
---- Tests if a stroke forms a polygon (triangle, rectangle, square).
-local function detectPolygon(points, total_len)
-    if #points < 6 then return nil end
-    local first = points[1]
-    local last = points[#points]
-    local close_dist = math.sqrt((last.x - first.x)^2 + (last.y - first.y)^2)
-
-    -- Must be closed or near-closed
-    if close_dist > total_len * 0.35 then return nil end
-
-    -- Try simplification with epsilon
-    local eps = total_len * 0.08
-    local simp = simplifyRDP(points, eps)
-
-    -- Ensure total stroke length is consistent with the simplified polygon perimeter (rejects spirals/scribbles)
-    local simp_len = 0
-    for i = 1, #simp - 1 do
-        local pA, pB = simp[i], simp[i + 1]
-        simp_len = simp_len + math.sqrt((pB.x - pA.x)^2 + (pB.y - pA.y)^2)
-    end
-    if total_len > 1.35 * simp_len then return nil end
-
-    local n_verts = #simp - 1
-    if n_verts == 3 then
-        --[[
-        The three corners that were drawn, joined by straight edges.
-
-        They used to be thrown away and replaced by an equilateral triangle on
-        the same centroid: every vertex put at the mean distance and the angles
-        forced to 120 degrees apart. That is not tidying a drawing, it is
-        substituting a different one -- a right triangle, an isoceles, anything
-        sketched for a diagram came back equilateral, and the thing the reader
-        was trying to draw was the part that got discarded.
-
-        Simplification has already removed the shake, so the corners are where
-        the reader put them and the edges between them are straight, which is
-        the whole of what the snap is for.
-        --]]
-        local tri_pts = {
-            { x = math.floor(simp[1].x + 0.5), y = math.floor(simp[1].y + 0.5), p = 1 },
-            { x = math.floor(simp[2].x + 0.5), y = math.floor(simp[2].y + 0.5), p = 1 },
-            { x = math.floor(simp[3].x + 0.5), y = math.floor(simp[3].y + 0.5), p = 1 },
-        }
-        table.insert(tri_pts, { x = tri_pts[1].x, y = tri_pts[1].y, p = 1 })
-        return "triangle", tri_pts
-
-    elseif n_verts == 4 then
-        --[[
-        Only a quadrilateral that is already a rectangle is snapped to one.
-
-        The snap below works by projecting onto the first edge and taking the
-        extent, which returns a rectangle whatever it is given: a trapezium, a
-        rhombus, a parallelogram, the perspective face of a box all came back
-        as plain boxes. So the corners are measured first, and anything that is
-        not square-cornered is kept as the quadrilateral it is.
-        --]]
-        if not isRectangular(simp) then
-            local quad_pts = {}
-            for i = 1, 4 do
-                table.insert(quad_pts, {
-                    x = math.floor(simp[i].x + 0.5),
-                    y = math.floor(simp[i].y + 0.5),
-                    p = 1,
-                })
-            end
-            table.insert(quad_pts, { x = quad_pts[1].x, y = quad_pts[1].y, p = 1 })
-            return "quadrilateral", quad_pts
-        end
-
-        local p1, p2 = simp[1], simp[2]
-        -- Calculate rotation angle along first edge
-        local theta = math.atan2(p2.y - p1.y, p2.x - p1.x)
-        -- Snap to 0 / 90 / 180 / 270 if close (axis-aligned)
-        local deg = (math.deg(theta) % 90)
-        if deg < 10 then
-            theta = theta - math.rad(deg)
-        elseif deg > 80 then
-            theta = theta + math.rad(90 - deg)
-        end
-
-        local cos_t = math.cos(theta)
-        local sin_t = math.sin(theta)
-
-        -- Project all points onto rotated coordinate system
-        local min_u, max_u = math.huge, -math.huge
-        local min_v, max_v = math.huge, -math.huge
-        for _, pt in ipairs(points) do
-            local u = pt.x * cos_t + pt.y * sin_t
-            local v = -pt.x * sin_t + pt.y * cos_t
-            if u < min_u then min_u = u end
-            if u > max_u then max_u = u end
-            if v < min_v then min_v = v end
-            if v > max_v then max_v = v end
-        end
-
-        local w = max_u - min_u
-        local h = max_v - min_v
-        local is_square = math.abs(w - h) / math.max(w, h) < 0.20
-
-        if is_square then
-            local side = (w + h) / 2
-            local mid_u = (min_u + max_u) / 2
-            local mid_v = (min_v + max_v) / 2
-            min_u, max_u = mid_u - side/2, mid_u + side/2
-            min_v, max_v = mid_v - side/2, mid_v + side/2
-        end
-
-        -- Unproject corners back to screen coordinates
-        local function unproject(u, v)
-            return {
-                x = math.floor(u * cos_t - v * sin_t + 0.5),
-                y = math.floor(u * sin_t + v * cos_t + 0.5),
-                p = 1
-            }
-        end
-
-        local c1 = unproject(min_u, min_v)
-        local c2 = unproject(max_u, min_v)
-        local c3 = unproject(max_u, max_v)
-        local c4 = unproject(min_u, max_v)
-
-        local rect_pts = { c1, c2, c3, c4, { x = c1.x, y = c1.y, p = 1 } }
-        return is_square and "square" or "rectangle", rect_pts
-    end
-
-    return nil
-end
-
 --- Creates a regular, axis-aligned shape inside a dragged rectangle.
 function Shape.create(kind, x0, y0, x1, y1, width, color, filled)
     if kind ~= "rectangle" and kind ~= "square" and kind ~= "circle" and kind ~= "triangle" then return nil end
@@ -437,7 +183,7 @@ function Shape.transform(original, handle, x, y, start_x, start_y)
     return result
 end
 
---- Recognizes a geometric shape from a raw stroke.
+--- Straightens a raw line or adds an arrowhead to an open stroke.
 -- Returns new_stroke, shape_type or nil if not a recognized shape.
 function Shape.recognize(raw_stroke, line_style)
     if not raw_stroke or raw_stroke:count() < 3 then return nil end
@@ -460,16 +206,6 @@ function Shape.recognize(raw_stroke, line_style)
     -- 1. Try Line
     local shape_type, pts = detectLine(points, total_len)
 
-    -- 2. Try Circle / Ellipse
-    if not shape_type and not open_arrow then
-        shape_type, pts = detectCircleOrEllipse(points, total_len)
-    end
-
-    -- 3. Try Polygon (Triangle, Rectangle, Square)
-    if not shape_type and not open_arrow then
-        shape_type, pts = detectPolygon(points, total_len)
-    end
-
     -- In arrow mode an open curved shaft keeps its route. RDP removes hand
     -- tremor; two corner-cutting passes soften it while preserving endpoints.
     if not shape_type and open_arrow then
@@ -485,15 +221,6 @@ function Shape.recognize(raw_stroke, line_style)
                 pts = smooth
             end
             shape_type = "line"
-    end
-    if shape_type == "triangle" or shape_type == "ellipse" then return nil end
-    if shape_type == "quadrilateral" or shape_type == "rectangle" or shape_type == "square" then
-        local kind = shape_type == "square" and "square" or "rectangle"
-        local clean = Shape.create(kind, raw_stroke.x_min, raw_stroke.y_min,
-            raw_stroke.x_max, raw_stroke.y_max, raw_stroke.width, raw_stroke.color, raw_stroke.filled)
-        clean.tint = raw_stroke.tint
-        clean.pen_style = raw_stroke.pen_style
-        return clean, kind
     end
     if shape_type == "line" and line_style == "arrow" then
         local a, b = pts[math.max(1, #pts-3)], pts[#pts]

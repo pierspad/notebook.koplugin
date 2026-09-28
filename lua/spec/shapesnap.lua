@@ -47,6 +47,23 @@ snap:trigger()
 assert(result and result.shape_kind == "line" and result.tool == "highlighter",
     "marker hold did not preserve the marker tool")
 
+-- Endpoint hold must not regularize freehand figures, for either drawing tool.
+for _,tool in ipairs({"pen","highlighter"}) do
+    for _,style in ipairs({"line","arrow"}) do
+        local loop=Stroke:new{tool=tool,width=3}
+        for i=0,40 do
+            local angle=i*math.pi/20
+            loop:addPoint(200+80*math.cos(angle),200+80*math.sin(angle),0.7)
+        end
+        result=nil
+        snap:begin(loop,280,200,style)
+        snap:trigger()
+        assert(not result and not snap.snapped,"held circle was regularized")
+        assert(loop:count()==41,"hold altered freehand points")
+        snap:cancel()
+    end
+end
+
 print("hold-to-straighten timing and pen/marker recognition passed")
 
 -- Replacing freehand ink must cancel any trailing fast frame and use a local

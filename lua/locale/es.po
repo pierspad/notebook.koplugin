@@ -290,17 +290,14 @@ msgstr "Color"
 msgid "Pen type"
 msgstr "Tipo de pluma"
 
-msgid "Marker size"
-msgstr "Tamaño del rotulador"
-
 msgid "Whole strokes"
 msgstr "Trazos completos"
 
 msgid "Part of a stroke"
 msgstr "Parte de un trazo"
 
-msgid "Eraser size"
-msgstr "Tamaño del borrador"
+msgid "Eraser type"
+msgstr "Tipo de goma"
 
 msgid "Square"
 msgstr "Cuadrado"
@@ -505,9 +502,6 @@ msgstr "Botón lateral"
 
 msgid "Highlighter"
 msgstr "Resaltador"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "El zoom aún no está disponible en páginas PDF importadas."
 
 
 

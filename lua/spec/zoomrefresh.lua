@@ -40,8 +40,8 @@ assert(not canvas.zoom_touch_active,"pan release retained finger contact")
 assert(canvas.zoom_x==31 and canvas.zoom_y==31,"consecutive pan lost movement")
 assert(full==0 and ui==0,"release forced a cleanup")
 canvas:_settleZoomPan()
-assert(renders==3 and ui==1 and full==0,"idle pan should refresh grayscale without recopy/full flash")
-canvas:_settleZoomPan();assert(ui==1,"idle cleanup repeated")
+assert(renders==3 and ui==0 and full==1,"idle pan should clean ghosts once without recopy")
+canvas:_settleZoomPan();assert(full==1,"idle cleanup repeated")
 -- Stationary taps/holds end too; swipe paths must not leave a stuck contact.
 Touch.onTouchStart(canvas,nil,{pos={x=80,y=80}})
 Touch.onZoomTouchEnd(canvas)
@@ -52,11 +52,11 @@ assert(not canvas.zoom_touch_active and canvas.zoom_x==41,"swipe lost movement/c
 canvas:_cancelZoomRefresh()
 local before=renders
 canvas.zoom_pan_cb();canvas.zoom_pan_settle_cb()
-assert(renders==before and ui==1,"cancelled pan still rendered")
+assert(renders==before and full==1,"cancelled pan still rendered")
 print("pan coalesces viewport copies and preserves the final position")
 
 local ink_refreshes = 0
-screen.refreshUI = function() ink_refreshes=ink_refreshes+1 end
+screen.refreshUI = function() ink_refreshes=ink_refreshes+1; ui=ui+1 end
 now=100
 canvas:_queueZoomInk(10,10,5,5,"ui")
 now=110
@@ -80,11 +80,11 @@ for _,flag in ipairs({'pen_down','stroke','zoom_stroke','shape_gesture','transfo
     'erasing','zoom_erasing','dragging_selection'}) do
  local before_ui=ui
  canvas[flag]=true;canvas:_settleZoomPan();canvas[flag]=nil
- assert(full==0 and ui==before_ui,'pan cleanup interrupted '..flag)
+ assert(full==1 and ui==before_ui,'pan cleanup interrupted '..flag)
 end
 canvas._runReconcile=require('canvasrefresh')._runReconcile
 canvas.reconcile={x=0,y=0,w=400,h=600};canvas.reconcile_full=true
 canvas.reconcile_cb=function() end
 now=3000;canvas:_settleZoomPan()
-assert(full==1 and not canvas.reconcile_full and not canvas.reconcile,
+assert(full==2 and not canvas.reconcile_full and not canvas.reconcile,
     'pan cleanup lost a pending whole-screen menu repair')

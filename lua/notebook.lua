@@ -169,12 +169,6 @@ end
 
 function Notebook:_toggleZoom()
     self:_finishInteraction()
-    if self.canvas.zoom == 1 and self.document:getPage().background then
-        UIManager:show(InfoMessage:new{
-            text = _("Zoom is not available on imported PDF pages yet."), timeout = 3,
-        })
-        return
-    end
     local scale = self.canvas.zoom == 1 and 2 or 1
     if scale > 1 and self.canvas.tool ~= "pen" and self.canvas.tool ~= "highlighter"
         and self.canvas.tool ~= "eraser" and self.canvas.tool ~= "shape" then
@@ -215,6 +209,7 @@ function Notebook:_refreshToolbar()
     self:_updatePageText()
     self.undo_state = self.document:canUndo()
     self.redo_state = self.document:canRedo()
+    if self.canvas:_isDisplayPaused() then return end
     self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
     UIManager:setDirty(nil,"ui",self.toolbar.dimen)
 end
@@ -341,6 +336,16 @@ end
 
 -- Widget ---------------------------------------------------------------------------
 
+-- An existing zoom contact belongs to the canvas through its release, even
+-- over a toolbar button (which otherwise consumes hold_release first).
+function Notebook:propagateEvent(event)
+    if event.handler == "onGesture" and self.canvas and self.canvas.zoom > 1
+        and self.canvas.zoom_touch_active and self.canvas:handleEvent(event) then
+        return true
+    end
+    return InputContainer.propagateEvent(self, event)
+end
+
 function Notebook:paintTo(bb, x, y)
     -- Fill the top band with solid white so no status bar stripes or ghosting appear
     bb:paintRect(x, y, self.dimen.w, TOP_INSET, Blitbuffer.COLOR_WHITE)
@@ -361,28 +366,77 @@ function Notebook:paintTo(bb, x, y)
     self.dimen.x, self.dimen.y = x, y
 end
 
+function Notebook:_scheduleClock()
+    UIManager:unschedule(self.clock_tick)
+    UIManager:scheduleIn(math.max(1, 60 - os.time() % 60), self.clock_tick)
+end
+
+function Notebook:onSuspend()
+    if self.closed then return end
+    self.suspended = true
+    if self.clock_tick then UIManager:unschedule(self.clock_tick) end
+    if self.resume_cb then UIManager:unschedule(self.resume_cb) end
+    self.canvas:pause()
+    if self.document.dirty then self.document:save() end
+end
+
+function Notebook:onResume()
+    -- With a delayed/locked screensaver, Resume comes before cover dismissal.
+    if self.closed or Device.screen_saver_mode or Device.screen_saver_lock then return end
+    if not self.suspended then return end
+    if self.resume_cb then UIManager:unschedule(self.resume_cb) end
+    self.suspended = nil
+    self.canvas:resume()
+    self:_finishInteraction()
+    -- The forthcoming full repaint includes the finished ink and any menu
+    -- cleanup; do not flash again for pre-sleep reconciliation debt.
+    UIManager:unschedule(self.canvas.reconcile_cb)
+    self.canvas.reconcile, self.canvas.reconcile_color, self.canvas.reconcile_full = nil, nil, nil
+    if self.document.dirty then
+        UIManager:unschedule(self.canvas.autosave_cb)
+        UIManager:scheduleIn(2.5, self.canvas.autosave_cb)
+    end
+    self.clock_text:setText(os.date("%H:%M"))
+    if self.clock_tick then self:_scheduleClock() end
+    UIManager:setDirty(self, "full")
+end
+
+function Notebook:onOutOfScreenSaver()
+    if self.closed then return end
+    -- KOReader clears its screensaver flags *after* broadcasting this event.
+    self.resume_cb = self.resume_cb or Safe.wrap("notebook:resume", function() self:onResume() end)
+    UIManager:unschedule(self.resume_cb)
+    UIManager:scheduleIn(0.05, self.resume_cb)
+end
+
 function Notebook:onShow()
     self.canvas:start()
     self.clock_tick = self.clock_tick or Safe.wrap("notebook:clock", function()
+        if self.closed or self.suspended or self.canvas:_isDisplayPaused() then return end
         -- Do not gate this on getTopmostVisibleWidget(): KOReader may report a
         -- canvas child or a transient overlay even while this screen is shown,
         -- which left the displayed time frozen at the opening minute.
         self.clock_text:setText(os.date("%H:%M"))
         self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
         UIManager:setDirty(nil,"ui",self.toolbar.dimen)
-        UIManager:scheduleIn(math.max(1, 60 - os.time() % 60), self.clock_tick)
+        self:_scheduleClock()
     end)
-    Safe.onShutdown("notebook:clock", function() UIManager:unschedule(self.clock_tick) end)
+    Safe.onShutdown("notebook:clock", function()
+        UIManager:unschedule(self.clock_tick)
+        if self.resume_cb then UIManager:unschedule(self.resume_cb) end
+    end)
     UIManager:unschedule(self.clock_tick)
     self.clock_text:setText(os.date("%H:%M"))
     UIManager:setDirty(self, "ui", self.toolbar.dimen)
-    UIManager:scheduleIn(math.max(1, 60 - os.time() % 60), self.clock_tick)
+    self:_scheduleClock()
     return true
 end
 
 function Notebook:onCloseWidget()
+    self.closed = true
     Safe.clearShutdown("notebook:clock")
     if self.clock_tick then UIManager:unschedule(self.clock_tick) end
+    if self.resume_cb then UIManager:unschedule(self.resume_cb) end
     self.canvas:stop()
     if self.document.dirty then
         self.document:save()

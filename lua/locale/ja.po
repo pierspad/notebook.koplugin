@@ -290,17 +290,14 @@ msgstr "色"
 msgid "Pen type"
 msgstr "ペンの種類"
 
-msgid "Marker size"
-msgstr "マーカーのサイズ"
-
 msgid "Whole strokes"
 msgstr "ストローク全体"
 
 msgid "Part of a stroke"
 msgstr "ストロークの一部"
 
-msgid "Eraser size"
-msgstr "消しゴムのサイズ"
+msgid "Eraser type"
+msgstr "消しゴムの種類"
 
 msgid "Square"
 msgstr "正方形"
@@ -505,9 +502,6 @@ msgstr "サイドボタン"
 
 msgid "Highlighter"
 msgstr "蛍光ペン"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "インポートした PDF ページでは、まだズームを使用できません。"
 
 
 

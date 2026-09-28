@@ -172,6 +172,16 @@ function TouchInput:onTouchPan(_, ges)
     return true
 end
 
+function TouchInput:onZoomHold()
+    return self.zoom > 1 and self.zoom_touch_active or false
+end
+
+-- Holding before dragging switches KOReader from pan to hold_pan.
+function TouchInput:onZoomHoldPan(_, ges)
+    if self.zoom <= 1 then return false end
+    return self:onTouchPan(_, ges)
+end
+
 -- A stationary touch ends as tap/hold_release rather than pan_release.
 function TouchInput:onZoomTouchEnd(_, ges)
     if self.zoom <= 1 then return false end
@@ -230,7 +240,7 @@ end
 --- Horizontal finger swipes turn the page, the way they do in the reader.
 function TouchInput:onPageSwipe(_, ges)
     if self.zoom > 1 then
-        if self:_touchIsPalm() then return true end
+        if self:_touchIsPalm() then return self:onTouchRelease(_, ges) end
         local first, last = ges.pos, ges.end_pos
         if first and last and not self.zoom_touch_moved then
             self:_zoomPan(last.x-first.x, last.y-first.y)

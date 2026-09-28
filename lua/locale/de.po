@@ -293,17 +293,14 @@ msgstr "Farbe"
 msgid "Pen type"
 msgstr "Stifttyp"
 
-msgid "Marker size"
-msgstr "Textmarkergröße"
-
 msgid "Whole strokes"
 msgstr "Ganze Striche"
 
 msgid "Part of a stroke"
 msgstr "Teil eines Strichs"
 
-msgid "Eraser size"
-msgstr "Radierergröße"
+msgid "Eraser type"
+msgstr "Radierertyp"
 
 msgid "Square"
 msgstr "Quadrat"
@@ -508,9 +505,6 @@ msgstr "Seitentaste"
 
 msgid "Highlighter"
 msgstr "Textmarker"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "Zoom ist für importierte PDF-Seiten noch nicht verfügbar."
 
 
 

@@ -291,17 +291,14 @@ msgstr "Couleur"
 msgid "Pen type"
 msgstr "Type de stylo"
 
-msgid "Marker size"
-msgstr "Taille du surligneur"
-
 msgid "Whole strokes"
 msgstr "Traits entiers"
 
 msgid "Part of a stroke"
 msgstr "Partie d'un trait"
 
-msgid "Eraser size"
-msgstr "Taille de la gomme"
+msgid "Eraser type"
+msgstr "Type de gomme"
 
 msgid "Square"
 msgstr "Carré"
@@ -506,9 +503,6 @@ msgstr "Bouton latéral"
 
 msgid "Highlighter"
 msgstr "Surligneur"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "Le zoom n’est pas encore disponible pour les pages PDF importées."
 
 
 

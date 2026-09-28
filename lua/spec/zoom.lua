@@ -58,7 +58,7 @@ assert(full_refreshes == 0, "full refresh interrupted finger pan")
 canvas.pen_down = false
 local before_ui=ui_refreshes
 canvas:_settleZoomPan()
-assert(full_refreshes == 0 and ui_refreshes==before_ui+1 and not canvas.zoom_pan_needs_settle,
+assert(full_refreshes == 1 and ui_refreshes==before_ui and not canvas.zoom_pan_needs_settle,
     "settled pan did not clean the viewport exactly once")
 canvas:_zoomStylus({id=1,x=100,y=120},"pen")
 canvas:_zoomStylus({id=-1},"pen")
@@ -81,8 +81,13 @@ assert(doc:getPage().strokes[1]==stroke and doc:getPage().strokes[2],
 
 local notebook=require("notebook"):new{document=Document:new("/tmp/notebook-zoom-button.scribe")}
 notebook.canvas.content={x=0,y=0,w=400,h=600}
+notebook.document:getPage().background={file="test.pdf",page=1}
+local pdf_draws=0
+package.loaded["pdfbackground"]={draw=function() pdf_draws=pdf_draws+1 end,clear=function() end}
 notebook.zoom_button.callback()
 assert(notebook.canvas.zoom==2 and notebook.zoom_button.icon=="notebook.zoom-out")
+notebook.canvas:_renderZoom(Device.screen.bb)
+assert(pdf_draws>0,"PDF zoom did not render its background")
 notebook.zoom_button.callback()
 assert(notebook.canvas.zoom==1 and notebook.zoom_button.icon=="notebook.zoom-in")
 

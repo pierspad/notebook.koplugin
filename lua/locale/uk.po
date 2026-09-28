@@ -289,17 +289,14 @@ msgstr "Колір"
 msgid "Pen type"
 msgstr "Тип пера"
 
-msgid "Marker size"
-msgstr "Розмір маркера"
-
 msgid "Whole strokes"
 msgstr "Цілі штрихи"
 
 msgid "Part of a stroke"
 msgstr "Частина штриха"
 
-msgid "Eraser size"
-msgstr "Розмір гумки"
+msgid "Eraser type"
+msgstr "Тип гумки"
 
 msgid "Square"
 msgstr "Квадрат"
@@ -504,9 +501,6 @@ msgstr "Бічна кнопка"
 
 msgid "Highlighter"
 msgstr "Маркер"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "Масштабування імпортованих сторінок PDF поки недоступне."
 
 
 

@@ -17,3 +17,4 @@ kindle.env
 
 # Release tooling.
 node_modules/
+.directory

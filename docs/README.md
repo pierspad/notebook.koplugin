@@ -8,7 +8,7 @@ A comprehensive engineering reference manual documenting the architecture, hardw
 
 1. [Architectural Overview & Core Invariants](#1-architectural-overview--core-invariants)
    - [Plugin Identity and Directory Constraints](#11-plugin-identity-and-directory-constraints)
-   - [Zero-Patch Integration Philosophy](#12-zero-patch-integration-philosophy)
+   - [Zero-Patch Philosophy](#12-zero-patch-philosophy)
    - [Directory Structure & Module Decomposition](#13-directory-structure--module-decomposition)
    - [Canvas Module Responsibility Matrix](#14-canvas-module-responsibility-matrix)
 2. [Hardware Realities & E-Ink Constraints](#2-hardware-realities--e-ink-constraints)
@@ -23,9 +23,9 @@ A comprehensive engineering reference manual documenting the architecture, hardw
    - [Pen Modalities: Uniform, Fountain, and Pencil](#33-pen-modalities-uniform-fountain-and-pencil)
    - [Highlighter Mechanics & Idempotent Min-Darkening](#34-highlighter-mechanics--idempotent-min-darkening)
    - [Palm Rejection & Outlier Velocity Filtering](#35-palm-rejection--outlier-velocity-filtering)
-4. [Geometric Recognition & Shape Tools](#4-geometric-recognition--shape-tools)
+4. [Straight Strokes & Shape Tools](#4-straight-strokes--shape-tools)
    - [Hold-to-Straighten Recognition Pipeline](#41-hold-to-straighten-recognition-pipeline)
-   - [Rectangle Regularization & Circle Bounding Fitting](#42-rectangle-regularization--circle-bounding-fitting)
+   - [Line Fitting](#42-line-fitting)
    - [Curved Arrow Fitting & Tangent Direction](#43-curved-arrow-fitting--tangent-direction)
    - [Explicit Shapes & Background Snapshot Caching](#44-explicit-shapes--background-snapshot-caching)
 5. [Eraser Subsystem](#5-eraser-subsystem)
@@ -83,7 +83,7 @@ Compatibility invariants across installations and migrations are codified and as
 
 ### 1.2 Zero-Patch Philosophy
 
-`notebook.koplugin` is designed to be purely additive. It requires no modifications, monkey-patches, or binary shims within the host KOReader installation.
+`notebook.koplugin` is designed to be purely additive. It requires no changes to KOReader files or binaries. While a canvas is active, `stylusbridge.lua` temporarily wraps the touch/keyboard input handlers to isolate Wacom slots; it restores those handlers on close or failure.
 
 KOReader exposes a top-level stylus API via `Input:registerStylusCallback` (defined in `frontend/device/input.lua`). On supported hardware (e.g., Kindle Scribe), the Linux kernel opens the digitizer input device during system startup. The plugin intercepts stylus events cooperatively, claims priority when the drawing canvas is active, and restores any previously registered callback upon deactivation or failure.
 
@@ -103,7 +103,8 @@ notebook.koplugin/
 │   ├── polygonink.lua       # Filled and outlined transformed polygon scanlines
 │   ├── penink.lua           # Tapered round pen / graphite scanline rasterizer
 │   ├── viewcanvas.lua       # Shared page/screen geometry and overlay restoration
-│   ├── canvas.lua           # Primary canvas widget lifecycle and tool dispatch
+│   ├── canvas.lua           # Primary canvas widget initialization and tool dispatch
+│   ├── canvaslifecycle.lua  # Start/stop, callback ownership and sleep pause/resume
 │   ├── canvasrender.lua     # Page/background pixels and clipped repaint
 │   ├── canvasrefresh.lua    # Dirty rectangles, cadence and idle color cleanup
 │   ├── notebooktoolbar.lua  # Toolbar widgets and layout
@@ -146,11 +147,14 @@ The canvas subsystem is decomposed into specialized mixin modules loaded into th
 
 | Module | Core Responsibility | Key Invariants & Dependencies |
 | :--- | :--- | :--- |
+| `canvaslifecycle.lua` | Session/input ownership and callback lifetime | Pauses screen writers during screensaver mode; restores input after cover dismissal. |
 | `canvas.lua` | Session state, active tool dispatch, stroke lifecycle | Coordinates tool state; owns `Document` reference; delegates rendering and input. |
 | `stylusbridge.lua` | Temporary Wacom slot routing and Linux input hooks | Isolates Wacom pen to slot 15; tracks physical barrel/eraser buttons; restores original handlers on exit. |
 | `stylusinput.lua` | Point filtering, coordinate rotation, and speed gating | Normalizes raw digitizer samples; applies screen rotation; drops physical outliers. |
 | `touchinput.lua` | Multitouch gestures, palm rejection, pan, page flips | Enforces `palm_grace_ms`; claims touch events inside canvas to prevent pass-through to background widgets. |
-| `zoomcanvas.lua` | 2x magnification view and coordinate transformations | Maintains enlarged `Blitbuffer` cache; transforms input coordinates; handles finger pan. |
+| `zoomcanvas.lua` | Zoomed stylus input and stroke completion | Maps input to page coordinates; postpones pending pan cleanup through pen lift. |
+| `zoomcache.lua` | Enlarged page raster and viewport copies | Keeps pan frames independent of stroke count once cached; repairs erased regions in place. |
+| `zoomrefresh.lua` | Coalesced pan frames and idle cleanup | Limits pan copies to a 35 ms cadence; requests one full viewport cleanup after release and 1.2 seconds of inactivity. |
 | `canvasrender.lua` | Page pixels and clipped repaint | Background cache and authoritative rendering. |
 | `canvasrefresh.lua` | Dirty rectangles and E-Ink scheduling | Fast live feedback, idle color reveal and full cleanup after transformations. |
 | `erasercanvas.lua` | Continuous capsule eraser and undo grouping | Performs swept segment intersection; batches atomic undos; protects geometric shapes from immediate deletion. |
@@ -174,7 +178,7 @@ KOReader dynamically scales UI metrics (padding, borders, icon sizes, and font d
 - The gallery action bar overflowed horizontally, rendering folder creation controls unreachable.
 - Modal dialogs scaled proportionally exceeded screen bounds, trapping the user behind virtual keyboards without an accessible Cancel button.
 
-All headless UI test runners MUST emulate native metrics: `EMULATE_READER_W=1860 EMULATE_READER_H=2480 EMULATE_READER_DPI=300`.
+Run toolbar/layout checks at native metrics as well as smaller viewports: `EMULATE_READER_W=1860 EMULATE_READER_H=2480 EMULATE_READER_DPI=300`.
 
 ### 2.2 E-Ink Waveform Pipeline & Partial Refreshes
 
@@ -342,37 +346,23 @@ Palm rejection operates at two coordinated levels:
 
 ---
 
-## 4. Geometric Recognition & Shape Tools
+## 4. Straight Strokes & Shape Tools
 
 ### 4.1 Hold-to-Straighten Recognition Pipeline
 
-Users can draw geometric primitives freehand and convert them into regularized shapes by pausing briefly at the end of the stroke.
+Holding the pen or marker at a stroke endpoint straightens a line or adds an
+arrowhead, according to **Straight stroke**. **Hold to straighten** remains enabled
+by default. `shapesnap.lua` monitors the anchor using `hold_travel_sq` and
+`hold_delay_ms`, then asks `Shape.recognize` for a replacement. Circles, squares,
+rectangles and triangles drawn freehand remain freehand; no geometric recognition
+runs. Explicit shape tools remain available independently.
 
-```
-Pen Down ──> Draw Stroke ──> Nib Pauses (< 64 px² for 350 ms)
-                                        │
-                                        ▼
-                              shapesnap.lua Timer Fires
-                                        │
-                                        ▼
-                           shape.lua Recognition Matcher
-                                        │
-        ┌───────────────────────┬───────┴───────────────────────┐
-        ▼                       ▼                               ▼
-  Straight Line / Arrow    Rectangle / Square             Fitted Circle
-```
+### 4.2 Line Fitting
 
-1. **Anchor Monitoring**: When the nib travels less than `hold_travel_sq` (64 px²) over `hold_delay_ms` (350 ms), `shapesnap.lua` triggers recognition.
-2. **Stroke Replacement**: The raw freehand stroke is removed from the active canvas buffer, replaced with the regularized geometry, and refreshed with a fast update.
-
-### 4.2 Rectangle Regularization & Circle Bounding Fitting
-
-- **Rectangles & Squares**: Polygons with 4 detected corners are evaluated for corner perpendicularity:
-  $$|\theta_i - 90^\circ| \le \text{rect\_angle_tolerance} \quad (\text{default: } 18^\circ)$$
-  Matching quadrilaterals are snapped to clean, page-aligned bounding rectangles. If aspect ratio width-to-height is within 10% of unity, it snaps to a perfect square.
-- **Circle Fitting**: Rather than averaging sample coordinates (which biases the center toward the slower, denser portion of a hand-drawn curve), `shape.lua` calculates the center from the geometric bounding box extremes:
-  $$C_x = \frac{x_{\min} + x_{\max}}{2}, \quad C_y = \frac{y_{\min} + y_{\max}}{2}, \quad R = \frac{(x_{\max} - x_{\min}) + (y_{\max} - y_{\min})}{4}$$
-  Circumference coverage tests ensure partial arcs and spirals are rejected, preserving intentional open curved lines.
+Cluster filtering suppresses endpoint jitter. A straight stroke must span at least
+80% of its path length and keep perpendicular deviations within the line tolerance.
+The replacement preserves tool, brush, width, color and tint; an unrecognized
+stroke remains untouched.
 
 ### 4.3 Curved Arrow Fitting & Tangent Direction
 
@@ -387,7 +377,7 @@ Arrow recognition accommodates open, hand-drawn curves:
 
 Users can create rectangles, squares, circles and triangles, with outlines or solid fills. `filled` is stored with each stroke and survives transforms, undo, clipboard copies and scaled raster exports.
 
-`geometryink.lua` draws axis-aligned rectangles and circles as primitives. `polygonink.lua` scan-converts rotated polygons and deformed circles from their actual vertices, including filled interiors and rounded outline joins. Recognized pencil/fountain shapes use the brush renderer to retain their style.
+`geometryink.lua` draws axis-aligned rectangles and circles as primitives. `polygonink.lua` scan-converts rotated polygons and deformed circles from their actual vertices, including filled interiors and rounded outline joins. Straightened pencil/fountain strokes use the brush renderer to retain their style.
 
 Shape manipulation captures one immutable background snapshot. Each preview restores only the union of the old and new bounds. Rotation/resize samples are coalesced at a 50 ms interval; release always commits the latest position and cancels the trailing callback. The snapshot is freed when the gesture ends.
 
@@ -397,7 +387,9 @@ The text editor has two joined rows of five equally sized controls. The backgrou
 
 `textpreview.lua` captures the underlying page once per edit. Typing restores dirty pixels and draws only the changing label. `textcache.lua` retains at most 32 native text widgets within an 8-million-pixel budget (except one active oversized label), freeing evicted buffers even when undo history still holds their strokes. Closing the editor cancels the preview; confirming whitespace-only text creates no label, or removes an existing label with undo support. This applies to both white and transparent backgrounds.
 
-Zoom retains the enlarged page cache while erasing. The document returns dirty page bounds; `zoomcache.lua` repairs only that region and copies its visible intersection to the screen. Both cache construction and partial repairs include the PDF background. Pan frames are coalesced at 35 ms. Cleanup waits for 1.2 seconds of idle time, restarts on the next finger contact, and uses a viewport UI refresh instead of a full flashing waveform. Tap, hold release, pan release and swipe all finish the contact. Cleanup reuses pixels already on screen and merges pending local ink reconciliation.
+Zoom is available on imported PDF pages as well as paper templates. PDF paper is rasterized at the enlarged page size, so annotation coordinates and eraser repairs share the same transform. Zoom retains the enlarged page cache while erasing. The document returns dirty page bounds; `zoomcache.lua` repairs only that region and copies its visible intersection to the screen. Both cache construction and partial repairs include the PDF background. Pan frames are coalesced at 35 ms. Cleanup waits for finger release and 1.2 seconds of idle time, restarts on renewed finger or pen activity (including pen lift), and requests one full flashing refresh of the viewport. `refreshUI`/AUTO alone did not provide a reliable ghost-clearing request. A resting finger postpones cleanup. Tap, hold release, pan release and swipe finish the contact, including outside the paper. Gesture ranges accept any final position only while a zoom contact is owned, including sensor/rotation overshoot beyond the screen; `Notebook:propagateEvent` lets that contact reach the canvas before toolbar buttons can consume its release. `hold_pan` continues a drag after a long press. Cleanup reuses framebuffer pixels and consumes pending ink reconciliation; an outstanding whole-screen menu repair expands this same request to include the toolbar. No periodic full refresh runs during panning.
+
+Autosave also waits while a zoom finger contact or trailing pan frame is active, so serialization cannot interrupt a drag. Zoom cancellation clears the trailing/settle callbacks and the previous pan timestamp. The native cache path itself is retained: it already avoids rerasterizing vectors on ordinary pan frames.
 
 Shapes can now be created and rotated directly at 2× zoom: input maps to page coordinates, while handles and the floating menu map back to screen coordinates. Choosing pen, marker, eraser or shapes preserves zoom. Lasso and text editing still switch to the normal page editor; they are not zoom editing tools yet.
 
@@ -491,7 +483,7 @@ Two catastrophic failure modes exist:
 `lua/safe.lua` isolates `notebook.koplugin` from the host environment:
 
 1. **`Safe.widget(Class, name)`**: Wraps critical entry points (`init`, `paintTo`, `handleEvent`) in protective `pcall` boundaries. Any crash inside the plugin widget hierarchy is caught before reaching `UIManager`.
-2. **`Safe.later(delay, callback)`**: The *only* permissible mechanism for scheduling deferred work in the plugin. Disallows `UIManager:nextTick`, guaranteeing that work is scheduled at least 1 ms in the future, allowing the event loop to yield and poll hardware input.
+2. **`Safe.later(where, callback)`**: Schedules wrapped one-shot work after a short delay that yields to input. Repeating or cancellable canvas work uses `UIManager:scheduleIn` with owned, protected callbacks. The plugin avoids `UIManager:nextTick` chains.
 3. **Emergency State Restoration**: If an unhandled exception occurs:
    - The original host Wacom stylus callback is restored immediately.
    - All plugin windows, overlays, and timers are aggressively dismantled.
@@ -547,7 +539,7 @@ Parameters are persisted in `G_reader_settings` under the `notebook_tuning_*` pr
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Ink** | `refresh_interval_ms` | 20 | 8–120 | 4 | Minimum time between partial screen refreshes during drawing. Matches the ~20 ms A2 waveform hardware latency. Lower values queue backlog in the kernel framebuffer. |
 | **Ink** | `idle_flush_ms` | 35 | 10–200 | 5 | Delay before flushing the final stroke fragment if the pen pauses mid-stroke without lifting. |
-| **Ink** | `reconcile_delay_ms` | 2000 | 200–5000 | 100 | Idle delay before revealing final grayscale/color with refreshUI; full refresh is reserved for explicit cleanup. |
+| **Ink** | `reconcile_delay_ms` | 2000 | 200–5000 | 100 | Idle delay before revealing final grayscale/color with refreshUI; full refresh is reserved for menu/shape cleanup and settled zoom panning. |
 | **Ink** | `jitter_floor_sq` | 4 | 0–64 | 1 | Distance squared below which incoming digitizer samples are discarded as resting sensor noise. |
 | **Eraser** | `eraser_radius` | 12 | 4–80 | 2 | Base spatial collision radius (in pixels) around the eraser path. |
 | **Eraser** | `erase_repaint_ms` | 70 | 16–400 | 10 | Minimum interval between vector repaints while the eraser is sweeping. Prevents CPU saturation during complex page sweeps. |
@@ -556,7 +548,7 @@ Parameters are persisted in `G_reader_settings` under the `notebook_tuning_*` pr
 | **Lasso** | `frame_margin` | 10 | 0–40 | 2 | Slack margin added around selection bounding boxes to ensure dashed boundary lines are cleanly erased during motion. |
 | **Shapes** | `hold_travel_sq` | 64 | 4–400 | 4 | Maximum allowable nib wander squared (in pixels) for the recognition hold timer to remain active. |
 | **Shapes** | `hold_delay_ms` | 350 | 100–1500 | 50 | Duration the nib must remain stationary at the end of a stroke before triggering shape snapping. |
-| **Shapes** | `rect_angle_tolerance` | 18 | 2–45 | 1 | Maximum angular deviation (in degrees) from 90° permitted when regularizing quadrilaterals into rectangles. |
+| **Shapes** | `rect_angle_tolerance` | 18 | 2–45 | 1 | Legacy setting retained for saved tuning compatibility; automatic quadrilateral recognition is disabled. |
 | **Input** | `palm_grace_ms` | 600 | 0–2000 | 50 | Duration after pen lift during which all touch and swipe gestures are suppressed to prevent trailing palm page turns. |
 | **Input** | `max_pen_speed` | 6 | 1–30 | 1 | Maximum believable nib velocity in pixels per millisecond. Samples exceeding this threshold are treated as stray palm jumps. |
 | **Input** | `jump_base` | 48 | 8–300 | 8 | Permitted baseline spatial jump distance between consecutive samples regardless of timestamp delta. |
@@ -617,7 +609,7 @@ Directly overwriting an active notebook file risks corruption if battery failure
 
 ### 9.3 PDF Export Pipeline & FFI Direct Copy
 
-Multi-page PDF export (`export.lua`) renders vector pages into native Kindle blitbuffers (`BB8` 8-bit grayscale format).
+Multi-page PDF export (`export.lua`) rasterizes each notebook page into an 8-bit grayscale blitbuffer and embeds it as a RunLengthDecode image in the PDF. It preserves the rendered page appearance; the PDF does not contain editable vector strokes. XOPP export separately preserves editable strokes with brush approximations.
 - **FFI Row Copying**: To avoid slow per-pixel Lua conversions, row data is copied directly via LuaJIT FFI `ffi.copy` incorporating stride padding alignment:
   ```lua
   for row = 0, h - 1 do
@@ -639,37 +631,37 @@ To diagnose device-specific digitizer bugs without capturing personal handwritin
 - Create a notebook named `_debug_` (or an empty file `koreader/notebook/_debug_`).
 - Raw input events, Wacom slot transitions, capacitive touch coordinates, tool changes, and screen rotations are logged to `koreader/notebook/notebook-debug.log`.
 - **Privacy Assurance**: Vector point histories and document text are never written to the debug log.
-- **Rolling Cap**: The log rotates at 1 MB to `notebook-debug.log.1`, bounding total diagnostic disk usage strictly to ~2 MB. Deleting the `_debug_` notebook disables logging immediately.
+- **Rolling Cap**: The log rotates at 1 MB to `notebook-debug.log.1`, bounding total diagnostic disk usage strictly to ~2 MB. Delete the `_debug_` notebook or marker and reopen Notebook to disable logging for the next session.
 
 ---
 
 ## 10. Reader Annotations Architecture (Integration Plan)
 
+Reader overlays are planned, not implemented by this release. Importing a PDF
+as notebook paper creates a standalone notebook with a fixed PDF background;
+its 2× zoom and annotations do not attach to the original book in ReaderUI.
+The authoritative design is [Reader annotations: integration plan](READER_ANNOTATIONS.md).
+
 ### 10.1 Canvas vs. Document Overlay Differences
 
-Integrating handwriting into KOReader's book reading view requires reconciling two fundamentally opposing UI models:
-
-| Architectural Property | Standalone Notebook Canvas | Reader Annotation Overlay (Pencil) |
-| :--- | :--- | :--- |
-| **Widget Hierarchy** | Top-level full-screen modal container | Child widget participating in `ReaderUI` paint cycle |
-| **Lifecycle** | Dedicated open/close document session | Attached to book lifecycle; observes background page turns |
-| **Coordinate Space** | Absolute, static screen/page coordinates | Dynamic, document-relative text/page coordinates |
-| **Input Ownership** | Exclusive ownership of stylus callback | Cooperative leasing; must release input during page navigation |
-| **Persistence Target** | Self-contained `.scribe` files | Book-specific `.sdr/pencil_strokes.lua` sidecars |
+Notebook owns a full-screen editing session, `.scribe` persistence, input callbacks
+and canvas timers. A reader overlay must instead follow ReaderUI's document,
+page, navigation and repaint lifecycle. Reusable rendering modules alone do not
+provide that controller.
 
 ### 10.2 Reflowable Text Anchors (XPointers) vs. Fixed Coordinates
 
-- **Fixed-Layout Documents (PDF)**: Pages maintain permanent, immutable aspect ratios and coordinate dimensions. A vector stroke mapped to page-normalized coordinates $(u, v) \in [0, 1]^2$ renders identically across any display zoom or rotation.
-- **Reflowable Documents (EPUB, MOBI, FB2)**: Pagination is non-permanent. Changing font size, typeface, line margins, or orientation completely redistributes words across pages.
-  - Raw coordinates or page numbers are invalid across reflows.
-  - Annotations MUST anchor to DOM/text ranges using **XPointers**.
-  - If a text reflow causes an anchor to become unresolvable, the annotation MUST NOT be drawn over arbitrary text; it must be preserved in an orphaned annotation recovery list.
+A PDF reader overlay would store strokes against stable document page dimensions
+and map them through the reader's current viewport. EPUB page numbers change on
+reflow: annotations need resolvable text anchors and a recovery view for unresolved
+anchors. Notebook's current page coordinates must not be reused as EPUB anchors.
 
 ### 10.3 Pencil Sidecar Migration Strategy
 
-1. **Non-Destructive Coexistence**: Notebook format and existing Pencil sidecar files remain strictly decoupled.
-2. **Read-Only Importer**: A read-only migration parser converts legacy `pencil_strokes.lua` data into Notebook's versioned document model with automatic backup creation. Under no circumstances are legacy Pencil sidecars deleted.
-3. **Stylus Callback Leasing API**: Refactoring KOReader's input bridge to provide a cooperative leasing mechanism, allowing ReaderUI navigation and freehand drawing overlays to arbitrate input ownership cleanly.
+Any future importer must be read-only, preserve Pencil files and stroke metadata,
+and validate coordinate transforms with fixtures. A new versioned sidecar should
+be introduced independently of existing `.scribe` documents. The integration plan
+defines the staged PDF, EPUB and migration work; none is a current reader feature.
 
 ---
 
@@ -677,12 +669,12 @@ Integrating handwriting into KOReader's book reading view requires reconciling t
 
 ### 11.1 Headless Unit Test Bench
 
-The test suite in `lua/spec/` executes directly under standard `luajit` in ~1.2 seconds without requiring an emulator, display server, or X11/Wayland session:
+The test suite in `lua/spec/` executes directly under standard `luajit` without requiring an emulator, display server, or X11/Wayland session:
 ```bash
 make test
 ```
 
-The test runner exercises 20 targeted suites:
+The test runner currently exercises 34 named suites (the authoritative list is `SUITES` in `Makefile`). Core coverage includes:
 - `run`: Vector geometry, undo/redo stacks, refresh bounding calculations, highlighter blending, PDF export.
 - `pages`: Multi-page lifecycle, template backgrounds, persistence round-trips.
 - `eraser`: Segment capsule sweeping, dirty bounds, undo batching, shape preservation.
@@ -690,17 +682,20 @@ The test runner exercises 20 targeted suites:
 - `safe`: Exception trapping, watchdog loop termination, callback restoration.
 - `i18n`: Gettext translation catalog completeness against source code strings.
 - `gallery`: Card grid layouts, asynchronous thumbnail queueing, multi-selection sweeps.
-- `shape` & `shapesnap`: Geometric regularization, circle fitting, arrow tangent calculation, hold timers.
+- `shape` & `shapesnap`: Freehand figure rejection, straight lines, arrow tangent calculation and hold timers.
 - `lasso` & `lassoedit`: Loop hit-testing, coordinate translation, clipboard serialization.
 - `migration`: Directory renaming compatibility, legacy configuration migration.
 - `tuning`, `tuningdock`, `tuninggate`: Parameter boundary clamps, gate activation, dump formatting.
 - `zoom`: 2x viewport coordinate transformations, magnified blitbuffer cache invalidation.
+- `zoomrefresh`, `zoompan`: refresh cadence, timed release/hold/swipe sequences, toolbar crossings, pen deferral, merged cleanup, cancellation and autosave during pans.
+- `suspend`: screensaver entry, stale timer guards, input ownership, delayed unlock, retained ink and closing with a queued resume.
+- `templateclip`: 240 pixel comparisons against exhaustive dot stamping, including fractional scales, negative origins and empty clips.
 
 ### 11.2 Hardware-Accurate UI Stubs
 
-Unit tests rely on `lua/spec/uistubs.lua`. These stubs precisely model the Kindle Scribe's 300 DPI screen density:
+Unit tests rely on `lua/spec/uistubs.lua`. These stubs model selected KOReader widget and scaling behaviors:
 - Simulates KOReader's `Screen:scaleBySize()` calculations.
-- Enforces real widget measurement constraints: widgets added to containers after measurement cycles correctly trigger layout errors, reproducing physical device failures in headless CI.
+- Exercises widget sizes, gestures and dirty notifications without a running reader. Native SDL checks remain necessary to verify actual widget layout.
 
 ### 11.3 Headless SDL Verification Tools
 
@@ -814,3 +809,69 @@ use a bounded pixel setter to avoid older blitbuffer full-stride fill shortcuts
 escaping narrow viewports. Native regression checks compare partial caret
 updates pixel-for-pixel with a full label redraw. Menu close and row selection
 release native preview/icon buffers rather than leaving them to collection.
+
+
+### Zoom pan regression and reproducible measurements
+
+The zoom refresh policy and lifecycle are documented above.
+`tools/check-zoom-pan.lua` uses real KOReader widget dispatch and native buffers;
+it verifies 384 cache/direct pixel comparisons across six papers, four rotations,
+four pan offsets, BB8/RGB32 buffers and C/Lua backends. Its cached/direct timing
+comparison describes the existing architecture, not a new speedup.
+
+`tools/bench-template.lua` accepts a prior `template.lua` and compares warmed,
+alternating baseline/current draws using nine batches of 500 calls. Dot-paper
+repairs skip offscreen rows while preserving the exact repeated-addition spacing
+of the reference renderer. Whole-page exports/cache builds retain their tight
+loop. The gains are small in absolute desktop milliseconds and do not establish
+an improvement in physical pen or pan latency.
+
+The zoom pan and suspend fixes add no settings or user-visible message keys. All 13 catalogs
+continue to pass the completeness, substitution and gettext checks. `canvaslifecycle.lua` now owns start/stop, pause/resume, the shared callback list
+and the display-paused predicate. The private loader isolates it like the other
+plugin modules.
+
+
+### Screensaver and suspension lifecycle
+
+The clock formerly painted the entire toolbar directly into `Screen.bb` on each
+tick, even with a cover above Notebook. It now checks both the notebook's
+suspended state and KOReader's `screen_saver_mode`/`screen_saver_lock` flags.
+The latter also protect the interval between screensaver entry and the Suspend
+broadcast. Canvas timers and raw stylus input use the same predicate.
+
+On Suspend, Notebook cancels the clock and canvas timers, cancels shape snapping,
+yields its stylus callback and saves dirty committed document data. Unfinished
+tool state remains in memory: its notebook snapshots cannot be applied to the
+cover. After the screensaver closes, it finishes that interaction once and asks
+UIManager for a full repaint. A Resume event while a delayed/locked cover is
+still visible keeps the canvas paused. `OutOfScreenSaver` schedules a short
+callback because KOReader clears its flags after broadcasting that event.
+Closing Notebook cancels this callback too.
+
+`tools/check-suspend.lua` uses the real KOReader widget stack and
+`ScreenSaverWidget`, verifies every cover pixel after attempted clock/drawing
+timer calls, and exercises real Suspend, Resume and OutOfScreenSaver dispatch
+at both zoom levels. It complements `spec/suspend.lua`, which also verifies
+callback cancellation, prior stylus restoration and retained unfinished ink.
+
+### PDF zoom regression
+
+Imported PDF pages use the same 2× writing, finger pan and idle cleanup as normal
+notebooks. The removed availability warning is removed from every language catalog;
+existing translated zoom and straight-stroke controls are reused.
+
+`tools/check-pdf-zoom.lua` runs with real MuPDF and blitbuffers. From a disposable
+KOReader SDL runtime, pass the plugin Lua directory and a readable, unencrypted PDF:
+
+```sh
+SDL_VIDEODRIVER=dummy ./luajit /path/notebook.koplugin/tools/check-pdf-zoom.lua \
+    /path/notebook.koplugin/lua /path/fixture.pdf
+```
+
+Checks cover grayscale/RGB, all four rotations, fractional and edge viewport
+positions, annotations, eraser restoration and reuse of a single PDF raster during
+pan/erase. Local verification passed 96 viewport comparisons across `simple.pdf`
+and the first two pages of KOReader's `Paper.pdf`, plus all eraser repairs.
+`make ci` passed all 34 suites, lint, 13 translation catalogs and ZIP checks.
+Physical e-ink refresh timing still requires testing on the device.

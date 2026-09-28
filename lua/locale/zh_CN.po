@@ -287,17 +287,14 @@ msgstr "颜色"
 msgid "Pen type"
 msgstr "笔类型"
 
-msgid "Marker size"
-msgstr "荧光笔粗细"
-
 msgid "Whole strokes"
 msgstr "整个笔画"
 
 msgid "Part of a stroke"
 msgstr "笔画的一部分"
 
-msgid "Eraser size"
-msgstr "橡皮擦大小"
+msgid "Eraser type"
+msgstr "橡皮擦类型"
 
 msgid "Square"
 msgstr "正方形"
@@ -502,9 +499,6 @@ msgstr "侧边按钮"
 
 msgid "Highlighter"
 msgstr "荧光笔"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "导入的 PDF 页面暂不支持缩放。"
 
 
 

@@ -17,7 +17,7 @@ function Notebook:_setSetting(key, value)
     G_reader_settings:saveSetting(SETTING_PREFIX .. key, value)
 end
 
-function Notebook:_colorActions(key, index)
+function Notebook:_colorActions(key, index, show_section)
     local actions = {}
     for i, option in ipairs({
         {0, _("Black"), "black"}, {255, _("White"), "white"},
@@ -27,7 +27,7 @@ function Notebook:_colorActions(key, index)
     }) do
         local value = option[1]
         actions[#actions + 1] = {
-            swatch = option[3], section = i == 1 and _("Color") or nil,
+            swatch = option[3], section = (show_section ~= false and i == 1) and _("Color") or nil,
             text = option[2], selected = function() return self.canvas[key] == value end,
             callback = function()
                 self:_setSetting(key, value)
@@ -106,8 +106,8 @@ function Notebook:_showToolOptions(index)
     local tool = TOOLS[index].tool
     if tool == "pen" then return self:_showPenOptions() end
     if tool == "highlighter" then
-        local colors = self:_colorActions("highlighter_color", index)
-        return self:_showToolMenu(index, _("Marker size"), colors, "highlighter_width")
+        local colors = self:_colorActions("highlighter_color", index, false)
+        return self:_showToolMenu(index, _("Color"), colors, "highlighter_width")
     end
     local actions = {}
     if tool == "eraser" then
@@ -117,7 +117,7 @@ function Notebook:_showToolOptions(index)
                 text=option[2], selected=function() return self.canvas.eraser_mode == value end,
                 callback=function() self:_setSetting("eraser_mode", value) end})
         end
-        return self:_showToolMenu(index, _("Eraser size"), actions, "eraser_size")
+        return self:_showToolMenu(index, _("Eraser type"), actions, "eraser_size")
     end
     if tool == "shape" then
         for _index, option in ipairs({

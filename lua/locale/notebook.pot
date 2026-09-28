@@ -279,16 +279,13 @@ msgstr ""
 msgid "Pen type"
 msgstr ""
 
-msgid "Marker size"
-msgstr ""
-
 msgid "Whole strokes"
 msgstr ""
 
 msgid "Part of a stroke"
 msgstr ""
 
-msgid "Eraser size"
+msgid "Eraser type"
 msgstr ""
 
 msgid "Square"
@@ -481,9 +478,6 @@ msgid "Side button"
 msgstr ""
 
 msgid "Highlighter"
-msgstr ""
-
-msgid "Zoom is not available on imported PDF pages yet."
 msgstr ""
 
 

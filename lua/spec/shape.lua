@@ -96,7 +96,7 @@ test("detects diagonal and vertical straight lines", function()
     assertEq(kind_d, "line", "shape kind")
 end)
 
-test("detects circle from rough freehand loop", function()
+test("leaves rough circles as freehand ink", function()
     local s = Stroke:new{ tool = "pen", width = 3 }
     local cx, cy, r = 300, 400, 100
     for deg = 0, 360, 10 do
@@ -105,12 +105,12 @@ test("detects circle from rough freehand loop", function()
         s:addPoint(cx + (r + jitter) * math.cos(rad), cy + (r + jitter) * math.sin(rad), 1)
     end
     local clean, kind = Shape.recognize(s)
-    assertTrue(clean ~= nil, "should recognize circle")
-    assertEq(kind, "circle", "shape kind")
-    assertTrue(clean:count() > 20, "circle points")
+    assertEq(clean, nil, "circle stays freehand")
+    assertEq(kind, nil)
+    assertEq(Shape.recognize(s, "arrow"), nil, "closed circle stays freehand in arrow mode")
 end)
 
-test("detects horizontal and rotated rectangles", function()
+test("leaves horizontal and rotated rectangles as freehand ink", function()
     -- Axis-aligned rectangle
     local s = Stroke:new{ tool = "pen", width = 3 }
     for x = 100, 400, 20 do s:addPoint(x, 100, 1) end
@@ -119,9 +119,8 @@ test("detects horizontal and rotated rectangles", function()
     for y = 250, 100, -20 do s:addPoint(100, y, 1) end
 
     local clean, kind = Shape.recognize(s)
-    assertTrue(clean ~= nil, "should recognize rectangle")
-    assertTrue(kind == "rectangle" or kind == "square", "shape kind")
-    assertEq(clean:count(), 5, "rectangle closed points")
+    assertEq(clean, nil)
+    assertEq(kind, nil)
 
     -- Rotated 45-degree rectangle (diamond / rotated box)
     local s_rot = Stroke:new{ tool = "pen", width = 3 }
@@ -136,8 +135,9 @@ test("detects horizontal and rotated rectangles", function()
     for ly = 50, -50, -20 do local x, y = rotPt(-100, ly); s_rot:addPoint(x, y, 1) end
 
     local clean_rot, kind_rot = Shape.recognize(s_rot)
-    assertTrue(clean_rot ~= nil, "should recognize rotated rectangle")
-    assertEq(clean_rot:count(), 5, "rotated rectangle closed points")
+    assertEq(clean_rot, nil)
+    assertEq(kind_rot, nil)
+    assertEq(Shape.recognize(s_rot, "arrow"), nil)
 end)
 
 --- The corner of `clean` nearest (x, y), and how far off it is.
@@ -165,7 +165,7 @@ test("leaves triangles as freehand ink", function()
     assertEq(kind, nil, "unsupported geometry has no shape metadata")
 end)
 
-test("regularizes a trapezium to an axis-aligned rectangle", function()
+test("leaves trapezia as freehand ink", function()
     local s = Stroke:new{ tool = "pen", width = 3 }
     -- A trapezium: wide base, narrow top, sloping sides.
     for x = 100, 400, 20 do s:addPoint(x, 300, 1) end
@@ -174,14 +174,8 @@ test("regularizes a trapezium to an axis-aligned rectangle", function()
     for t = 0, 1, 0.1 do s:addPoint(180 - t * 80, 150 + t * 150, 1) end
 
     local clean, kind = Shape.recognize(s)
-    assertTrue(clean ~= nil, "should recognize a four-sided shape")
-    assertEq(kind, "rectangle", "sloping sides become a regular rectangle")
-    assertEq(clean:count(), 5, "rectangle is closed")
-    for i=1,4 do
-        local x0,y0=clean:getPoint(i)
-        local x1,y1=clean:getPoint(i+1)
-        assertTrue(x0==x1 or y0==y1, "edges are horizontal or vertical")
-    end
+    assertEq(clean, nil)
+    assertEq(kind, nil)
 end)
 
 test("filters micro-jitter clusters when pen is held stationary at end of stroke", function()
@@ -244,7 +238,7 @@ test("line snap can add an arrowhead without changing the raw stroke", function(
     assertEq(s:count(), 41, "raw stroke was changed")
 end)
 
-test("circle recognition tolerates a slow quarter and an imperfect closure", function()
+test("leaves unevenly sampled imperfect circles as freehand ink", function()
     local s = Stroke:new{width=3}
     for i=0,200 do
         local angle = (i/200)^2 * math.pi * 1.97
@@ -252,8 +246,8 @@ test("circle recognition tolerates a slow quarter and an imperfect closure", fun
         s:addPoint(250+r*math.cos(angle),300+r*math.sin(angle))
     end
     local clean, kind = Shape.recognize(s)
-    assertEq(kind,"circle","unevenly sampled circle")
-    assertTrue(math.abs(clean.x_min-150)<8,"centre shifted towards slow samples")
+    assertEq(clean, nil)
+    assertEq(kind, nil)
 end)
 
 test("curved arrows retain their shaft and end with a tangent arrowhead", function()

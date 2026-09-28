@@ -34,6 +34,7 @@ otherwise every stroke would also register as a swipe or a tap and start
 turning pages underneath the drawing.
 --]]
 function StylusInput:onStylusEvent(slot)
+    if self:_isDisplayPaused() then return false end
     local raw_slot = slot
     self.sample_time=slot.timev
     -- Match the same transform KOReader applies to touch gestures. Make a

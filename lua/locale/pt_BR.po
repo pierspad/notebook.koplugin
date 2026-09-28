@@ -290,17 +290,14 @@ msgstr "Cor"
 msgid "Pen type"
 msgstr "Tipo de caneta"
 
-msgid "Marker size"
-msgstr "Tamanho do marcador"
-
 msgid "Whole strokes"
 msgstr "Traços inteiros"
 
 msgid "Part of a stroke"
 msgstr "Parte de um traço"
 
-msgid "Eraser size"
-msgstr "Tamanho da borracha"
+msgid "Eraser type"
+msgstr "Tipo de borracha"
 
 msgid "Square"
 msgstr "Quadrado"
@@ -505,9 +502,6 @@ msgstr "Botão lateral"
 
 msgid "Highlighter"
 msgstr "Marca-texto"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "O zoom ainda não está disponível em páginas PDF importadas."
 
 
 

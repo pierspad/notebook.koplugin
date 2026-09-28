@@ -293,17 +293,14 @@ msgstr "Colore"
 msgid "Pen type"
 msgstr "Tipo di penna"
 
-msgid "Marker size"
-msgstr "Dimensione evidenziatore"
-
 msgid "Whole strokes"
 msgstr "Tratti interi"
 
 msgid "Part of a stroke"
 msgstr "Parte di un tratto"
 
-msgid "Eraser size"
-msgstr "Dimensione gomma"
+msgid "Eraser type"
+msgstr "Tipo di gomma"
 
 msgid "Square"
 msgstr "Quadrato"
@@ -508,9 +505,6 @@ msgstr "Pulsante laterale"
 
 msgid "Highlighter"
 msgstr "Evidenziatore"
-
-msgid "Zoom is not available on imported PDF pages yet."
-msgstr "Lo zoom non è ancora disponibile sulle pagine PDF importate."
 
 
 
