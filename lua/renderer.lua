@@ -107,7 +107,7 @@ Paints the segment between two points and returns the dirtied rectangle.
 @tparam number x1,y1,p1 end point and its pressure
 @treturn number,number,number,number x, y, w, h of the dirtied area
 --]]
-function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled, grain_x, grain_y)
+function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled, grain_x, grain_y, exclude_start)
     local dx, dy = x1 - x0, y1 - y0
     local r0 = Renderer.radiusFor(stroke, p0, dx, dy)
     local r1 = Renderer.radiusFor(stroke, p1, dx, dy)
@@ -179,7 +179,8 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
         local last = math.min(steps, math.ceil(last_t * steps))
         if is_highlight then
             HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1,
-                color, first, last, steps, stroke.live_preview)
+                color, first, last, steps, stroke.live_preview,
+                exclude_start or (stroke.live_preview and dist > 0))
         else
             require("penink").draw(bb,x0,y0,r0,x1,y1,r1,color,is_rgb_ink,is_pencil,grain_x,grain_y)
         end
@@ -270,9 +271,11 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
         target = bb:viewport(ox, oy, w, h)
     end
     local bounds = clip and { w = target:getWidth(), h = target:getHeight() }
+    local marker_started = false
     local function segment(x0, y0, p0, x1, y1, p1)
         Renderer.drawSegment(target, stroke, x0 - ox, y0 - oy, p0,
-            x1 - ox, y1 - oy, p1, bounds, color_enabled, ox + (stroke.grain_x or 0), oy + (stroke.grain_y or 0))
+            x1 - ox, y1 - oy, p1, bounds, color_enabled, ox + (stroke.grain_x or 0), oy + (stroke.grain_y or 0), marker_started)
+        marker_started = stroke.tool == "highlighter"
     end
 
     -- Short strokes have no index and are drawn whole: their bounding box has
@@ -284,6 +287,7 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
         local cx1, cy1 = clip.x + clip.w + pad, clip.y + clip.h + pad
         for _, c in ipairs(chunks) do
             if cx1 >= c[3] and cx0 <= c[5] and cy1 >= c[4] and cy0 <= c[6] then
+                marker_started = false
                 local px, py, pp = stroke:getPoint(c[1])
                 for i = c[1] + 1, c[2] do
                     local x, y, p = stroke:getPoint(i)

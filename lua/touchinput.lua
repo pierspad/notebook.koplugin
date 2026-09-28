@@ -50,12 +50,22 @@ unanswered contact travels on to become a tap on whatever is underneath -- which
 is how resting a palm pressed toolbar buttons and repainted pieces of the screen
 under the ink.
 --]]
+-- Saving writes the whole file synchronously. Defer it when a deliberate
+-- finger contact starts, so it cannot stall the page swipe or zoom pan.
+local function deferTouchSave(self)
+    if self.document and self.document.dirty and self.autosave_cb then
+        UIManager:unschedule(self.autosave_cb)
+        UIManager:scheduleIn(2.5, self.autosave_cb)
+    end
+end
+
 function TouchInput:onTouchStart(_, ges)
     self.sample_time=nil
     self:_debugEvent("touch-start", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
         if self:_touchIsPalm() then return true end
+        deferTouchSave(self)
         self.zoom_touch_x, self.zoom_touch_y = self:_touchPoint(ges)
         self.zoom_touch_active = self.zoom_touch_x ~= nil
         if self.zoom_pan_needs_settle then self:_scheduleZoomPanSettle() end
@@ -63,6 +73,7 @@ function TouchInput:onTouchStart(_, ges)
         return true
     end
     if self:_touchIsPalm() then return true end
+    deferTouchSave(self)
 
     local x, y = self:_touchPoint(ges)
     if not x then return true end
@@ -276,6 +287,38 @@ function TouchInput:onPageSwipe(_, ges)
     end
 
     return false
+end
+
+-- A pair of deliberate two-finger taps undoes one operation. The first
+-- tap still terminates an owned zoom contact; palm/finger drawing never arms it.
+function TouchInput:onHistoryTap(_, ges)
+    if self:_isDisplayPaused() then
+        self.two_finger_tap_at, self.two_finger_tap_pos = nil, nil
+        return true
+    end
+    local moved = self.zoom_touch_moved
+    self:onZoomTouchEnd(_, ges)
+    local pos = ges and ges.pos
+    if not pos or self:_touchIsPalm() or self.draw_with_finger or self.stroke or self.erasing
+        or self.zoom_stroke or self.zoom_erasing or self.selected_strokes
+        or self.dragging_selection or self.transform_gesture or self.shape_gesture
+        or (self.zoom > 1 and moved) then
+        self.two_finger_tap_at, self.two_finger_tap_pos = nil, nil
+        return true
+    end
+    local now = ges.time or time.now()
+    local elapsed = self.two_finger_tap_at and time.to_ms(now - self.two_finger_tap_at)
+    local previous = self.two_finger_tap_pos
+    local radius = Screen:scaleBySize(60)
+    local nearby = previous and (pos.x-previous.x)^2 + (pos.y-previous.y)^2 <= radius^2
+    if elapsed and elapsed >= 0 and elapsed <= 500 and nearby then
+        self.two_finger_tap_at, self.two_finger_tap_pos = nil, nil
+        if self.owner then self.owner:_undo() end
+    else
+        self.two_finger_tap_at = now
+        self.two_finger_tap_pos = {x=pos.x,y=pos.y}
+    end
+    return true
 end
 
 function TouchInput:onPageMultiSwipe(_, ges)

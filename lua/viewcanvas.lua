@@ -41,6 +41,15 @@ function View:_repaintScreenRegion(x,y,w,h,defer)
     local c=self.content
     x,y,w,h=Rect.clamp(x,y,w,h,c)
     if not x then return end
+    self:_flushZoomCacheInk()
+    if self.zoom_cache and self.zoom_cache_page == self.document:getPage()
+        and self.zoom_cache_revision == (self.document:getPage().revision or 0)
+        and not (self.hidden_stroke or self.shape_gesture or self.transform_gesture
+            or self.stroke or self.zoom_stroke or self.text_preview) then
+        self:_blitZoomCacheRegion(x,y,w,h)
+        if not defer then self:_refreshNow(x,y,w,h,"ui") end
+        return
+    end
     local view=Screen.bb:viewport(x,y,w,h)
     Raster.rect(view,0,0,w,h,require("ffi/blitbuffer").COLOR_WHITE)
     local ox=c.x-self.zoom_x*self.zoom-x

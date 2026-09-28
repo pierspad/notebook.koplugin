@@ -500,8 +500,8 @@ msgstr "Pagina %1 di %2 — %3"
 msgid "Triangle"
 msgstr "Triangolo"
 
-msgid "Side button"
-msgstr "Pulsante laterale"
+msgid "Pen side button"
+msgstr "Pulsante laterale della penna"
 
 msgid "Highlighter"
 msgstr "Evidenziatore"
@@ -542,3 +542,15 @@ msgstr "SVG (solo inchiostro)"
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "Apri questo file SVG in un browser o editor vettoriale."
+
+msgid "Order"
+msgstr "Ordine"
+
+msgid "Shape order"
+msgstr "Ordine della forma"
+
+msgid "Above text"
+msgstr "Sopra il testo"
+
+msgid "Below text"
+msgstr "Sotto il testo"

@@ -81,6 +81,32 @@ local function newCanvas()
     return canvas, doc
 end
 
+test("proximity frames cannot create dots before or after a real contact", function()
+    for _, zoom in ipairs({1, 2}) do
+        local canvas, doc = newCanvas()
+        canvas:setZoom(zoom)
+        canvas:onStylusEvent{slot=15, tool=1, x=120, y=150}
+        assertTrue(not canvas.stroke and not canvas.zoom_stroke, "hover started ink")
+        assertTrue(not canvas.pen_down, "hover became contact")
+        canvas:onStylusEvent{slot=15, tool=1, id=1, x=120, y=150}
+        canvas:onStylusEvent{slot=15, tool=1, id=-1}
+        canvas:onStylusEvent{slot=15, tool=1, x=300, y=350}
+        canvas:onStylusEvent{slot=15, tool=1, id=-1}
+        assertEq(#doc:getPage().strokes, 1, "hover dot stored")
+    end
+end)
+
+test("pen release on low numbered pen slot survives tool proximity reset", function()
+    local canvas, doc = newCanvas()
+    local old = Device.input.pen_slot
+    Device.input.pen_slot = 4
+    canvas:onStylusEvent{slot=4, tool=1, id=1, x=100, y=150}
+    canvas:onStylusEvent{slot=4, tool=0, id=-1}
+    assertTrue(not canvas.pen_down and not canvas.stroke, "release swallowed as palm")
+    assertEq(#doc:getPage().strokes, 1, "contact not committed")
+    Device.input.pen_slot = old
+end)
+
 test("stylus coordinates follow the touch rotation before drawing", function()
     local screen = Device.screen
     local old_rotation = screen.getTouchRotation

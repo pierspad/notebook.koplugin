@@ -1,7 +1,9 @@
 -- Chisel highlighter rasterizer. Kept separate from the stroke and shape paths:
 -- large markers are the dominant per-pixel cost at 2x zoom.
 local HighlightInk = {}
-local BLACK = require("ffi/blitbuffer").COLOR_BLACK
+local BB = require("ffi/blitbuffer")
+local BLACK = BB.COLOR_BLACK
+local paintRow
 local function stampHighlight(bb, x, y, r, color)
     local x0 = math.floor(x - r + 0.5)
     local y0 = math.floor(y - r + 0.5)
@@ -45,28 +47,31 @@ local function stampHighlight(bb, x, y, r, color)
     end
 
     for j = y0, y1 do
-        for i = x0, x1 do
-            local px = bb:getPixel(i, j)
-            if px then
-                local gray = px.getColor8 and px:getColor8().a or px.a
-                -- Only ever darken *towards* the tint, never past it.
-                if gray and gray > tint then
-                    bb:setPixel(i, j, color)
-                end
-            end
-        end
+        if x0 <= x1 then paintRow(bb, j, x0, x1, color, tint, false) end
     end
 end
 
 HighlightInk.stamp = stampHighlight
 
 -- Shared blend for both constant-width and pressure-varying sweeps.
-local function paintRow(bb, py, left, right, color, tint, preview)
+paintRow = function(bb, py, left, right, color, tint, preview)
     if preview then
-        -- Black hatching is visible with DU and leaves most text/paper
-        -- untouched. No per-pixel reads or gray waveform while moving.
         for px = left + (-(left+py) % 4), right, 4 do
             bb:setPixel(px, py, BLACK)
+        end
+    elseif type(color) ~= "number" and color.getR and bb.getType and
+        (bb:getType() == BB.TYPE_BBRGB32 or bb:getType() == BB.TYPE_BBRGB24
+            or bb:getType() == BB.TYPE_BBRGB16) then
+        -- Per-channel darken preserves colored ink as well as black ink.
+        -- Unlike luminance replacement it never brightens any channel and
+        -- repeated passes with the same marker are idempotent.
+        local r,g,b = color:getR(),color:getG(),color:getB()
+        for px = left, right do
+            local pixel = bb:getPixel(px, py)
+            local pr,pg,pb = pixel:getR(),pixel:getG(),pixel:getB()
+            if pr > r or pg > g or pb > b then
+                bb:setPixel(px, py, BB.ColorRGB32(math.min(pr,r),math.min(pg,g),math.min(pb,b)))
+            end
         end
     else
         for px = left, right do
@@ -82,7 +87,7 @@ end
 -- A constant-width marker has monotone square stamps. Find the first/last
 -- stamp touching each row directly, instead of building tables for every
 -- overlapping stamp. Rounding is checked against the original stamp formula.
-local function constantSegment(bb, x0, y0, x1, y1, r, color, tint, first, last, steps, preview)
+local function constantSegment(bb, x0, y0, x1, y1, r, color, tint, first, last, steps, preview, exclude_start)
     local dx, dy = x1-x0, y1-y0
     local size = math.max(1, math.floor(r*2+0.5))
     local function top(i) return math.floor(y0+dy*(i/steps)-r+0.5) end
@@ -90,6 +95,24 @@ local function constantSegment(bb, x0, y0, x1, y1, r, color, tint, first, last, 
     local yfirst = math.max(0,math.min(t0,t1))
     local ylast = math.min(bb:getHeight()-1,math.max(t0,t1)+size-1)
     local maxx = bb:getWidth()-1
+    local start_left = math.floor(x0-r+0.5)
+    local start_top = math.floor(y0-r+0.5)
+    if dy == 0 then
+        local a = math.floor(x0+dx*(first/steps)-r+0.5)
+        local b = math.floor(x0+dx*(last/steps)-r+0.5)
+        local left,right = math.max(0,math.min(a,b)),math.min(maxx,math.max(a,b)+size-1)
+        if left > right then return end
+        if exclude_start then
+            local lright, rleft = math.min(right,start_left-1), math.max(left,start_left+size)
+            for py=yfirst,ylast do
+                if left<=lright then paintRow(bb,py,left,lright,color,tint,preview) end
+                if rleft<=right then paintRow(bb,py,rleft,right,color,tint,preview) end
+            end
+        else
+            for py=yfirst,ylast do paintRow(bb,py,left,right,color,tint,preview) end
+        end
+        return
+    end
     for py=yfirst,ylast do
         local lo,hi = first,last
         if dy ~= 0 then
@@ -104,7 +127,14 @@ local function constantSegment(bb, x0, y0, x1, y1, r, color, tint, first, last, 
             local a = math.floor(x0+dx*(lo/steps)-r+0.5)
             local b = math.floor(x0+dx*(hi/steps)-r+0.5)
             local left,right = math.max(0,math.min(a,b)),math.min(maxx,math.max(a,b)+size-1)
-            if left<=right then paintRow(bb,py,left,right,color,tint,preview) end
+            if exclude_start and py >= start_top and py < start_top+size then
+                -- The previous segment already painted the shared endpoint.
+                -- Only the newly exposed strips need reads/writes; a dense
+                -- stream of samples otherwise repaints a width-squared square.
+                local a,b = math.min(right,start_left-1),math.max(left,start_left+size)
+                if left<=a then paintRow(bb,py,left,a,color,tint,preview) end
+                if b<=right then paintRow(bb,py,b,right,color,tint,preview) end
+            elseif left<=right then paintRow(bb,py,left,right,color,tint,preview) end
         end
     end
 end
@@ -113,7 +143,7 @@ end
 -- pixel once. On a broad marker the previous loop visited most pixels in
 -- several stamps; this preserves the same idempotent tint and clipping.
 function HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1, color,
-        first, last, steps, preview)
+        first, last, steps, preview, exclude_start)
     if math.min(r0, r1) < 2 and not preview then
         for i = first, last do
             local t = i / steps
@@ -125,7 +155,7 @@ function HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1, color,
     local tint = type(color) == "number" and color
         or (color.getColor8 and color:getColor8().a or color.a or 0)
     if r0 == r1 then
-        return constantSegment(bb,x0,y0,x1,y1,r0,color,tint,first,last,steps,preview)
+        return constantSegment(bb,x0,y0,x1,y1,r0,color,tint,first,last,steps,preview,exclude_start)
     end
     local width = bb.getWidth and bb:getWidth() or bb.w
     local height = bb.getHeight and bb:getHeight() or bb.h

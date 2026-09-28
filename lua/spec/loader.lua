@@ -1,6 +1,7 @@
 require("spec/support").installStubs()
 require("spec/uistubs").install({})
 local stale = {legacy=true}
+package.loaded._meta = stale
 package.loaded.canvas = stale
 package.loaded.document = stale
 for _,name in ipairs({'raster','textdialog','textsizepicker','notebooktoolbar','notebooksettings','galleryexport','canvasrefresh','liveink','geometryink','penpressure','polygonink','textcache','textpreview',
@@ -8,6 +9,7 @@ for _,name in ipairs({'raster','textdialog','textsizepicker','notebooktoolbar','
     package.loaded[name]=stale
 end
 local load = dofile("loader.lua")(".")
+assert(load("_meta").version == dofile("_meta.lua").version and package.loaded._meta == stale)
 local canvas = load("canvas")
 assert(canvas ~= stale and canvas.onStylusEvent)
 assert(load("canvas") == canvas)

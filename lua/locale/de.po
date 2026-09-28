@@ -500,8 +500,8 @@ msgstr "Seite %1 von %2 — %3"
 msgid "Triangle"
 msgstr "Dreieck"
 
-msgid "Side button"
-msgstr "Seitentaste"
+msgid "Pen side button"
+msgstr "Stift-Seitentaste"
 
 msgid "Highlighter"
 msgstr "Textmarker"
@@ -542,3 +542,15 @@ msgstr "SVG (nur Tinte)"
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "Diese SVG-Datei in einem Browser oder Vektoreditor öffnen."
+
+msgid "Order"
+msgstr "Reihenfolge"
+
+msgid "Shape order"
+msgstr "Reihenfolge der Form"
+
+msgid "Above text"
+msgstr "Über dem Text"
+
+msgid "Below text"
+msgstr "Unter dem Text"

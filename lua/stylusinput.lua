@@ -78,7 +78,7 @@ function StylusInput:onStylusEvent(slot)
     local is_pen = slot.tool == Input.TOOL_TYPE_PEN
         or slot.tool == Input.TOOL_TYPE_ERASER
         or slot.tool == Input.TOOL_TYPE_HIGHLIGHTER
-    if from_panel and not is_pen then
+    if from_panel and not is_pen and not pen_release then
         return false
     end
 
@@ -91,6 +91,10 @@ function StylusInput:onStylusEvent(slot)
     if not is_stylus then
         return false
     end
+
+    -- Proximity/tool frames have coordinates but no tracking contact yet.
+    -- They must never stamp the initial pen dot (also applies at 2x zoom).
+    if slot.id == nil and not self.pen_down then return true end
 
     -- KOReader may overwrite a persistent slot.tool with the barrel tool.
     -- Remember the physical Wacom end separately so releasing the button does

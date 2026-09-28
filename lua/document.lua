@@ -161,8 +161,18 @@ function Document:_inBatch()
     return self._batch ~= nil
 end
 
+-- Invalidate derived pixels/data only for the page that actually changed.
+function Document:_touchPage(index)
+    local page = self.pages[index or self.current_page]
+    if page then
+        page.revision = (page.revision or 0) + 1
+        page._serialized = nil
+    end
+end
+
 --- Records an operation and clears the redo branch.
 function Document:_record(op)
+    self:_touchPage(op.page)
     table.insert(self.undo_stack, op)
     if #self.undo_stack > MAX_HISTORY then
         table.remove(self.undo_stack, 1)
@@ -185,9 +195,40 @@ function Document:addStroke(stroke)
     table.insert(page.strokes, stroke)
     if self:_inBatch() then
         self._batch.changed = true
+        self:_touchPage()
         return
     end
     self:_record{ type = "add", page = self.current_page, stroke = stroke }
+end
+
+--- Move selected objects through the paint order as one undoable edit.
+function Document:reorderStrokes(selected, front)
+    local page = self:getPage()
+    local chosen, moved, rest = {}, {}, {}
+    for _, stroke in ipairs(selected) do chosen[stroke] = true end
+    for _, stroke in ipairs(page.strokes) do
+        local list = chosen[stroke] and moved or rest
+        list[#list + 1] = stroke
+    end
+    if #moved == 0 then return false end
+    local ordered = {}
+    for _, list in ipairs(front and {rest, moved} or {moved, rest}) do
+        for _, stroke in ipairs(list) do ordered[#ordered + 1] = stroke end
+    end
+    local changed = false
+    for i, stroke in ipairs(ordered) do
+        if stroke ~= page.strokes[i] then changed = true; break end
+    end
+    if not changed then return false end
+    local bounds
+    for _, stroke in ipairs(moved) do
+        bounds = require("rect").grow(bounds, stroke:getBounds())
+    end
+    local before = copyList(page.strokes)
+    page.strokes = ordered
+    self:_record{type="list", page=self.current_page, before=before,
+        after=copyList(ordered), bounds=bounds}
+    return true
 end
 
 --[[--
@@ -234,6 +275,7 @@ function Document:removeStrokes(strokes)
 
     if self:_inBatch() then
         self._batch.changed = true
+        self:_touchPage()
         return
     end
     self:_record{ type = "erase", page = self.current_page, removed = removed }
@@ -254,7 +296,10 @@ function Document:replaceStroke(original, replacement)
             self:beginBatch()
             page.strokes[i] = replacement
             self._batch.changed = true
-            self:commitBatch()
+            self:_touchPage()
+            local bounds = require("rect").grow(nil, original:getBounds())
+            bounds = require("rect").grow(bounds, replacement:getBounds())
+            self:commitBatch(bounds.x, bounds.y, bounds.w, bounds.h)
             return true
         end
     end
@@ -302,6 +347,7 @@ function Document:eraseAlongPath(path, r, shapes)
 
     if self._batch then
         self._batch.changed = true
+        self:_touchPage()
         self.dirty = true
     else
         self:_record{ type = "erase", page = self.current_page, removed = removed }
@@ -380,6 +426,7 @@ function Document:eraseAreaAlongPath(path, r, shapes)
             end
         end
         self._batch.changed = true
+        self:_touchPage()
         self.dirty = true
     else
         local before, after = copyList(strokes), {}
@@ -425,10 +472,17 @@ local function revert(doc, op)
         -- `removed` is in descending index order, so walking it backwards
         -- reinserts smallest index first: each stroke then lands where it was,
         -- because the ones before it are already back in front of it.
+        local restored, read = {}, 1
         for i = #op.removed, 1, -1 do
             local entry = op.removed[i]
-            table.insert(page.strokes, math.min(entry.index, #page.strokes + 1), entry.stroke)
+            while #restored < entry.index - 1 and read <= #page.strokes do
+                restored[#restored + 1] = page.strokes[read]
+                read = read + 1
+            end
+            restored[#restored + 1] = entry.stroke
         end
+        for i = read, #page.strokes do restored[#restored + 1] = page.strokes[i] end
+        page.strokes = restored
     elseif op.type == "move" then
         for _, stroke in ipairs(op.strokes) do stroke:translate(-op.dx, -op.dy) end
     elseif op.type == "list" then
@@ -445,14 +499,17 @@ local function reapply(doc, op)
     if op.type == "add" then
         table.insert(page.strokes, op.stroke)
     elseif op.type == "erase" then
-        for _, entry in ipairs(op.removed) do
-            for i = #page.strokes, 1, -1 do
-                if page.strokes[i] == entry.stroke then
-                    table.remove(page.strokes, i)
-                    break
-                end
+        local removed = {}
+        for _, entry in ipairs(op.removed) do removed[entry.stroke] = true end
+        local write = 1
+        for read = 1, #page.strokes do
+            local stroke = page.strokes[read]
+            if not removed[stroke] then
+                page.strokes[write] = stroke
+                write = write + 1
             end
         end
+        for i = #page.strokes, write, -1 do page.strokes[i] = nil end
     elseif op.type == "move" then
         for _, stroke in ipairs(op.strokes) do stroke:translate(op.dx, op.dy) end
     elseif op.type == "list" then
@@ -504,6 +561,7 @@ function Document:undo()
     local op = table.remove(self.undo_stack)
     if not op then return nil end
     revert(self, op)
+    self:_touchPage(op.page)
     table.insert(self.redo_stack, op)
     self.dirty = true
     self:_clampPage()
@@ -515,6 +573,7 @@ function Document:redo()
     local op = table.remove(self.redo_stack)
     if not op then return nil end
     reapply(self, op)
+    self:_touchPage(op.page)
     table.insert(self.undo_stack, op)
     self.dirty = true
     self:_clampPage()
@@ -672,9 +731,13 @@ function Document:save()
 
     local pages = {}
     for i, page in ipairs(self.pages) do
-        local strokes = {}
-        for j, stroke in ipairs(page.strokes) do
-            strokes[j] = stroke:serialize()
+        local strokes = page._serialized
+        if not strokes then
+            strokes = {}
+            for j, stroke in ipairs(page.strokes) do
+                strokes[j] = stroke:serialize()
+            end
+            page._serialized = strokes
         end
         pages[i] = { strokes = strokes, template = page.template, background = page.background }
     end

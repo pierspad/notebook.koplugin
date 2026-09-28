@@ -474,7 +474,7 @@ msgstr ""
 msgid "Triangle"
 msgstr ""
 
-msgid "Side button"
+msgid "Pen side button"
 msgstr ""
 
 msgid "Highlighter"
@@ -515,4 +515,16 @@ msgid "SVG (ink only)"
 msgstr ""
 
 msgid "Open this SVG file in a browser or vector editor."
+msgstr ""
+
+msgid "Order"
+msgstr ""
+
+msgid "Shape order"
+msgstr ""
+
+msgid "Above text"
+msgstr ""
+
+msgid "Below text"
 msgstr ""

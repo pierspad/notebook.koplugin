@@ -15,17 +15,42 @@ function ZoomCache:_clearZoomCache()
     if self.zoom_cache then self.zoom_cache:free() end
     self.zoom_cache = nil
     self.zoom_cache_page = nil
+    self.zoom_cache_revision = nil
+    self.zoom_cache_key = nil
     self.zoom_cache_pending=nil
+    self.zoom_cache_pending_revision=nil
 end
 
 function ZoomCache:_flushZoomCacheInk()
     local pending=self.zoom_cache_pending
+    local revision=self.zoom_cache_pending_revision
     self.zoom_cache_pending=nil
+    self.zoom_cache_pending_revision=nil
     if self.zoom_cache and pending then
         local c=self.content
         Renderer.drawPage(self.zoom_cache,{strokes=pending},self.zoom,-c.x*self.zoom,-c.y*self.zoom,
             Screen.isColorEnabled and Screen:isColorEnabled())
+        self.zoom_cache_revision = revision
     end
+end
+
+-- Repair just the affected page rectangle, including pixels outside the
+-- current viewport. A later pan must not resurrect ink removed by history.
+function ZoomCache:_repairZoomCacheRegion(x, y, w, h)
+    if not self.zoom_cache or self.zoom_cache_page ~= self.document:getPage() then return false end
+    self:_flushZoomCacheInk()
+    local c, scale = self.content, self.zoom
+    local rx,ry,rw,rh = Rect.clamp((x-c.x)*scale,(y-c.y)*scale,w*scale,h*scale,
+        {x=0,y=0,w=self.zoom_cache:getWidth(),h=self.zoom_cache:getHeight()})
+    if rx then
+        local view = self.zoom_cache:viewport(rx,ry,rw,rh)
+        Raster.rect(view,0,0,rw,rh,Blitbuffer.COLOR_WHITE)
+        self:_drawZoomPaper(view,{x=-rx,y=-ry,w=c.w*scale,h=c.h*scale})
+        Renderer.drawPage(view,self.document:getPage(),scale,-c.x*scale-rx,-c.y*scale-ry,
+            Screen.isColorEnabled and Screen:isColorEnabled())
+    end
+    self.zoom_cache_revision = self.document:getPage().revision or 0
+    return true
 end
 
 function ZoomCache:_blitZoomCacheRegion(x, y, w, h)
@@ -65,7 +90,10 @@ function ZoomCache:_flushZoomErase()
             Screen.isColorEnabled and Screen:isColorEnabled())
     end
     self:_flushZoomCacheInk()
-    if self.zoom_cache then repair(self.zoom_cache,c.x,c.y) end
+    if self.zoom_cache then
+        repair(self.zoom_cache,c.x,c.y)
+        self.zoom_cache_revision = self.document:getPage().revision or 0
+    end
     local x,y,w,h=Rect.clamp(c.x+(dirty.x-self.zoom_x)*scale,c.y+(dirty.y-self.zoom_y)*scale,
         dirty.w*scale,dirty.h*scale,c)
     if not x then return end
@@ -79,12 +107,17 @@ function ZoomCache:_renderZoom(bb, direct)
     local c = self.content
     local view = bb:viewport(c.x, c.y, c.w, c.h)
     local page = self.document:getPage()
+    local background = page.background
+    local key = table.concat({self.document:templateFor() or "", self.zoom,
+        c.x,c.y,c.w,c.h, tostring(Screen.isColorEnabled and Screen:isColorEnabled()),
+        background and background.file or "", background and background.page or ""}, "|")
     local editing=self.transform_gesture or self.shape_gesture or self.hidden_stroke
     if editing then direct=true end
     local draw_page=self:_visiblePage()
     -- Build the enlarged page once. Panning then copies a viewport instead of
     -- rasterizing every stroke and every paper line for each touch sample.
-    if not direct and bb.getType and (not self.zoom_cache or self.zoom_cache_page ~= page) then
+    if not direct and bb.getType and (not self.zoom_cache or self.zoom_cache_page ~= page
+        or self.zoom_cache_revision ~= (page.revision or 0) or self.zoom_cache_key ~= key) then
         self:_clearZoomCache()
         local w, h = c.w * self.zoom, c.h * self.zoom
         self.zoom_cache = Blitbuffer.new(w, h, bb:getType())
@@ -94,6 +127,8 @@ function ZoomCache:_renderZoom(bb, direct)
             -c.x * self.zoom, -c.y * self.zoom,
             Screen.isColorEnabled and Screen:isColorEnabled())
         self.zoom_cache_page = page
+        self.zoom_cache_revision = page.revision or 0
+        self.zoom_cache_key = key
     end
     if self.zoom_cache and not direct then
         view:blitFrom(self.zoom_cache, 0, 0,

@@ -497,8 +497,8 @@ msgstr "ページ %1 / %2 — %3"
 msgid "Triangle"
 msgstr "三角形"
 
-msgid "Side button"
-msgstr "サイドボタン"
+msgid "Pen side button"
+msgstr "ペンのサイドボタン"
 
 msgid "Highlighter"
 msgstr "蛍光ペン"
@@ -539,3 +539,15 @@ msgstr "SVG（インクのみ）"
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "このSVGファイルをブラウザーまたはベクターエディターで開いてください。"
+
+msgid "Order"
+msgstr "重なり順"
+
+msgid "Shape order"
+msgstr "図形の重なり順"
+
+msgid "Above text"
+msgstr "テキストの上"
+
+msgid "Below text"
+msgstr "テキストの下"

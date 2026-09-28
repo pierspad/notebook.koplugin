@@ -200,6 +200,30 @@ function Canvas:_showLassoMenu(selected)
         end,
         bbox = display or { x = self.content.x + 100, y = self.content.y + 100, w = 200, h = 100 },
         has_clipboard = Canvas.clipboard ~= nil and #Canvas.clipboard > 0,
+        on_order = #selected == 1 and selected[1].shape_kind and function()
+            self.lasso_menu = nil
+            local dialog
+            local function apply(front)
+                UIManager:close(dialog)
+                self:_deselectLasso()
+                if self.document:reorderStrokes(selected, front) then
+                    if self.zoom > 1 then self:_clearZoomCache() end
+                    self:_repaintRegion(selected[1]:getBounds())
+                    UIManager:unschedule(self.autosave_cb)
+                    UIManager:scheduleIn(2.5, self.autosave_cb)
+                    if self.on_change then self:on_change() end
+                end
+                self:_showLassoMenu(selected)
+            end
+            dialog = require("ui/widget/buttondialog"):new{
+                title = _("Shape order"),
+                buttons = {
+                    {{text=_("Above text"), callback=function() apply(true) end}},
+                    {{text=_("Below text"), callback=function() apply(false) end}},
+                },
+            }
+            UIManager:show(dialog)
+        end or nil,
         on_edit = #selected == 1 and selected[1].text and self.on_edit_text and function()
             local text = selected[1]
             self.lasso_menu = nil

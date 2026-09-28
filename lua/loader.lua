@@ -5,7 +5,7 @@ return function(directory)
     local shared_require = require
     local cache = {}
     local own = {}
-    for name in ("actionmenu canvas document export gallery i18n lassomenu lasso launcherbar library " ..
+    for name in ("_meta actionmenu canvas document export gallery i18n lassomenu lasso launcherbar library " ..
         "newnotebook notebook pagepanel papersample pdfbackground pressure rect raster renderer safe settings shape share " ..
         "stroke textobject textpreview textcache textdialog textsizepicker polygonink penpressure penink liveink viewcanvas xopp svg " ..
         "exportprogress " ..

@@ -15,6 +15,9 @@ local CanvasRender = {}
 -- and two overlapping refreshes would flicker.
 function CanvasRender:_repaintRegion(x, y, w, h, defer_refresh)
     if self.zoom > 1 then
+        if not (self.hidden_stroke or self.shape_gesture or self.transform_gesture) then
+            self:_repairZoomCacheRegion(x,y,w,h)
+        end
         local sx,sy=self:_viewPoint(x,y)
         return self:_repaintScreenRegion(sx,sy,w*self.zoom,h*self.zoom,defer_refresh)
     end
@@ -66,8 +69,45 @@ function CanvasRender:paintTo(bb, x, y)
         self.background_cache=bb:copy()
         self.background_cache_key=cache_key
     end
+    -- Two most recently rendered pages bound bitmap memory regardless of
+    -- notebook length. Never cache temporary selection/preview pixels.
+    local stable = not (self.hidden_stroke or self.stroke or self.transform_gesture
+        or self.shape_gesture or self.text_preview or self.selected_strokes
+        or self.document._batch)
+    self.page_render_cache = self.page_render_cache or {}
+    local bpp = bb.getType and Blitbuffer.TYPE_TO_BPP and Blitbuffer.TYPE_TO_BPP[bb:getType()] or 8
+    -- At most 12 MiB of page snapshots, also on RGB framebuffers.
+    local snapshot_bytes = self.dimen.w * self.dimen.h * bpp / 8
+    local cache_limit = math.min(2, math.floor(12 * 1024 * 1024 / snapshot_bytes))
+    stable = stable and cache_limit > 0
+    local key = cache_key .. "|" .. tostring(page.revision or 0)
+        .. "|" .. tostring(Screen.isColorEnabled and Screen:isColorEnabled())
+        .. "|" .. self.dimen.w .. "|" .. self.dimen.h .. "|" .. bpp
+        .. "|" .. x .. "|" .. y .. "|" .. self.content.x .. "|" .. self.content.y
+        .. "|" .. self.content.w .. "|" .. self.content.h
+    if stable then
+        for i, entry in ipairs(self.page_render_cache) do
+            if entry.key == key then
+                bb:blitFrom(entry.bb,x,y,x,y,self.dimen.w,self.dimen.h)
+                table.remove(self.page_render_cache,i)
+                table.insert(self.page_render_cache,1,entry)
+                return
+            end
+        end
+    end
     for _,stroke in ipairs(self:_visiblePage().strokes) do
         if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
+    end
+    if stable then
+        for i = #self.page_render_cache, 1, -1 do
+            if self.page_render_cache[i].page == page then
+                table.remove(self.page_render_cache,i).bb:free()
+            end
+        end
+        while #self.page_render_cache >= cache_limit do
+            table.remove(self.page_render_cache).bb:free()
+        end
+        table.insert(self.page_render_cache,1,{key=key,page=page,bb=bb:copy()})
     end
     local preview=self.transform_gesture and self.transform_gesture.preview or self.stroke
     if preview then Renderer.drawStroke(bb,preview,nil,Screen.isColorEnabled and Screen:isColorEnabled()) end

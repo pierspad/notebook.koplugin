@@ -75,3 +75,19 @@ for _=1,600 do
     end end
 end
 print('marker: 600 fractional/clipped/reversed sweeps and binary previews match reference stamps')
+
+-- Dense incremental sweeps must match full overlapping stamps, even on
+-- reversals, with only new strips visited after the shared endpoint.
+for _, preview in ipairs({false,true}) do
+    local actual, expected = FakeBB.new(96,88), FakeBB.new(96,88)
+    local points={{30.2,30.5},{32.7,31.1},{33.1,33.8},{31.4,35.2},{30.2,30.5}}
+    for i=1,#points do
+        local a,b=points[math.max(1,i-1)],points[i]
+        HighlightInk.drawSegment(actual,a[1],a[2],18,b[1],b[2],18,160,0,1,1,preview,i>1)
+        HighlightInk.drawSegment(expected,a[1],a[2],18,b[1],b[2],18,160,0,1,1,preview)
+    end
+    for y=0,87 do for x=0,95 do
+        assert(actual:get(x,y)==expected:get(x,y), 'incremental marker lost shared coverage')
+    end end
+end
+print('marker incremental strips match full raster on turns and reversals')

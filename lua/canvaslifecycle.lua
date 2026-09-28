@@ -24,6 +24,7 @@ end
 function Lifecycle:pause()
     if self.suspended then return end
     self.suspended = true
+    self.two_finger_tap_at, self.two_finger_tap_pos = nil, nil
     self:_unscheduleCanvasCallbacks()
     self:_cancelZoomRefresh()
     self.shape_snap:cancel()
@@ -91,6 +92,9 @@ function Lifecycle:stop()
     require("pdfbackground").clear()
     if self.background_cache then self.background_cache:free(); self.background_cache=nil end
     self.background_cache_key=nil
+    for _, entry in ipairs(self.page_render_cache or {}) do entry.bb:free() end
+    self.page_render_cache=nil
+    self.two_finger_tap_at, self.two_finger_tap_pos=nil,nil
     self:_endErase()
     self.physical_pen_tool = nil
     self.barrel_down = false

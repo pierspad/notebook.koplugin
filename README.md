@@ -24,6 +24,31 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 
 Notebooks are stored in `koreader/notebook/`.
 
+### Development build: fluidity and undo gestures
+
+The notebook toolbar shows the installed plugin version beneath the clock.
+To undo, tap twice with **two fingers per tap**, in the same area, within half
+a second. The gesture is disabled while drawing with fingers, selecting objects,
+using the stylus or sleeping. Redo remains available from the toolbar.
+
+Page rendering retains at most two recent pages (12 MiB maximum); edits,
+undo/redo and background changes invalidate the derived pixels. Multi-stroke
+undo/redo uses one pass through the stroke list. Atomic saves reuse serialized
+stroke tables for unchanged pages, but still write a complete notebook.
+
+To test the current checkout on a configured Kindle:
+
+```sh
+make ci
+make deploy FLAGS=--restart
+```
+
+In the local multi-plugin workspace, `./install.sh` also verifies, packages,
+installs and restarts KOReader. The installable zip is in `build/`; extract its
+`notebook.koplugin` directory into `koreader/plugins/` and restart KOReader for
+manual installation. `tools/bench-notebook.lua` runs a four-page benchmark with
+KOReader's native renderer, without changing the display or existing notebooks.
+
 ### Input debug log
 
 To capture a device-specific pen problem, create a new notebook named `_debug_`

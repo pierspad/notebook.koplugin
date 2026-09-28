@@ -25,3 +25,25 @@ for _,points in ipairs({{100,300,1600,300},{100,100,1700,2100},{100,100,125,125}
  end
 end
 bb:free()
+-- Dense input stream: each new sample shares a broad endpoint square.
+local dense=BB.new(1860,2480,BB.TYPE_BB8)
+for _,radius in ipairs({24,96,240}) do
+ for _,preview in ipairs({false,true}) do
+    local function bench(ink,incremental)
+        local started=os.clock()
+        for _=1,20 do
+            dense:fill(BB.COLOR_WHITE)
+            ink.drawSegment(dense,300,600,radius,300,600,radius,color,0,1,1,preview)
+            for i=1,300 do
+                ink.drawSegment(dense,300+(i-1)*2,600,radius,300+i*2,600,radius,
+                    color,0,1,1,preview,incremental)
+            end
+        end
+        return (os.clock()-started)*1000/20
+    end
+    local new=bench(current,true);local old=previous and bench(previous,false)
+    print(string.format('dense width=%d preview=%s: %.3f ms%s',radius*2,tostring(preview),new,
+        old and string.format(' (previous %.3f ms, %.2fx)',old,old/new) or ''))
+ end
+end
+dense:free()

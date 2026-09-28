@@ -49,6 +49,7 @@ function ZoomCanvas:_endZoomContact()
             if self.zoom_cache and self.zoom_cache_page == self.document:getPage() then
                 self.zoom_cache_pending=self.zoom_cache_pending or {}
                 self.zoom_cache_pending[#self.zoom_cache_pending+1]=stroke
+                self.zoom_cache_pending_revision=self.document:getPage().revision or 0
             else
                 self:_clearZoomCache()
             end
@@ -61,6 +62,7 @@ function ZoomCanvas:_endZoomContact()
         changed, changed_tool = true, "eraser"
         self.document:commitBatch()
         self:_flushZoomErase()
+        if self.zoom_cache then self.zoom_cache_revision=self.document:getPage().revision or 0 end
         if self.document.dirty then
             UIManager:unschedule(self.autosave_cb)
             UIManager:scheduleIn(2.5, self.autosave_cb)

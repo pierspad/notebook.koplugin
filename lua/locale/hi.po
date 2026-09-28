@@ -495,8 +495,8 @@ msgstr "पृष्ठ %1 / %2 — %3"
 msgid "Triangle"
 msgstr "त्रिभुज"
 
-msgid "Side button"
-msgstr "साइड बटन"
+msgid "Pen side button"
+msgstr "पेन का साइड बटन"
 
 msgid "Highlighter"
 msgstr "हाइलाइटर"
@@ -537,3 +537,15 @@ msgstr "SVG (केवल स्याही)"
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "इस SVG फ़ाइल को ब्राउज़र या वेक्टर संपादक में खोलें।"
+
+msgid "Order"
+msgstr "क्रम"
+
+msgid "Shape order"
+msgstr "आकृति का क्रम"
+
+msgid "Above text"
+msgstr "पाठ के ऊपर"
+
+msgid "Below text"
+msgstr "पाठ के नीचे"

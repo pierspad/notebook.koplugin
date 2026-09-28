@@ -270,6 +270,8 @@ function Notebook:_redo()
 end
 
 function Notebook:_afterHistoryChange(page, x, y, w, h)
+    UIManager:unschedule(self.canvas.autosave_cb)
+    UIManager:scheduleIn(2.5, self.canvas.autosave_cb)
     if page ~= self.document.current_page then
         if self.canvas.zoom > 1 then
             self.canvas:setZoom(1)
@@ -291,7 +293,7 @@ function Notebook:_afterHistoryChange(page, x, y, w, h)
         self:_fullRepaint()
         return
     end
-    self:_refreshToolbar()
+    self:_onDocumentChanged()
 end
 
 function Notebook:_turnPage(delta)
@@ -308,6 +310,11 @@ function Notebook:_turnPage(delta)
         self.document:addPage()
     else
         self.document:goToPage(target)
+    end
+    if self.document.dirty then
+        -- Let the requested page appear before the synchronous atomic save.
+        UIManager:unschedule(self.canvas.autosave_cb)
+        UIManager:scheduleIn(2.5, self.canvas.autosave_cb)
     end
     self:_fullRepaint()
 end

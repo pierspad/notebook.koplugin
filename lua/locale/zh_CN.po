@@ -494,8 +494,8 @@ msgstr "第 %1 页，共 %2 页 — %3"
 msgid "Triangle"
 msgstr "三角形"
 
-msgid "Side button"
-msgstr "侧边按钮"
+msgid "Pen side button"
+msgstr "笔侧键"
 
 msgid "Highlighter"
 msgstr "荧光笔"
@@ -536,3 +536,15 @@ msgstr "SVG（仅笔迹）"
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "请在浏览器或矢量编辑器中打开此 SVG 文件。"
+
+msgid "Order"
+msgstr "层叠顺序"
+
+msgid "Shape order"
+msgstr "形状层叠顺序"
+
+msgid "Above text"
+msgstr "置于文字上方"
+
+msgid "Below text"
+msgstr "置于文字下方"

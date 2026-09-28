@@ -496,8 +496,8 @@ msgstr "Страница %1 из %2 — %3"
 msgid "Triangle"
 msgstr "Треугольник"
 
-msgid "Side button"
-msgstr "Боковая кнопка"
+msgid "Pen side button"
+msgstr "Боковая кнопка пера"
 
 msgid "Highlighter"
 msgstr "Маркер"
@@ -538,3 +538,15 @@ msgstr "SVG (только штрихи)"
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "Откройте этот файл SVG в браузере или векторном редакторе."
+
+msgid "Order"
+msgstr "Порядок"
+
+msgid "Shape order"
+msgstr "Порядок фигуры"
+
+msgid "Above text"
+msgstr "Над текстом"
+
+msgid "Below text"
+msgstr "Под текстом"

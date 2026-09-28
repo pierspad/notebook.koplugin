@@ -159,6 +159,8 @@ function Canvas:init()
 
     -- Background auto-save on writing pause
     self.autosave_cb = function()
+        -- A direct invocation and a scheduled retry must not fork two timers.
+        UIManager:unschedule(self.autosave_cb)
         if self.stroke or self.erasing or self.dragging_selection or self.shape_gesture
             or self.transform_gesture or self.zoom_stroke or self.zoom_erasing or self.text_preview
             or self.zoom_touch_active or self.zoom_pan_dirty then
@@ -230,11 +232,11 @@ function Canvas:init()
                 GestureRange:new{ ges = "tap", range = zoom_contact_range },
                 GestureRange:new{ ges = "hold_release", range = zoom_contact_range },
                 GestureRange:new{ ges = "double_tap", range = zoom_contact_range },
-                GestureRange:new{ ges = "two_finger_tap", range = zoom_contact_range },
                 GestureRange:new{ ges = "two_finger_pan_release", range = zoom_contact_range },
                 GestureRange:new{ ges = "two_finger_hold_release", range = zoom_contact_range },
                 GestureRange:new{ ges = "two_finger_hold_pan_release", range = zoom_contact_range },
             },
+            HistoryTap = { GestureRange:new{ ges = "two_finger_tap", range = zoom_contact_range } },
             PageSwipe         = { GestureRange:new{ ges = "swipe",            range = zoom_contact_range } },
             PageMultiSwipe    = { GestureRange:new{ ges = "multiswipe",       range = zoom_contact_range } },
             PageTwoFingerSwipe = { GestureRange:new{ ges = "two_finger_swipe", range = zoom_contact_range } },

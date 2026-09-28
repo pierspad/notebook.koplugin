@@ -108,6 +108,17 @@ function LassoMenu:init()
         table.insert(buttons, HorizontalSpan:new{ width = pad })
     end
 
+    if self.on_order then
+        table.insert(buttons, FloatingButton:new{
+            text = _("Order"),
+            callback = function()
+                UIManager:close(self)
+                self.on_order()
+            end,
+        })
+        table.insert(buttons, HorizontalSpan:new{ width = pad })
+    end
+
     -- 1. Taglia (Cut)
     table.insert(buttons, FloatingButton:new{
         icon = "notebook.cut",
