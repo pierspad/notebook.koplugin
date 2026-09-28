@@ -45,8 +45,9 @@ end
 
 function ZoomRefresh:_zoomPan(dx, dy)
     local c = self.content
-    local next_x = Zoom.clamp(self.zoom_x - dx / self.zoom, c.x, c.w, self.zoom)
-    local next_y = Zoom.clamp(self.zoom_y - dy / self.zoom, c.y, c.h, self.zoom)
+    local factor = (self.pan_sensitivity or Tuning.pan_sensitivity or 2) / self.zoom
+    local next_x = Zoom.clamp(self.zoom_x - dx * factor, c.x, c.w, self.zoom)
+    local next_y = Zoom.clamp(self.zoom_y - dy * factor, c.y, c.h, self.zoom)
     if math.floor(next_x*self.zoom) == math.floor(self.zoom_x*self.zoom)
         and math.floor(next_y*self.zoom) == math.floor(self.zoom_y*self.zoom) then return end
     if self.selected_strokes then self:_deselectLasso() end

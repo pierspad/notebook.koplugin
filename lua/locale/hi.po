@@ -528,3 +528,12 @@ msgstr "पाठ शैली"
 
 msgid "Text size"
 msgstr "पाठ का आकार"
+
+msgid "SVG"
+msgstr "SVG"
+
+msgid "SVG (ink only)"
+msgstr "SVG (केवल स्याही)"
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "इस SVG फ़ाइल को ब्राउज़र या वेक्टर संपादक में खोलें।"

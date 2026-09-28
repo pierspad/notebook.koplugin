@@ -48,7 +48,7 @@ local stroke=doc:getPage().strokes[1]
 assert(stroke and stroke:count()==2)
 local x,y=stroke:getPoint(1)
 assert(x==50 and y==60,"zoomed pen stored screen rather than page coordinates")
-canvas:_zoomPan(-200,-300)
+canvas:_zoomPan(-100,-150)
 assert(canvas.zoom_x==100 and canvas.zoom_y==150)
 assert(canvas.zoom_pan_needs_settle, "pan did not schedule cleanup")
 canvas.zoom_touch_x = 12

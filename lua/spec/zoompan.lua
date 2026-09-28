@@ -67,7 +67,7 @@ end
 reset()
 gesture('touch',200,200);gesture('pan',180,180)
 advance(100);gesture('pan',160,40) -- leaves paper, still our drag
-assert(c.zoom_y==140 and c.zoom_touch_active,'pan stopped at toolbar')
+assert(c.zoom_y==220 and c.zoom_touch_active,'pan stopped at toolbar')
 advance(5000)
 assert(fullCount()==0,'resting contact was interrupted')
 gesture('pan_release',160,40)
@@ -87,7 +87,7 @@ assert(#calls==0 and renders==0,'stationary tap forced a page refresh')
 -- A hold becomes hold_pan, whose release a real toolbar button can consume.
 reset();gesture('touch',200,200);gesture('hold',200,200)
 gesture('hold_pan',160,40);gesture('hold',160,40)
-assert(c.zoom_y==140 and toolbar_calls==0,'held pan escaped to toolbar')
+assert(c.zoom_y==220 and toolbar_calls==0,'held pan escaped to toolbar')
 gesture('hold_release',160,40)
 assert(not c.zoom_touch_active and toolbar_calls==0,'toolbar stole hold release')
 advance(1200);assert(fullCount()==1,'held pan never cleaned up')
@@ -104,7 +104,7 @@ for i=1,20 do
     gesture('touch',200,200);gesture('pan',198,198);gesture('pan',196,196)
     gesture('pan_release',196,196);advance(100)
 end
-assert(fullCount()==0 and c.zoom_x==40 and c.zoom_y==100,'rapid pans lost movement or flashed')
+assert(fullCount()==0 and c.zoom_x==80 and c.zoom_y==140,'rapid pans lost movement or flashed')
 advance(1100);assert(fullCount()==1)
 
 -- All terminal gesture types clear ownership outside the content rectangle.

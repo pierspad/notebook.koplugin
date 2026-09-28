@@ -155,7 +155,7 @@ function Card:init()
     }
     if isExport(self.item) then
         self.ribbon = TextWidget:new{
-            text = self.item.is_xopp and _("XOPP") or _("PDF"),
+            text = self.item.is_svg and _("SVG") or (self.item.is_xopp and _("XOPP") or _("PDF")),
             face = Font:getFace("cfont", 20),
             fgcolor = Blitbuffer.COLOR_WHITE,
             bold = true,
@@ -1092,6 +1092,9 @@ function Gallery:_open(item)
     if item.is_pdf then
         return self:_openPDF(item)
     end
+    if item.is_svg then
+        return self:_error(_("Open this SVG file in a browser or vector editor."))
+    end
     if item.is_xopp then
         return self:_error(_("Open this XOPP file with Xournal++."))
     end
@@ -1180,6 +1183,7 @@ function Gallery:_exportMenu(notebooks)
         title = _("Export"),
         actions = {
             {icon="notebook.export", text=_("PDF"), callback=function() self:_exportMany(notebooks,"pdf") end},
+            {icon="notebook.export", text=_("SVG (ink only)"), callback=function() self:_exportMany(notebooks,"svg") end},
             {icon="notebook.export", text=_("Xournal++"), callback=function() self:_exportMany(notebooks,"xopp") end},
         },
     })

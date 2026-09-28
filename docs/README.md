@@ -554,6 +554,7 @@ Parameters are persisted in `G_reader_settings` under the `notebook_tuning_*` pr
 | **Input** | `jump_base` | 48 | 8–300 | 8 | Permitted baseline spatial jump distance between consecutive samples regardless of timestamp delta. |
 | **Input** | `max_jump_gap_ms` | 120 | 20–500 | 20 | Maximum time delta over which pen velocity is evaluated, bounding jump distance calculations across delayed events. |
 | **Input** | `outlier_limit` | 8 | 1–40 | 1 | Number of consecutive rejected outliers before resetting tracking, preventing dead strokes during genuine rapid transitions. |
+| **Input** | `pan_sensitivity` | 2 | 1–5 | 1 | Sensitivity multiplier for zoom pan scrolling. Higher values cover more page distance per touch gesture. |
 
 ### 8.3 Diagnostics Dump Protocol
 

@@ -507,3 +507,12 @@ msgstr ""
 
 msgid "Text size"
 msgstr ""
+
+msgid "SVG"
+msgstr ""
+
+msgid "SVG (ink only)"
+msgstr ""
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr ""

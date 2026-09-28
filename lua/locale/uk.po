@@ -529,3 +529,12 @@ msgstr "Накреслення тексту"
 
 msgid "Text size"
 msgstr "Розмір тексту"
+
+msgid "SVG"
+msgstr "SVG"
+
+msgid "SVG (ink only)"
+msgstr "SVG (лише штрихи)"
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "Відкрийте цей файл SVG у браузері або векторному редакторі."

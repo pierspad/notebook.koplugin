@@ -127,6 +127,11 @@ Tuning.spec = {
         doc = "Consecutive refusals before the position is believed after all, "
             .. "so a genuine discontinuity cannot wedge the stroke permanently.",
     },
+    pan_sensitivity = {
+        default = 2, min = 1, max = 5, step = 1,
+        doc = "Sensitivity multiplier for zoom pan scrolling. Higher values "
+            .. "cover more page distance per touch gesture.",
+    },
 }
 
 --[[--
@@ -155,7 +160,7 @@ Tuning.tabs = {
     } },
     { id = "input", keys = {
         "palm_grace_ms", "max_pen_speed", "jump_base", "max_jump_gap_ms",
-        "outlier_limit",
+        "outlier_limit", "pan_sensitivity",
     } },
 }
 

@@ -531,3 +531,12 @@ msgstr "Estilo do texto"
 
 msgid "Text size"
 msgstr "Tamanho do texto"
+
+msgid "SVG"
+msgstr "SVG"
+
+msgid "SVG (ink only)"
+msgstr "SVG (apenas tinta)"
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "Abra este ficheiro SVG num navegador ou editor vetorial."

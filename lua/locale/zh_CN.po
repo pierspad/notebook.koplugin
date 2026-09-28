@@ -527,3 +527,12 @@ msgstr "文字样式"
 
 msgid "Text size"
 msgstr "文字大小"
+
+msgid "SVG"
+msgstr "SVG"
+
+msgid "SVG (ink only)"
+msgstr "SVG（仅笔迹）"
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "请在浏览器或矢量编辑器中打开此 SVG 文件。"

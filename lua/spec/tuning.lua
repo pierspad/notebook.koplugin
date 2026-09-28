@@ -199,6 +199,7 @@ test("every tuning default is intentional and accounted for", function()
         jump_base            = 48,
         max_jump_gap_ms      = 120,
         outlier_limit        = 8,
+        pan_sensitivity      = 2,
     }
     for key, value in pairs(was) do
         assertTrue(Tuning.spec[key], key .. " is gone from the spec")

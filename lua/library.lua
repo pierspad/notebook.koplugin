@@ -287,15 +287,17 @@ function Library.list(folder, sort)
                 local name = entry:match("^(.+)%" .. EXT .. "$")
                 local pdf_name = not name and entry:match("^(.+)%.pdf$") or nil
                 local xopp_name = not name and not pdf_name and entry:match("^(.+)%.xopp$") or nil
-                if name or pdf_name or xopp_name then
+                local svg_name = entry:match("^(.+)%.svg$")
+                if name or pdf_name or xopp_name or svg_name then
                     table.insert(files, {
-                        name = name or pdf_name or xopp_name,
+                        name = name or pdf_name or xopp_name or svg_name,
                         path = path,
                         folder = folder,
                         is_pdf = pdf_name ~= nil,
                         is_xopp = xopp_name ~= nil,
-                        is_export = pdf_name ~= nil or xopp_name ~= nil,
-                        extension = pdf_name and "pdf" or (xopp_name and "xopp" or nil),
+                        is_svg = svg_name ~= nil,
+                        is_export = pdf_name ~= nil or xopp_name ~= nil or svg_name ~= nil,
+                        extension = pdf_name and "pdf" or (xopp_name and "xopp" or (svg_name and "svg" or nil)),
                         modified = attr.modification or 0,
                         size = attr.size or 0,
                     })

@@ -3,6 +3,7 @@ local Document = require("document")
 local Export = require("export")
 local ExportProgress = require("exportprogress")
 local Xopp = require("xopp")
+local Svg = require("svg")
 local InfoMessage = require("ui/widget/infomessage")
 local Library = require("library")
 local UIManager = require("ui/uimanager")
@@ -252,7 +253,9 @@ function Gallery:_exportMany(notebooks, format)
                 end
                 return Safe.later("gallery:export-page", pageStep)
             end
-            local ok,extra = Xopp.toXOPP(doc,out)
+            local ok,extra
+            if format == "svg" then ok,extra = Svg.toSVG(doc,out)
+            else ok,extra = Xopp.toXOPP(doc,out) end
             if ok then
                 done, last_path, last_extra = done + 1, out, extra
             else

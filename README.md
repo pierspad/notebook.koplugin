@@ -63,7 +63,15 @@ marker file) and reopen Notebook to stop logging. You can then delete both log f
 - **Multi-page Notebooks & Paper Templates**:
   - Multi-page management with visual thumbnail gallery and reordering.
   - Built-in paper templates: Blank, Lined, Narrow lined, Grid, Dot grid, Checklist, and custom PDF page backgrounds.
-- **Export & Sync**: PDF export using the page renderer and editable Xournal++ (`.xopp`) export, with optional wireless file transfer via LocalSend.
+- **Export & Sync**: PDF export using the page renderer, vector SVG ink, and editable Xournal++ (`.xopp`) export, with optional wireless file transfer via LocalSend.
+
+SVG exports all pages vertically in one portable file, with a separate clipped
+viewport for each page. It includes ink, filled shapes and editable text, but
+omits paper templates and imported PDF backgrounds. Pressure changes are
+vector geometry; pencil grain and the highlighter tip/blending are approximations, and
+text uses the viewing system’s fonts (wrapping may differ). Use PDF for the
+rendered page or XOPP to continue editing a multi-page document in Xournal++.
+No additional export formats or dependencies are required.
 
 Hold or double-tap any tool button to open its options popover. After cutting or copying, use the Paste button in the top bar.
 
