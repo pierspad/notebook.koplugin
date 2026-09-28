@@ -12,7 +12,7 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 | <img src="docs/images/gallery.png" width="300" alt="Notebooks Gallery" /> | <img src="docs/images/drawing.png" width="300" alt="Drawing and Stylus Tools" /> |
 | **Pen Options & Color Palette** | **Paper Templates** |
 | <img src="docs/images/colored_pen.png" width="300" alt="Pen Options and Color Palette" /> | <img src="docs/images/templates.png" width="300" alt="Paper Templates" /> |
-| **PDF & XOPP Export** | **Quick Action (SimpleUI)** |
+| **PDF, SVG & XOPP Export** | **Quick Action (SimpleUI)** |
 | <img src="docs/images/export.png" width="300" alt="Export Formats" /> | <img src="docs/images/home.png" width="300" alt="Quick Action in SimpleUI" /> |
 
 ## Install
@@ -65,14 +65,6 @@ marker file) and reopen Notebook to stop logging. You can then delete both log f
   - Built-in paper templates: Blank, Lined, Narrow lined, Grid, Dot grid, Checklist, and custom PDF page backgrounds.
 - **Export & Sync**: PDF export using the page renderer, vector SVG ink, and editable Xournal++ (`.xopp`) export, with optional wireless file transfer via LocalSend.
 
-SVG exports all pages vertically in one portable file, with a separate clipped
-viewport for each page. It includes ink, filled shapes and editable text, but
-omits paper templates and imported PDF backgrounds. Pressure changes are
-vector geometry; pencil grain and the highlighter tip/blending are approximations, and
-text uses the viewing system’s fonts (wrapping may differ). Use PDF for the
-rendered page or XOPP to continue editing a multi-page document in Xournal++.
-No additional export formats or dependencies are required.
-
 Hold or double-tap any tool button to open its options popover. After cutting or copying, use the Paste button in the top bar.
 
 ### Custom icons
@@ -93,15 +85,6 @@ On startup, Notebook automatically synchronizes its bundled icons into the KORea
 - **ViewBox**: Use a square `viewBox="0 0 24 24"` or `viewBox="0 0 32 32"`.
 - **Coloring**: Draw icons in solid black (`#000` or `black`) on a transparent background. KOReader automatically inverts the icon to white when selected on the toolbar or menus, and when night mode is active.
 - **Cache**: Restart KOReader after modifying or adding icons so its icon cache reloads them.
-
-#### Available icons
-
-- **Toolbar tools**: `notebook.pen.svg`, `notebook.marker.svg`, `notebook.eraser.svg`, `notebook.lasso.svg`, `notebook.shape.svg`, `notebook.text.svg`
-- **Pen styles & strokes**: `notebook.fineliner.svg`, `notebook.fountain.svg`, `notebook.pencil.svg`, `notebook.line.svg`, `notebook.arrow.svg`
-- **Shapes & Fill**: `notebook.square.svg`, `notebook.rectangle.svg`, `notebook.circle.svg`, `notebook.triangle.svg`, `notebook.shape.svg` (toolbar & Filled shape option)
-- **Lasso & clipboard**: `notebook.cut.svg`, `notebook.copy.svg`, `notebook.paste.svg`, `notebook.duplicate.svg`, `notebook.delete.svg`
-- **Navigation & history**: `notebook.undo.svg`, `notebook.redo.svg`, `notebook.zoom-in.svg`, `notebook.zoom-out.svg`
-- **Gallery & pages**: `notebook.page.svg`, `notebook.folder.svg`, `notebook.open.svg`, `notebook.rename.svg`, `notebook.share.svg`, `notebook.export.svg`, `notebook.refresh.svg`, `notebook.bg-white.svg`, `notebook.bg-none.svg`
 
 ## Development
 
