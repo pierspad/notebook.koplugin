@@ -26,7 +26,7 @@ Notebooks are stored in `koreader/notebook/`.
 
 ### Development build: fluidity and undo gestures
 
-The notebook toolbar shows the installed plugin version beneath the clock.
+The gallery header shows the installed plugin version at the top right.
 To undo, tap twice with **two fingers per tap**, in the same area, within half
 a second. The gesture is disabled while drawing with fingers, selecting objects,
 using the stylus or sleeping. Redo remains available from the toolbar.

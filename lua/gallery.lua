@@ -650,6 +650,12 @@ function Gallery:_fitHeader(make)
 
     -- The title row: what you are looking at, and the one control that is about
     -- the row itself rather than about what is in the grid.
+    local version = TextWidget:new{
+        text = require("_meta").version,
+        face = Font:getFace("cfont", 12),
+    }
+    self.version_text = version
+    local version_w = version:getSize().w
     local top = HorizontalGroup:new{ align = "center" }
     table.insert(top, back)
     table.insert(top, HorizontalSpan:new{ width = gap })
@@ -658,13 +664,18 @@ function Gallery:_fitHeader(make)
         face = Font:getFace("tfont", 22),
         max_width = math.max(
             avail - back:getSize().w - gap
-                  - (corner and corner:getSize().w + gap or 0),
+                  - (corner and corner:getSize().w + gap or 0) - version_w - gap,
             Screen:scaleBySize(40)),
     })
     if corner then
         table.insert(top, HorizontalSpan:new{ width = gap })
         table.insert(top, corner)
     end
+
+    local used = 0
+    for _, widget in ipairs(top) do used = used + widget:getSize().w end
+    table.insert(top, HorizontalSpan:new{width=math.max(gap, avail-used-version_w)})
+    table.insert(top, version)
 
     local bottom = HorizontalGroup:new{ align = "center" }
     for _, button in ipairs(buttons) do

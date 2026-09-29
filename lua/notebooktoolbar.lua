@@ -13,7 +13,6 @@ local IconWidget = require("ui/widget/iconwidget")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
-local VerticalGroup = require("ui/widget/verticalgroup")
 local Toolbar = {}
 
 -- Toolbar ------------------------------------------------------------------------
@@ -191,11 +190,7 @@ function Toolbar:_buildToolbar()
     local page_text_w = self.page_button:getSize().w
 
     self.clock_text = TextWidget:new{text=os.date("%H:%M"), face=Font:getFace("cfont", 18)}
-    self.version_text = TextWidget:new{
-        text = require("_meta").version,
-        face = Font:getFace("cfont", 11),
-    }
-    local clock_w = math.max(self.clock_text:getSize().w, self.version_text:getSize().w) + gap
+    local clock_w = self.clock_text:getSize().w + gap
     -- Back + tools + undo/redo/refresh + zoom + paste + previous/next + settings.
     local n_cells = #TOOLS + 9
     local cell_overhead = 2 * (Size.border.thin + Size.padding.button)
@@ -266,7 +261,7 @@ function Toolbar:_buildToolbar()
         clock_inset,
         CenterContainer:new{
             dimen = Geom:new{w=clock_w, h=self.next_page_button:getSize().h},
-            VerticalGroup:new{align="center", self.clock_text, self.version_text},
+            self.clock_text,
         },
         betweenGroups(),
         -- Leaving is a "back" arrow on the left, where every other back control
