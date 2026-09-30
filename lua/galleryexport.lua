@@ -79,6 +79,31 @@ function Gallery:_shareMany(chosen, format, prepared)
 
     local i, done, failed, last_out, multiple_files = 0, 0, 0, nil, false
     format=format or (G_reader_settings:readSetting("notebook_share_format") == "xopp" and "xopp" or "pdf")
+    -- Reserve original output names before assigning suffixes. XOPP companions
+    -- share the staging directory and must not overwrite an explicitly chosen PDF.
+    local reserved, used, outputs = {}, {}, {}
+    for _, item in ipairs(chosen) do
+        reserved[(item.name .. "." .. (item.extension or format)):lower()] = true
+    end
+    for index, item in ipairs(chosen) do
+        local extension = item.extension or format
+        local name = item.name .. "." .. extension
+        local function taken(candidate, suffix)
+            local key = candidate:lower()
+            return used[key] or (suffix and reserved[key])
+                or (extension == "xopp" and (used[key .. ".bg.pdf"] or reserved[key .. ".bg.pdf"]))
+        end
+        if taken(name, false) then
+            local suffix = 2
+            repeat
+                name = string.format("%s (%d).%s", item.name, suffix, extension)
+                suffix = suffix + 1
+            until not taken(name, true)
+        end
+        used[name:lower()] = true
+        if extension == "xopp" then used[name:lower() .. ".bg.pdf"] = true end
+        outputs[index] = staging .. "/" .. name
+    end
     local function step()
         i = i + 1
         local item = chosen[i]
@@ -104,7 +129,7 @@ function Gallery:_shareMany(chosen, format, prepared)
             return self.on_share(ready)
         end
 
-        local out = staging .. "/" .. item.name .. "." .. (item.extension or format)
+        local out = outputs[i]
         local ok
         if isExport(item) then
             ok = Library.copyFile(item.path, out)

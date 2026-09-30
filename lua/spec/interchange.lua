@@ -39,4 +39,43 @@ assert(attached_xml:match('<page width="600%.000" height="800%.000">'),
 assert(attached_xml:match('0%.000 40%.000 600%.000 640%.000'),
     'letterbox and content origin were not removed from overlay coordinates')
 os.remove(pdf); os.remove(attached_path); os.remove(companion)
-print('interchange XOPP and editable text passed')
+-- Large interchange documents cross stored-DEFLATE block boundaries. Verify
+-- the byte checksum independently and bound checksum work per input byte.
+local big=Stroke:new{tool='text',shape_kind='text',font_size=24,
+    text=string.rep('Caffè < & > " ',12000)}
+big:addPoint(0,0); big:addPoint(500,100)
+local large={pages={{strokes={big}}},templateFor=function() return 'blank' end}
+local large_path=os.tmpname()..'.xopp'
+local bit=require('bit')
+local shift, shifts=bit.rshift,0
+bit.rshift=function(...) shifts=shifts+1; return shift(...) end
+local generated,reason=pcall(Xopp.toXOPP,large,large_path)
+bit.rshift=shift
+assert(generated and reason,'large XOPP failed')
+local file=assert(io.open(large_path,'rb')); local compressed=file:read('*a'); file:close()
+local parts,at={},11
+while true do
+    local final=compressed:byte(at)
+    local n=compressed:byte(at+1)+compressed:byte(at+2)*256
+    local inverse=compressed:byte(at+3)+compressed:byte(at+4)*256
+    assert(n+inverse==65535,'invalid stored block length')
+    parts[#parts+1]=compressed:sub(at+5,at+4+n)
+    at=at+5+n
+    if final==1 then break end
+    assert(final==0,'invalid DEFLATE block header')
+end
+local payload=table.concat(parts)
+local function u32(n)
+    return string.char(n%256,math.floor(n/256)%256,math.floor(n/65536)%256,math.floor(n/16777216)%256)
+end
+local crc=0xffffffff
+for i=1,#payload do
+    crc=bit.bxor(crc,payload:byte(i))
+    for _=1,8 do crc=bit.bxor(shift(crc,1),bit.band(crc,1)~=0 and 0xedb88320 or 0) end
+end
+assert(compressed:sub(at)==u32(bit.bnot(crc))..u32(#payload),'CRC32/ISIZE changed')
+assert(payload:find('Caffè &lt; &amp; &gt; &quot;',1,true),'large Unicode text changed')
+assert(os.execute('gzip -t '..large_path)==0,'large XOPP is not valid gzip')
+os.remove(large_path)
+assert(shifts<=#payload+4096,'CRC checksum repeats eight bit steps for every byte')
+print('interchange XOPP and editable text: metadata, PDF coordinates, large gzip blocks and CRC32 passed')

@@ -9,6 +9,18 @@ local Tuning = require("tuning")
 
 local Lasso = {}
 
+local function polygonBounds(poly_pts)
+    local lx0, ly0 = math.huge, math.huge
+    local lx1, ly1 = -math.huge, -math.huge
+    for _, p in ipairs(poly_pts) do
+        if p.x < lx0 then lx0 = p.x end
+        if p.y < ly0 then ly0 = p.y end
+        if p.x > lx1 then lx1 = p.x end
+        if p.y > ly1 then ly1 = p.y end
+    end
+    return { lx0, ly0, lx1, ly1 }
+end
+
 --- Point-in-polygon ray-casting test.
 function Lasso.pointInPolygon(px, py, poly_pts)
     local n = #poly_pts
@@ -39,7 +51,7 @@ concave -- an L, an arc, a large circle, a long diagonal -- it lies in the empty
 space the stroke encloses rather than on the ink. A small loop drawn in the gap
 inside an L therefore selected the L without ever having touched it.
 --]]
-function Lasso.isStrokeSelected(stroke, poly_pts)
+local function strokeSelected(stroke, poly_pts, bounds)
     if not stroke or stroke:count() == 0 then return false end
 
     --[[
@@ -51,14 +63,8 @@ function Lasso.isStrokeSelected(stroke, poly_pts)
     strokes the loop is nowhere near, which on a written page is nearly all of
     them, without measuring anything.
     ]]
-    local lx0, ly0 = math.huge, math.huge
-    local lx1, ly1 = -math.huge, -math.huge
-    for _, p in ipairs(poly_pts) do
-        if p.x < lx0 then lx0 = p.x end
-        if p.y < ly0 then ly0 = p.y end
-        if p.x > lx1 then lx1 = p.x end
-        if p.y > ly1 then ly1 = p.y end
-    end
+    bounds = bounds or polygonBounds(poly_pts)
+    local lx0, ly0, lx1, ly1 = unpack(bounds)
     local bx, by, bw, bh = stroke:getBounds()
     if lx1 < bx or lx0 > bx + bw or ly1 < by or ly0 > by + bh then
         return false
@@ -107,11 +113,18 @@ function Lasso.isStrokeSelected(stroke, poly_pts)
     return Lasso.pointInPolygon(px, py, poly_pts)
 end
 
+function Lasso.isStrokeSelected(stroke, poly_pts)
+    return strokeSelected(stroke, poly_pts)
+end
+
 --- Finds all strokes on a page selected by a lasso loop.
 function Lasso.findSelectedStrokes(page_strokes, lasso_pts)
     local selected = {}
+    if #page_strokes == 0 then return selected end
+    -- One immutable loop serves the whole query; sampling stays identical.
+    local bounds = polygonBounds(lasso_pts)
     for _, stroke in ipairs(page_strokes) do
-        if Lasso.isStrokeSelected(stroke, lasso_pts) then
+        if strokeSelected(stroke, lasso_pts, bounds) then
             table.insert(selected, stroke)
         end
     end

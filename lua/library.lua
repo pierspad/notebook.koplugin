@@ -120,6 +120,18 @@ function Library.abs(rel)
     return Library.root() .. "/" .. rel
 end
 
+-- lstat of the final component still follows links in its parent path.
+local function hasLinkedParent(path)
+    local parent = path:gsub("/+$", ""):match("^(.*)/[^/]+$")
+    local prefix = path:sub(1, 1) == "/" and "/" or ""
+    for part in (parent or ""):gmatch("[^/]+") do
+        prefix = prefix .. part
+        if lfs.symlinkattributes(prefix, "mode") == "link" then return true end
+        prefix = prefix .. "/"
+    end
+    return false
+end
+
 --- Creates a directory, and any parent it needs.
 function Library.ensureDir(rel)
     local path = Library.abs(rel)
@@ -243,8 +255,9 @@ makes a folder easy to miss. Within each group, `sort` decides the order; see
 Library.ORDERS.
 --]]
 function Library.list(folder, sort)
-    Library.ensureDir(folder)
     local dir = Library.abs(folder)
+    if hasLinkedParent(dir) or lfs.symlinkattributes(dir, "mode") == "link" then return {} end
+    if not Library.ensureDir(folder) then return {} end
     local folders, files = {}, {}
 
     for entry in lfs.dir(dir) do
@@ -252,7 +265,7 @@ function Library.list(folder, sort)
         -- dotted folder precisely so it does not show up here.
         if entry:sub(1, 1) ~= "." then
             local path = dir .. "/" .. entry
-            local attr = lfs.attributes(path)
+            local attr = lfs.symlinkattributes(path)
             --[[
             KOReader keeps a document's bookmarks, last page and settings in a
             sidecar directory named after it, `<name>.sdr`, created the moment
@@ -345,7 +358,13 @@ local function copyFile(from, to)
     end
 
     while true do
-        local chunk = src:read(COPY_CHUNK)
+        local chunk, read_err = src:read(COPY_CHUNK)
+        if read_err then
+            src:close()
+            dst:close()
+            os.remove(to)
+            return false
+        end
         if not chunk or chunk == "" then break end
         if not dst:write(chunk) then
             src:close()
@@ -355,8 +374,12 @@ local function copyFile(from, to)
         end
     end
 
-    src:close()
-    dst:close()
+    local source_closed = src:close()
+    local dest_closed = dst:close()
+    if not source_closed or not dest_closed then
+        os.remove(to)
+        return false
+    end
     return true
 end
 
@@ -469,15 +492,19 @@ Recursive, because a folder the reader wants gone is rarely empty, and refusing
 unless it is empty just makes them delete the contents by hand first.
 --]]
 function Library.deleteTree(path)
-    if lfs.attributes(path, "mode") ~= "directory" then return false end
+    path = path:gsub("/+$", "")
+    if path == "" or hasLinkedParent(path) then return false end
+    local mode = lfs.symlinkattributes(path, "mode")
+    if mode == "link" then return os.remove(path) and true or false end
+    if mode ~= "directory" then return false end
 
     for entry in lfs.dir(path) do
         if entry ~= "." and entry ~= ".." then
             local child = path .. "/" .. entry
-            if lfs.attributes(child, "mode") == "directory" then
-                Library.deleteTree(child)
+            if lfs.symlinkattributes(child, "mode") == "directory" then
+                if not Library.deleteTree(child) then return false end
             else
-                os.remove(child)
+                if not os.remove(child) then return false end
             end
         end
     end
@@ -502,13 +529,13 @@ function Library.allFolders(rel, depth, into)
     rel = rel or ""
 
     local dir = Library.abs(rel)
-    if lfs.attributes(dir, "mode") ~= "directory" then return into end
+    if hasLinkedParent(dir) or lfs.symlinkattributes(dir, "mode") ~= "directory" then return into end
 
     local names = {}
     for entry in lfs.dir(dir) do
         -- Sidecars are not places to put things; see the note in Library.list.
         if entry:sub(1, 1) ~= "." and not entry:match("%.sdr$") then
-            if lfs.attributes(dir .. "/" .. entry, "mode") == "directory" then
+            if lfs.symlinkattributes(dir .. "/" .. entry, "mode") == "directory" then
                 table.insert(names, entry)
             end
         end

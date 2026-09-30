@@ -533,6 +533,10 @@ function stubs.install(fs)
             return true
         end,
     }
+    -- This fixture holds no links; lstat and stat coincide. Link regression
+    -- tests override these boundaries with explicit target resolution.
+    package.loaded["libs/libkoreader-lfs"].symlinkattributes =
+        package.loaded["libs/libkoreader-lfs"].attributes
 
     --[[--
     A rename that moves a directory and everything under it.

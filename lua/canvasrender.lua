@@ -60,15 +60,6 @@ function CanvasRender:paintTo(bb, x, y)
     local background=page.background
     local cache_key=table.concat({tostring(page),self.document:templateFor() or "",
         background and background.file or "",background and background.page or ""},"|")
-    if self.background_cache and self.background_cache_key==cache_key then
-        bb:blitFrom(self.background_cache,x,y,x,y,self.dimen.w,self.dimen.h)
-    else
-        bb:paintRect(x, y, self.dimen.w, self.dimen.h, Blitbuffer.COLOR_WHITE)
-        self:_drawTemplate(bb)
-        if self.background_cache then self.background_cache:free() end
-        self.background_cache=bb:copy()
-        self.background_cache_key=cache_key
-    end
     -- Two most recently rendered pages bound bitmap memory regardless of
     -- notebook length. Never cache temporary selection/preview pixels.
     local stable = not (self.hidden_stroke or self.stroke or self.transform_gesture
@@ -85,15 +76,33 @@ function CanvasRender:paintTo(bb, x, y)
         .. "|" .. self.dimen.w .. "|" .. self.dimen.h .. "|" .. bpp
         .. "|" .. x .. "|" .. y .. "|" .. self.content.x .. "|" .. self.content.y
         .. "|" .. self.content.w .. "|" .. self.content.h
+    local cached, cached_index
     if stable then
         for i, entry in ipairs(self.page_render_cache) do
             if entry.key == key then
-                bb:blitFrom(entry.bb,x,y,x,y,self.dimen.w,self.dimen.h)
-                table.remove(self.page_render_cache,i)
-                table.insert(self.page_render_cache,1,entry)
-                return
+                cached, cached_index = entry, i
+                break
             end
         end
+    end
+    -- A page snapshot already includes its paper. Still rebuild a changed
+    -- background cache: partial eraser repaints restore pixels from it.
+    if not cached or not self.background_cache or self.background_cache_key ~= cache_key then
+        if self.background_cache and self.background_cache_key==cache_key then
+            bb:blitFrom(self.background_cache,x,y,x,y,self.dimen.w,self.dimen.h)
+        else
+            bb:paintRect(x, y, self.dimen.w, self.dimen.h, Blitbuffer.COLOR_WHITE)
+            self:_drawTemplate(bb)
+            if self.background_cache then self.background_cache:free() end
+            self.background_cache=bb:copy()
+            self.background_cache_key=cache_key
+        end
+    end
+    if cached then
+        bb:blitFrom(cached.bb,x,y,x,y,self.dimen.w,self.dimen.h)
+        table.remove(self.page_render_cache,cached_index)
+        table.insert(self.page_render_cache,1,cached)
+        return
     end
     for _,stroke in ipairs(self:_visiblePage().strokes) do
         if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end

@@ -784,38 +784,81 @@ function Document:save()
     return ok, err
 end
 
+local function finiteNumber(value)
+    return type(value) == "number" and value == value and math.abs(value) < math.huge
+end
+
+local function array(value)
+    if type(value) ~= "table" then return false end
+    local size = #value
+    for key in pairs(value) do
+        if not finiteNumber(key) or key < 1 or key > size or key % 1 ~= 0 then return false end
+    end
+    for i = 1, size do
+        if value[i] == nil then return false end
+    end
+    return true
+end
+
+local function validStroke(stroke)
+    if type(stroke) ~= "table" or not finiteNumber(stroke.n)
+        or stroke.n < 0 or stroke.n % 1 ~= 0 or not array(stroke.pts)
+        or #stroke.pts ~= stroke.n * 3 then return false end
+    if stroke.tool ~= nil and type(stroke.tool) ~= "string" then return false end
+    if stroke.width ~= nil and (not finiteNumber(stroke.width) or stroke.width <= 0) then return false end
+    local color = stroke.color
+    -- RGB ink is persisted as 0x1RRGGBB; retain legacy grayscale values too.
+    if color ~= nil and (not finiteNumber(color)
+        or not ((color >= 0 and color <= 255)
+            or (color >= 0x1000000 and color <= 0x1FFFFFF and color % 1 == 0))) then return false end
+    local tint = stroke.tint
+    if tint ~= nil and (not finiteNumber(tint)
+        or not ((tint >= 0 and tint <= 255)
+            or (tint >= 0x1000000 and tint <= 0x1FFFFFF and tint % 1 == 0))) then return false end
+    for i = 1, #stroke.pts do
+        if not finiteNumber(stroke.pts[i]) then return false end
+    end
+    return true
+end
+
 function Document:load()
     local data = Persist:new{ path = self.path, codec = CODEC }:load()
-    if not data then return false end
+    if type(data) ~= "table" then return false end
     if data.version ~= FORMAT_VERSION then
         logger.warn("Notebook: unsupported notebook format version", data.version)
         return false
     end
 
-    self.pages = {}
+    if data.pages ~= nil and not array(data.pages) then return false end
+    local pages = {}
     for i, page in ipairs(data.pages or {}) do
+        if type(page) ~= "table" or (page.strokes ~= nil and not array(page.strokes)) then return false end
         local strokes = {}
         for j, s in ipairs(page.strokes or {}) do
+            if not validStroke(s) then return false end
             strokes[j] = Stroke:deserialize(s)
         end
         -- A background this build does not know about is dropped rather than
         -- carried around: a notebook written by a newer version stays readable,
         -- and the page falls back to the notebook's.
         local template = Template.isKnown(page.template) and page.template or nil
-        self.pages[i] = { strokes = strokes, template = template, background = page.background }
+        pages[i] = { strokes = strokes, template = template, background = page.background }
     end
-    if #self.pages == 0 then self.pages = { newPage() } end
+    if #pages == 0 then pages = { newPage() } end
 
+    -- Replace the open state only after the whole notebook has been validated.
+    self.pages = pages
     self.template = Template.isKnown(data.template) and data.template or Template.DEFAULT
     self.page_size = data.page_size
     -- Absent in notebooks written before the origin was recorded; see
     -- Document:contentOrigin.
     local origin = data.content_origin
-    self.content_origin = {
-        x = (type(origin) == "table" and tonumber(origin.x)) or 0,
-        y = (type(origin) == "table" and tonumber(origin.y)) or 0,
-    }
-    self.current_page = math.min(data.current_page or 1, #self.pages)
+    local x = type(origin) == "table" and tonumber(origin.x)
+    local y = type(origin) == "table" and tonumber(origin.y)
+    self.content_origin = { x = finiteNumber(x) and x or 0, y = finiteNumber(y) and y or 0 }
+    local current = data.current_page
+    if not finiteNumber(current) or current % 1 ~= 0 then current = 1 end
+    self.current_page = math.max(1, math.min(current, #pages))
     self.undo_stack, self.redo_stack = {}, {}
     self.dirty = false
     return true

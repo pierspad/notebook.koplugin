@@ -169,11 +169,14 @@ local function fileHash(path)
     if not file then return nil end
     local hash=5381
     while true do
-        local chunk=file:read(65536)
-        if not chunk then break end
+        local chunk,err=file:read(65536)
+        if not chunk then
+            if err then file:close(); return nil end
+            break
+        end
         for i=1,#chunk do hash=(hash*33+chunk:byte(i))%2147483647 end
     end
-    file:close()
+    if not file:close() then return nil end
     return string.format("%08x",hash)
 end
 

@@ -15,14 +15,23 @@ local function u32(n)
     return string.char(n%256,math.floor(n/256)%256,math.floor(n/65536)%256,math.floor(n/16777216)%256)
 end
 
+local crc_table
 local function crc32(data)
     local bit=require("bit")
+    if not crc_table then
+        crc_table={}
+        for i=0,255 do
+            local value=i
+            for _=1,8 do
+                value=bit.bxor(bit.rshift(value,1),bit.band(value,1)~=0 and 0xedb88320 or 0)
+            end
+            crc_table[i+1]=value
+        end
+    end
     local crc=0xffffffff
     for i=1,#data do
-        crc=bit.bxor(crc,data:byte(i))
-        for _=1,8 do
-            crc=bit.bxor(bit.rshift(crc,1),bit.band(crc,1)~=0 and 0xedb88320 or 0)
-        end
+        local index=bit.band(bit.bxor(crc,data:byte(i)),255)+1
+        crc=bit.bxor(bit.rshift(crc,8),crc_table[index])
     end
     return bit.band(bit.bnot(crc),0xffffffff)
 end
@@ -114,8 +123,8 @@ function Xopp.toXOPP(doc,path)
     local file,err=io.open(temporary,"wb")
     if not file then return false,err end
     local ok,write_err=file:write(gzip(table.concat(lines,"\n")))
-    file:close()
-    if not ok then os.remove(temporary); return false,write_err end
+    local closed,close_err=file:close()
+    if not ok or not closed then os.remove(temporary); return false,write_err or close_err end
     ok,write_err=os.rename(temporary,path)
     if not ok then os.remove(temporary); return false,write_err end
     if pdf_source then
@@ -125,13 +134,15 @@ function Xopp.toXOPP(doc,path)
         local target=source and io.open(background_tmp,"wb")
         if not target then if source then source:close() end; os.remove(path); return false,"cannot copy PDF background" end
         while true do
-            local chunk=source:read(65536)
+            local chunk,read_err=source:read(65536)
+            if read_err then ok,write_err=false,read_err; break end
             if not chunk then break end
             ok,write_err=target:write(chunk)
             if not ok then break end
         end
-        source:close()
-        local closed,close_err=target:close()
+        local source_closed,source_err=source:close()
+        if not source_closed then ok,write_err=false,write_err or source_err end
+        closed,close_err=target:close()
         if not ok or not closed then
             os.remove(background_tmp); os.remove(path)
             return false,write_err or close_err or "cannot copy PDF background"

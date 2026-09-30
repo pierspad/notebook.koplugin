@@ -288,5 +288,53 @@ test("cloning carries the tint across", function()
     assertEq(Lasso.cloneStrokes({ s })[1].tint, 100, "clone tint")
 end)
 
+test("one selection query measures polygon bounds only once", function()
+    local reads = 0
+    local polygon = {}
+    for i, point in ipairs(boxLoop(0, 0, 20, 20)) do
+        polygon[i] = setmetatable({}, { __index = function(_, key)
+            reads = reads + 1
+            return point[key]
+        end })
+    end
+    local strokes = {}
+    for i = 1, 200 do
+        local s = Stroke:new{ width = 3 }
+        s:addPoint(500 + i, 500, 1)
+        strokes[i] = s
+    end
+    assertEq(#Lasso.findSelectedStrokes(strokes, polygon), 0)
+    assertTrue(reads <= 32, "polygon bounds reread for each rejected stroke: " .. reads)
+end)
+
+test("batch selection agrees with individual queries across irregular loops", function()
+    math.randomseed(20261001)
+    local strokes = { Stroke:new{} }
+    for i = 1, 80 do
+        local s = Stroke:new{ width = 1 + i % 12 }
+        for _ = 1, 3 do s:addPoint(math.random(-100, 300), math.random(-100, 300), 1) end
+        strokes[#strokes + 1] = s
+    end
+    local polygons = { {}, {{x=0,y=0}}, {{x=0,y=0},{x=100,y=100}},
+        boxLoop(0,0,100,100), boxLoop(100,100,-100,-100) }
+    for _ = 1, 50 do
+        local polygon = {}
+        for i = 1, 12 do
+            local angle, radius = i * math.pi / 6, math.random(10, 200)
+            polygon[i] = {x=100+radius*math.cos(angle), y=100+radius*math.sin(angle)}
+        end
+        polygons[#polygons + 1] = polygon
+    end
+    for _, polygon in ipairs(polygons) do
+        local expected = {}
+        for _, s in ipairs(strokes) do
+            if Lasso.isStrokeSelected(s, polygon) then expected[#expected+1] = s end
+        end
+        local actual = Lasso.findSelectedStrokes(strokes, polygon)
+        assertEq(#actual, #expected)
+        for i, s in ipairs(expected) do assertEq(actual[i], s, "identity and ordering") end
+    end
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

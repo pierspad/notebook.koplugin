@@ -28,7 +28,15 @@ Renderer.drawStroke=function(...) calls=calls+1; return draw(...) end
 local function paint() c:paintTo(Screen.bb,0,0) end
 paint(); local first=calls
 assert(first==20,"initial render missing ink")
+local blit = Screen.bb.blitFrom
+local blits = 0
+Screen.bb.blitFrom = function(self, ...)
+    blits = blits + 1
+    return blit(self, ...)
+end
 paint(); assert(calls==first,"unchanged page rerasterized")
+assert(blits==1,"cached page copied the full framebuffer more than once")
+Screen.bb.blitFrom = blit
 local function exact()
     local expected=support.FakeBB.new(160,200)
     c:_drawTemplate(expected)
@@ -38,9 +46,11 @@ local function exact()
     end end
 end
 exact()
+doc:setPageTemplate(3,"dots")
 doc:goToPage(3); paint(); exact()
 doc:goToPage(4); local before=calls; paint()
 assert(calls==before,"adjacent page cache missed")
+c:_repaintRegion(0,30,160,170,true); exact()
 doc:addStroke(ink(100)); paint(); exact()
 doc:undo(); paint(); exact(); doc:redo(); paint(); exact()
 doc:beginBatch(); doc:addStroke(ink(110)); paint(); exact()

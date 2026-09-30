@@ -109,7 +109,8 @@ end
 local function newGallery(n, fields)
     -- "safe" among them because it caches UIManager at load: left over from a
     -- previous test it would schedule into that test's recorder, not this one's.
-    for _, name in ipairs{ "gallery", "library", "actionmenu", "export",
+    for _, name in ipairs{ "gallery", "galleryexport", "exportprogress", "share", "xopp", "svg",
+                           "library", "actionmenu", "export",
                            "document", "renderer", "stroke", "safe" } do
         package.loaded[name] = nil
     end
@@ -1346,6 +1347,98 @@ test("notebook, folder and PDF creation are direct header actions", function()
     assertTrue(labelled(gallery.header_row,"New folder")~=nil,"New folder is missing")
     assertTrue(labelled(gallery.header_row,"Annotate PDF")~=nil,"Annotate PDF is missing")
     assertTrue(labelled(gallery.header_row,"Select")~=nil,"Select is missing")
+end)
+
+test("sharing an identically named notebook and PDFs preserves every file", function()
+    local sent
+    local gallery, rec = newGallery(0, { on_share = function(path) sent = path end })
+    local Share = require("share")
+    local Export = require("export")
+    local BB = package.loaded["ffi/blitbuffer"]
+    BB.new = function(w, h) return support.FakeBB.new(w, h) end
+    local stagingDir, cachedExport, toPDF = Share.stagingDir, Share.cachedExport, Export.toPDF
+    local dir = os.tmpname()
+    os.remove(dir)
+    assert(os.execute(string.format("mkdir %q", dir)) == 0)
+    local outputs = {}
+    local source, other = dir .. "/original.pdf", dir .. "/other.pdf"
+    local function write(path, bytes)
+        local f = assert(io.open(path, "wb")); assert(f:write(bytes)); assert(f:close())
+    end
+    local function read(path)
+        local f = assert(io.open(path, "rb")); local bytes = f:read("*a"); f:close(); return bytes
+    end
+    write(source, "original PDF"); write(other, "second original PDF")
+    Share.stagingDir = function() return dir end
+    -- Keep the real export/file-copy path; isolate the persistent share cache.
+    Share.cachedExport = function() return nil end
+    Export.toPDF = function(doc, out)
+        return toPDF(doc, out, { width = 12, height = 16 })
+    end
+    local store = support._store
+    store["/share-note"] = { version = 1, pages = { { strokes = {} } } }
+    local ok, err = pcall(function()
+        gallery:_shareMany({
+            { name = "Foo", path = "/share-note" },
+            { name = "Foo", path = source, is_pdf = true, extension = "pdf" },
+            { name = "Foo (2)", path = other, is_pdf = true, extension = "pdf" },
+        }, "pdf")
+        rec.runTicks()
+        assertEq(sent, dir, "the prepared selection was not shared as a directory")
+        outputs = { dir .. "/Foo.pdf", dir .. "/Foo (2).pdf", dir .. "/Foo (3).pdf" }
+        assertTrue(read(outputs[1]):sub(1, 5) == "%PDF-", "rendered notebook was overwritten")
+        assertEq(read(outputs[2]), "second original PDF", "an original filename was taken by a suffix")
+        assertEq(read(outputs[3]), "original PDF", "the duplicate display name lost its PDF")
+    end)
+    Share.stagingDir, Share.cachedExport, Export.toPDF = stagingDir, cachedExport, toPDF
+    -- Remove all possible outputs even when an assertion failed before listing them.
+    for _, name in ipairs{ "Foo.pdf", "Foo (2).pdf", "Foo (3).pdf" } do
+        os.remove(dir .. "/" .. name); os.remove(dir .. "/" .. name .. ".tmp")
+    end
+    os.remove(source); os.remove(other)
+    os.execute(string.format("rmdir %q", dir))
+    if not ok then error(err, 0) end
+end)
+
+test("sharing XOPP files protects companion PDFs and case-folded output names", function()
+    local gallery, rec = newGallery(0)
+    local Share = require("share")
+    local stagingDir = Share.stagingDir
+    local dir = os.tmpname()
+    os.remove(dir)
+    assert(os.execute(string.format("mkdir %q", dir)) == 0)
+    local source, pdf, other = dir .. "/source.xopp", dir .. "/source.pdf", dir .. "/other.xopp"
+    local function write(path, bytes)
+        local f = assert(io.open(path, "wb")); assert(f:write(bytes)); assert(f:close())
+    end
+    local function read(path)
+        local f = assert(io.open(path, "rb")); local bytes = f:read("*a"); f:close(); return bytes
+    end
+    write(source, "first XOPP"); write(source .. ".bg.pdf", "attached PDF")
+    write(pdf, "independent PDF"); write(other, "second XOPP")
+    rec.fs[source .. ".bg.pdf"] = {mode = "file"}
+    Share.stagingDir = function() return dir end
+    local ready
+    local ok, err = pcall(function()
+        gallery:_shareMany({
+            {name = "Foo", path = source, is_xopp = true, extension = "xopp"},
+            {name = "Foo.xopp.bg", path = pdf, is_pdf = true, extension = "pdf"},
+            {name = "foo", path = other, is_xopp = true, extension = "xopp"},
+        }, "xopp", function(path) ready = path end)
+        rec.runTicks()
+        assertEq(ready, dir, "prepared callback did not receive the whole selection")
+        assertEq(read(dir .. "/Foo (2).xopp"), "first XOPP", "XOPP name collided")
+        assertEq(read(dir .. "/Foo (2).xopp.bg.pdf"), "attached PDF", "companion was overwritten")
+        assertEq(read(dir .. "/Foo.xopp.bg.pdf"), "independent PDF", "explicit PDF was overwritten")
+        assertEq(read(dir .. "/foo (3).xopp"), "second XOPP", "case-folded duplicate collided")
+    end)
+    Share.stagingDir = stagingDir
+    for _, name in ipairs{
+        "source.xopp", "source.xopp.bg.pdf", "source.pdf", "other.xopp",
+        "Foo.xopp", "Foo.xopp.bg.pdf", "foo.xopp", "Foo (2).xopp", "Foo (2).xopp.bg.pdf", "foo (3).xopp",
+    } do os.remove(dir .. "/" .. name) end
+    os.execute(string.format("rmdir %q", dir))
+    if not ok then error(err, 0) end
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
