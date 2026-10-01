@@ -604,8 +604,8 @@ msgstr "检查更新"
 msgid "Choose pages to export"
 msgstr "选择要导出的页面"
 
-msgid "Pages 1–%1; for example: 1, 3-5"
-msgstr "页码 1–%1；例如：1, 3-5"
+msgid "Pages 1–%1. Use - for ranges and , to separate pages."
+msgstr "页面 1–%1。用 - 表示范围，用 , 分隔页面。"
 
 msgid "Continue"
 msgstr "继续"

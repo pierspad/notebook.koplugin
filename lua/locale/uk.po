@@ -606,8 +606,8 @@ msgstr "Перевірити оновлення"
 msgid "Choose pages to export"
 msgstr "Вибрати сторінки для експорту"
 
-msgid "Pages 1–%1; for example: 1, 3-5"
-msgstr "Сторінки 1–%1; наприклад: 1, 3-5"
+msgid "Pages 1–%1. Use - for ranges and , to separate pages."
+msgstr "Сторінки 1–%1. Використовуйте - для діапазонів і , для розділення сторінок."
 
 msgid "Continue"
 msgstr "Продовжити"

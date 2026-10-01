@@ -75,3 +75,6 @@ settings.notebook_update_attempt=nil
 scheduled[1][2]();assert(calls==2,"disabled weekly checks ran")
 
 print("updater: stable policy, rollback/orphan removal, HTTPS quoting, weekly/offline scheduling and retry guards passed")
+
+local Notes=require("releasenotes")
+assert(Notes.plain("### Changes\n* **Fix** [issue](https://example.org/1)\n[https://example.org](https://example.org)")=="Changes\n• Fix issue (https://example.org/1)\nhttps://example.org")

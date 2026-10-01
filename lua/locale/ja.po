@@ -607,8 +607,8 @@ msgstr "更新を確認"
 msgid "Choose pages to export"
 msgstr "書き出すページを選択"
 
-msgid "Pages 1–%1; for example: 1, 3-5"
-msgstr "ページ1–%1；例：1, 3-5"
+msgid "Pages 1–%1. Use - for ranges and , to separate pages."
+msgstr "ページ 1–%1。範囲には -、ページの区切りには , を使います。"
 
 msgid "Continue"
 msgstr "続行"

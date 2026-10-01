@@ -40,7 +40,9 @@ function PageGrid:_layout()
     local tile_h = math.floor(tile_w * 1.25)
 
     local header = self:_buildHeader()
-    local rows_h = self.dimen.h - header:getSize().h - 3 * margin
+    local footer = self._buildFooter and self:_buildFooter()
+    local footer_h = footer and footer:getSize().h + margin or 0
+    local rows_h = self.dimen.h - header:getSize().h - footer_h - 3 * margin
     local rows = math.max(1, math.floor((rows_h + margin) / (tile_h + margin)))
     self.per_page = rows * COLUMNS
 
@@ -86,7 +88,7 @@ function PageGrid:_layout()
                     index = index,
                     width = tile_w,
                     height = tile_h,
-                    current = index == self.document.current_page,
+                    current = not self.isSelected and index == self.document.current_page,
                     selected = self.isSelected and self:isSelected(index),
                     on_open = function(i) self:_goToPage(i) end,
                     on_hold = function(i) self:_actions(i) end,
@@ -111,6 +113,8 @@ function PageGrid:_layout()
             header,
             VerticalSpan:new{ width = margin },
             grid,
+            VerticalSpan:new{ width = footer and math.max(margin, rows_h - grid:getSize().h + margin) or 0 },
+            footer,
         },
     }
 end

@@ -15,6 +15,17 @@ end
 
 -- Split both half-planes in one traversal. Shared vertices are immutable.
 local function split(points,a,b)
+    local low,high=math.huge,-math.huge
+    for _,point in ipairs(points) do
+        local d=cross(a,b,point)
+        if d<low then low=d end
+        if d>high then high=d end
+        if low<0 and high>0 then break end
+    end
+    -- Most cutter edges contain the whole remaining polygon on one side.
+    -- Reuse its immutable vertices instead of allocating two copies per edge.
+    if low>=0 then return points,{} end
+    if high<=0 then return {},points end
     local inside,outside={},{}
     local prev=points[#points]
     if not prev then return inside,outside end

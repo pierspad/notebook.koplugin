@@ -47,10 +47,12 @@ function M.path(stroke,path,r)
     local bx,by,bw,bh=stroke:getBounds()
     if bx>x1 or by>y1 or bx+bw<x0 or by+bh<y0 then return false end
     if stroke.filled then
-        for first,last in Area.parts(stroke) do
-            local poly={}
-            for i=first,last do local x,y=stroke:getPoint(i);poly[#poly+1]={x,y} end
-            if touches(poly,path,r) then return true end
+        for _,contour in ipairs(Area.contours(stroke)) do
+            if contour[3]<=x1 and contour[5]>=x0 and contour[4]<=y1 and contour[6]>=y0 then
+                local poly={}
+                for i=contour[1],contour[2] do local x,y=stroke:getPoint(i);poly[#poly+1]={x,y} end
+                if touches(poly,path,r) then return true end
+            end
         end
         return false
     end

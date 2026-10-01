@@ -77,7 +77,7 @@ local function offer(release,owner)
     local dialog
     dialog=TextViewer:new{
         title=_("Notebook update available"),
-        text=version.." → "..release.tag.."\n\n"..release.notes,
+        text=version.." → "..release.tag.."\n\n"..require("releasenotes").plain(release.notes),
         add_default_buttons=false,
         buttons_table={{
             {text=_("Later"),callback=function() UIManager:close(dialog) end},

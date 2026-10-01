@@ -587,7 +587,7 @@ msgstr ""
 msgid "Choose pages to export"
 msgstr ""
 
-msgid "Pages 1–%1; for example: 1, 3-5"
+msgid "Pages 1–%1. Use - for ranges and , to separate pages."
 msgstr ""
 
 msgid "Continue"

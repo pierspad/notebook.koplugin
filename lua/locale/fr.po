@@ -608,8 +608,8 @@ msgstr "Vérifier la mise à jour"
 msgid "Choose pages to export"
 msgstr "Choisir les pages à exporter"
 
-msgid "Pages 1–%1; for example: 1, 3-5"
-msgstr "Pages 1–%1 ; par exemple : 1, 3-5"
+msgid "Pages 1–%1. Use - for ranges and , to separate pages."
+msgstr "Pages 1–%1. Utilisez - pour les plages et , pour séparer les pages."
 
 msgid "Continue"
 msgstr "Continuer"

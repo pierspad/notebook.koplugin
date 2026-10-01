@@ -45,7 +45,7 @@ panel:_goToPage(2)
 assert(Selection.format(panel:indices())=="1,4")
 assert(#doc.pages==4 and #doc.undo_stack==3,'selection modified notebook history')
 -- Selection callback is exercised through the actual header control.
-local controls=panel.holder[1][1][1][3]
+local controls=panel:_buildFooter()
 controls[3]:onTap()
 assert(result and Selection.format(result)=="1,4")
-print("export page grid: checkboxes, range validation, callback and immutable history passed")
+print("export page grid: selection borders, range validation, callback and immutable history passed")

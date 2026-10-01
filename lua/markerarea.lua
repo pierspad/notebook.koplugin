@@ -65,6 +65,24 @@ function Area.parts(stroke)
     end
 end
 
+-- Six scalars per independent contour; shared by clipping and dirty repaint.
+-- Point mutations invalidate this index, and clones build their own index.
+function Area.contours(stroke)
+    if stroke.contour_bounds then return stroke.contour_bounds end
+    local contours={}
+    for first,last in Area.parts(stroke) do
+        local minx,miny,maxx,maxy=math.huge,math.huge,-math.huge,-math.huge
+        for i=first,last do
+            local x,y=stroke:getPoint(i)
+            minx,miny=math.min(minx,x),math.min(miny,y)
+            maxx,maxy=math.max(maxx,x),math.max(maxy,y)
+        end
+        contours[#contours+1]={first,last,minx,miny,maxx,maxy}
+    end
+    stroke.contour_bounds=contours
+    return contours
+end
+
 function Area.erase(stroke,path,r,context)
     if #path<2 or r<=0 or stroke.n==0 then return nil end
     local x0,y0,x1,y1=stroke:getBounds()
@@ -132,10 +150,23 @@ function Area.erase(stroke,path,r,context)
         end
     end
     if stroke.filled then
-        for first,last in Area.parts(stroke) do
-            local points={}
-            for i=first,last do local x,y=stroke:getPoint(i);points[#points+1]={x,y} end
-            cut(points)
+        for _,contour in ipairs(Area.contours(stroke)) do
+            local first,last,minx,miny,maxx,maxy=unpack(contour)
+            if maxx<px0-extra or minx>px1+extra or maxy<py0-extra or miny>py1+extra then
+                -- Copy distant contours directly from the flat point array.
+                -- Avoid polygon tables and clipping for every prior cut.
+                if not area_fragment then
+                    area_fragment=Stroke:new{tool="highlighter",width=stroke.width,
+                        color=stroke.color,tint=stroke.tint,filled=true,marker_parts={}}
+                    fragments[#fragments+1]=area_fragment
+                end
+                area_fragment:appendRange(stroke,first,last)
+                area_fragment.marker_parts[#area_fragment.marker_parts+1]=area_fragment.n
+            else
+                local points={}
+                for i=first,last do local x,y=stroke:getPoint(i);points[#points+1]={x,y} end
+                cut(points)
+            end
         end
     else
         local first=1

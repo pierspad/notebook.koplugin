@@ -24,6 +24,23 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 
 Notebooks are stored in `koreader/notebook/`.
 
+## Compatibility
+
+- **Kindle Scribe** is the primary hardware target; native KOReader checks
+  have also been run on the device. Stylus input, pressure and button support
+  depend on KOReader's device driver and the device firmware.
+- **KOReader desktop emulator (Linux)** is used for automated checks and native
+  offscreen rendering/layout tests. Mouse input can exercise the interface.
+- **Other devices** are not confirmed by these tests. A stylus-capable screen
+  alone does not establish compatibility; please report your model, firmware
+  and KOReader version when testing another device.
+- LocalSend is optional and only needed for wireless sharing. SimpleUI is
+  optional; Notebook is also available from KOReader's normal Tools menu.
+
+The source repository keeps the installable plugin in `lua/`. A source checkout
+or a contrib submodule is **not** the ready-to-install plugin directory: use the
+release ZIP above, or run `make package` and extract the ZIP from `build/`.
+
 ## Features
 
 - **Versatile Pen Tools**:

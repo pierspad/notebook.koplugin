@@ -120,3 +120,23 @@ for _,path in ipairs({{40,50,120,100},{30,65,120,70,55,90},{70,30,80,120,90,30}}
  end end
 end
 print('marker polylines: fast diagonal sweeps and reversing paths match independent segment distances')
+
+local clip=require("markerclip")
+local polygon={{0,0},{100,0},{0,100}}
+local pieces,hit=clip.subtract(polygon,{{80,80},{100,80},{100,100},{80,100}})
+assert(not hit and pieces[1]==polygon)
+
+-- Partial repaint must rasterize only the visible independent contour.
+local ink=require("highlightink")
+local raster=ink.polygon;local calls=0
+ink.polygon=function(...) calls=calls+1;return raster(...) end
+Renderer.drawStroke(FakeBB.new(180,160),multipart,{x=5,y=5,w=30,h=30})
+ink.polygon=raster
+assert(calls==1,"dirty repaint rebuilt distant marker contours")
+local area=require("markerarea")
+local bounds=area.contours(multipart)
+assert(bounds[1][3]==10)
+multipart:translate(3,4)
+assert(area.contours(multipart)[1][3]==13,"translation left stale contour bounds")
+multipart:setPoint(1,2,3)
+assert(area.contours(multipart)[1][3]==2,"point edit left stale contour bounds")

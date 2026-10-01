@@ -80,6 +80,7 @@ function Stroke:addPoint(x, y, pressure)
     self.pts[i + 3] = pressure or 1
     self.n = self.n + 1
     self.chunks = nil
+    self.contour_bounds = nil
 
     if x < self.x_min then self.x_min = x end
     if y < self.y_min then self.y_min = y end
@@ -114,6 +115,7 @@ function Stroke:appendRange(src, from, to)
     self.n = self.n + (to - from + 1)
     self.x_min, self.y_min, self.x_max, self.y_max = x_min, y_min, x_max, y_max
     self.chunks = nil
+    self.contour_bounds = nil
 end
 
 --[[--
@@ -173,10 +175,12 @@ function Stroke:setPoint(i, x, y, pressure)
     self.pts[o + 2] = y
     if pressure then self.pts[o + 3] = pressure end
     self.chunks = nil
+    self.contour_bounds = nil
 end
 
 --- Translates all points by (dx, dy).
 function Stroke:translate(dx, dy)
+    self.contour_bounds = nil
     local n = self.n
     local pts = self.pts
     for i = 1, n do

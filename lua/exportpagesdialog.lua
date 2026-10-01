@@ -1,4 +1,4 @@
--- Export selection owns checkboxes and ranges; thumbnail layout is shared with
+-- Export selection owns borders and ranges; thumbnail layout is shared with
 -- navigation. Selecting pages never changes the document or its undo history.
 local InputDialog=require("ui/widget/inputdialog")
 local InfoMessage=require("ui/widget/infomessage")
@@ -6,6 +6,7 @@ local UIManager=require("ui/uimanager")
 local Selection=require("pageselection")
 local PageGrid=require("pagegrid")
 local Widgets=require("widgets")
+local TextBoxWidget=require("ui/widget/textboxwidget")
 local TextWidget=require("ui/widget/textwidget")
 local Font=require("ui/font")
 local Size=require("ui/size")
@@ -48,7 +49,7 @@ function Panel:_editRange()
     local dialog
     dialog=InputDialog:new{
         title=_("Choose pages to export"),input=Selection.format(self:indices()),
-        input_hint=T(_("Pages 1–%1; for example: 1, 3-5"),self.document:pageCount()),
+        input_hint=T(_("Pages 1–%1. Use - for ranges and , to separate pages."),self.document:pageCount()),
         buttons={{
             {text=_("Cancel"),callback=function() UIManager:close(dialog) end},
             {text=_("Continue"),callback=function()
@@ -62,15 +63,6 @@ function Panel:_editRange()
 end
 function Panel:_buildHeader()
     local avail=self.dimen.w-2*Size.padding.large
-    local width=math.floor((avail-Size.padding.small)/2)-2*Size.padding.button-2*Size.border.thin
-    local controls=HorizontalGroup:new{align="center"}
-    table.insert(controls,Widgets.textButton{text=_("Cancel"),width=width,callback=function() self:onClose() end})
-    table.insert(controls,HorizontalSpan:new{width=Size.padding.small})
-    table.insert(controls,Widgets.textButton{text=_("Continue"),width=width,callback=function()
-        local indices=self:indices()
-        if #indices==0 then return self:_invalid() end
-        UIManager:close(self);self.on_selected(indices)
-    end})
     local range=Selection.format(self:indices())
     self.range_button=Widgets.textButton{
         text=range,icon="notebook.page",width=avail-2*Size.padding.button-2*Size.border.thin,
@@ -90,13 +82,25 @@ function Panel:_buildHeader()
     button("›",function() self:_turnPage(1) end)
     return VerticalGroup:new{align="left",
         TextWidget:new{text=_("Choose pages to export"),face=Font:getFace("tfont",22),max_width=avail},
-        VerticalSpan:new{width=Size.padding.small},controls,
         VerticalSpan:new{width=Size.padding.small},self.range_button,
         VerticalSpan:new{width=Size.padding.small},selection,
         VerticalSpan:new{width=Size.padding.small},
-        TextWidget:new{text=T(_("Pages 1–%1; for example: 1, 3-5"),self.document:pageCount()),
-            face=Font:getFace("cfont",15),max_width=avail},
+        TextBoxWidget:new{text=T(_("Pages 1–%1. Use - for ranges and , to separate pages."),self.document:pageCount()),
+            face=Font:getFace("cfont",15),width=avail},
     }
+end
+function Panel:_buildFooter()
+    local avail=self.dimen.w-2*Size.padding.large
+    local width=math.floor((avail-Size.padding.small)/2)-2*Size.padding.button-2*Size.border.thin
+    local controls=HorizontalGroup:new{align="center"}
+    table.insert(controls,Widgets.textButton{text=_("Cancel"),width=width,callback=function() self:onClose() end})
+    table.insert(controls,HorizontalSpan:new{width=Size.padding.small})
+    table.insert(controls,Widgets.textButton{text=_("Continue"),width=width,callback=function()
+        local indices=self:indices()
+        if #indices==0 then return self:_invalid() end
+        UIManager:close(self);self.on_selected(indices)
+    end})
+    return controls
 end
 Panel=Safe.widget(Panel,"export page selection")
 local M={}

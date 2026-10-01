@@ -610,8 +610,8 @@ msgstr "Controlla aggiornamento"
 msgid "Choose pages to export"
 msgstr "Scegli le pagine da esportare"
 
-msgid "Pages 1–%1; for example: 1, 3-5"
-msgstr "Pagine 1–%1; per esempio: 1, 3-5"
+msgid "Pages 1–%1. Use - for ranges and , to separate pages."
+msgstr "Pagine 1–%1. Usa - per gli intervalli e , per separare le pagine."
 
 msgid "Continue"
 msgstr "Continua"

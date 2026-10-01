@@ -26,7 +26,7 @@ local PageTile = InputContainer:extend{
 
 function PageTile:init()
     local number = TextWidget:new{
-        text = (self.selected == nil and "" or (self.selected and "☑ " or "☐ ")) .. tostring(self.index),
+        text = tostring(self.index),
         face = Font:getFace("cfont", 16),
     }
     self.label_h = number:getSize().h + Size.padding.small
@@ -35,7 +35,7 @@ function PageTile:init()
 
     self.frame = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,
-        color = Blitbuffer.COLOR_BLACK,
+        color = self.selected == false and Blitbuffer.COLOR_GRAY or Blitbuffer.COLOR_BLACK,
         bordersize = Size.border.thin,
         radius = Size.radius.button,
         margin = 0,
@@ -100,9 +100,13 @@ function PageTile:paintTo(bb, x, y)
         require("pdfbackground").draw(bb,page.background,
             {x=ruling.x,y=ruling.y,w=size.w*scale,h=size.h*scale},paper)
     end
-    Renderer.drawPage(bb, page, scale, px, py)
+    -- Keep oversized imported content inside its thumbnail.
+    if #page.strokes>0 then
+        local thumbnail=bb:viewport(px,py,self.paper_w,self.paper_h)
+        Renderer.drawPage(thumbnail, page, scale)
+    end
 
-    if self.current then
+    if self.current or self.selected then
         bb:paintBorder(x, y, self.dimen.w, self.dimen.h,
             Size.border.thick, Blitbuffer.COLOR_BLACK, Size.radius.button)
     end

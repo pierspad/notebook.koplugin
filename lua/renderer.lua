@@ -248,10 +248,14 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
 
     if stroke.tool == "highlighter" and stroke.filled then
         local color=highlightColor(stroke,color_enabled)
-        for first,last in require("markerarea").parts(stroke) do
-            local points={}
-            for i=first,last do local x,y=stroke:getPoint(i);points[#points+1]={x,y} end
-            HighlightInk.polygon(bb,points,color,false,clip)
+        for _,contour in ipairs(require("markerarea").contours(stroke)) do
+            local first,last,x0,y0,x1,y1=unpack(contour)
+            if not clip or (x1+1e-8>=clip.x and y1+1e-8>=clip.y
+                and x0-1e-8<clip.x+clip.w and y0-1e-8<clip.y+clip.h) then
+                local points={}
+                for i=first,last do local x,y=stroke:getPoint(i);points[#points+1]={x,y} end
+                HighlightInk.polygon(bb,points,color,false,clip)
+            end
         end
         return
     end
