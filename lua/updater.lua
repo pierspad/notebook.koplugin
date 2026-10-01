@@ -74,10 +74,14 @@ end
 local function offer(release,owner)
     -- TextViewer is resolved through KOReader, never through a new plugin file.
     local TextViewer=require("ui/widget/textviewer")
+    local markdown=TextViewer.html_text_formats and TextViewer.html_text_formats.md
+    local notes=release.notes or ""
+    if not markdown then notes=require("releasenotes").plain(notes) end
     local dialog
     dialog=TextViewer:new{
         title=_("Notebook update available"),
-        text=version.." → "..release.tag.."\n\n"..require("releasenotes").plain(release.notes),
+        text=version.." → "..release.tag.."\n\n"..notes,
+        text_format=markdown and "md" or nil,
         add_default_buttons=false,
         buttons_table={{
             {text=_("Later"),callback=function() UIManager:close(dialog) end},

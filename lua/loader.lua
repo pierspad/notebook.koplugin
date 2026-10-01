@@ -9,7 +9,7 @@ return function(directory)
         "newnotebook notebook pagepanel pagegrid pagetile papersample pdfbackground pressure rect raster renderer safe settings shape share " ..
         "stroke textobject textpreview textcache textdialog textsizepicker polygonink penpressure penink liveink viewcanvas xopp svg " ..
         "exportprogress documentstorage documenthistory pageselection exportpagesdialog gallerycard galleryheader pluginicons " ..
-        "updatepolicy updateinstaller updatetransport updater " ..
+        "updatepolicy updateinstaller updatetransport updater releasenotes " ..
         "canvasrender canvasrefresh canvaslifecycle notebooktoolbar notebooksettings galleryexport " ..
         "erasercanvas geometryink highlightink markerarea markerhit markerclip notebooktext selectioncanvas shapecanvas " ..
         "shapesnap snapcanvas stylusbridge stylusinput touchinput zoom zoomcache zoomcanvas zoomrefresh " ..

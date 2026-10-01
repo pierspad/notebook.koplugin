@@ -30,3 +30,4 @@ assert(marker:splitAlongPath({50,20,50,20},5),'private marker area module unavai
 assert(package.loaded.markerarea==stale and load('markerarea')~=stale)
 load('renderer').drawStroke(require('spec/support').FakeBB.new(120,60),marker)
 print("private plugin modules and production marker rendering/erasure passed")
+assert(load('releasenotes').plain('### Heading')=='Heading','release notes missing from private loader')

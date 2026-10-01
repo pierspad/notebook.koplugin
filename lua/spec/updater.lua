@@ -78,3 +78,26 @@ print("updater: stable policy, rollback/orphan removal, HTTPS quoting, weekly/of
 
 local Notes=require("releasenotes")
 assert(Notes.plain("### Changes\n* **Fix** [issue](https://example.org/1)\n[https://example.org](https://example.org)")=="Changes\n• Fix issue (https://example.org/1)\nhttps://example.org")
+
+-- Exercise the real update-offer callback through the packaged private loader.
+local private=dofile('loader.lua')('.')
+local privateUpdater=private('updater')
+local privateTransport=private('updatetransport')
+local rawNotes='## [9.9.9](https://example.org/compare)\n\n### Fixes\n\n* **Fast** erasing'
+private('updatepolicy').release=function() return {tag='v9.9.9',notes=rawNotes} end
+package.loaded.json={decode=function() return {} end}
+local viewer
+package.loaded['ui/widget/textviewer']={html_text_formats={md=true},new=function(_,options)
+ viewer=options;return options
+end}
+privateTransport.fetch=function(_,_,_,_,callback)
+ local path=os.tmpname();local file=assert(io.open(path,'w'));file:write('{}');file:close()
+ callback(path)
+end
+privateUpdater.check(true)
+assert(viewer and viewer.text_format=='md','update offer does not enable native Markdown')
+assert(viewer.text:find(rawNotes,1,true),'Markdown source must reach native renderer intact')
+package.loaded['ui/widget/textviewer'].html_text_formats=nil
+viewer=nil
+privateUpdater.check(true)
+assert(viewer and not viewer.text_format and not viewer.text:find('###',1,true),'old viewer fallback exposes Markdown')
