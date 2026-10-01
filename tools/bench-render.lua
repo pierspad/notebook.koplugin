@@ -17,14 +17,15 @@ for _, tool in ipairs({"pen", "highlighter"}) do
     Renderer.drawStroke(full, s)
     Renderer.drawStroke(bb, s, clip)
     local differences, outside = 0, 0
-    for y = 0, 1859 do
-        for x = 0, 1859 do
+    for y = 0, bb:getHeight() - 1 do
+        for x = 0, bb:getWidth() - 1 do
             local v = bb:getPixel(x,y):getColor8().a
             if x >= clip.x and x < clip.x+clip.w and y >= clip.y and y < clip.y+clip.h then
                 if v ~= full:getPixel(x,y):getColor8().a then differences = differences+1 end
             elseif v ~= 255 then outside = outside+1 end
         end
     end
+    assert(differences == 0 and outside == 0, "clipped rendering changed pixels")
     local start = os.clock()
     for _ = 1, 30 do Renderer.drawStroke(bb, s, clip) end
     print(string.format("%s: %.3f ms/clip, inside differences=%d, outside writes=%d",

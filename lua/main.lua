@@ -4,10 +4,9 @@ Notebook: handwriting notebooks for KOReader.
 Stylus input arrives through KOReader's own stylus callback API, so nothing in
 the framework or on the device is patched -- this plugin is purely additive.
 
-Note that every module is required here, at load time. The plugin loader puts
-the plugin directory on package.path only while the plugin is being loaded and
-restores it immediately afterwards, so a require deferred into a callback would
-fail to resolve.
+The private loader keeps plugin modules separate from KOReader and sibling
+plugins. It retains the plugin directory in each module environment, so later
+callbacks can safely require their own modules after KOReader restores package.path.
 
 @module koplugin.notebook
 --]]--
@@ -15,7 +14,6 @@ fail to resolve.
 local plugin_dir = assert(debug.getinfo(1, "S").source:match("^@(.+)/[^/]+$"))
 local require = assert(loadfile(plugin_dir .. "/loader.lua"))()(plugin_dir)
 
-local DataStorage = require("datastorage")
 local Dispatcher = require("dispatcher")
 local Document = require("document")
 local Gallery = require("gallery")
@@ -24,14 +22,13 @@ local LauncherBar = require("launcherbar")
 local Library = require("library")
 local Notebook = require("notebook")
 local Share = require("share")
+local Updater = require("updater")
 local Safe = require("safe")
 local UIManager = require("ui/uimanager")
 local lfs = require("libs/libkoreader-lfs")
-local logger = require("logger")
 local _ = require("i18n")
 
--- Required here so that everything is resolved while the plugin directory is
--- still on package.path; see the note at the top of this file.
+-- Common UI modules are resolved once through the private loader.
 require("newnotebook")
 require("template")
 require("pagepanel")
@@ -49,62 +46,7 @@ plugins put theirs. Since the toolbar cannot draw without them, this runs on
 load and re-copies anything missing, so the icons survive a KOReader upgrade
 that wipes the data directory.
 --]]
-local function installIcons()
-    -- Finding our own directory needs care. KOReader runs with its working
-    -- directory somewhere else entirely (/var/tmp/root on Kindle), so a relative
-    -- path resolves to nothing, and the failure is silent: the toolbar just
-    -- fills up with "icon not found" placeholders.
-    --
-    -- Try the path Lua recorded for this file, then the conventional location
-    -- under the data directory, and use whichever actually contains the icons.
-    local this_file = debug.getinfo(1, "S").source:match("^@(.*)$")
-    local candidates = {
-        this_file and this_file:match("^(.*)/[^/]+$") or nil,
-        DataStorage:getDataDir() .. "/plugins/notebook.koplugin",
-    }
-
-    local src
-    for _, dir in ipairs(candidates) do
-        if lfs.attributes(dir .. "/icons", "mode") == "directory" then
-            src = dir .. "/icons"
-            break
-        end
-    end
-    if not src then
-        logger.warn("Notebook: could not locate the icon directory; tried",
-            table.concat(candidates, ", "))
-        return
-    end
-
-    local dst = DataStorage:getDataDir() .. "/icons"
-
-    if lfs.attributes(dst, "mode") ~= "directory" then
-        if not lfs.mkdir(dst) then
-            logger.warn("Notebook: cannot create icon directory", dst)
-            return
-        end
-    end
-
-    for name in lfs.dir(src) do
-        if name:match("%.svg$") then
-            local from = io.open(src .. "/" .. name, "rb")
-            if from then
-                local data = from:read("*a")
-                from:close()
-                local existing = io.open(dst .. "/" .. name, "rb")
-                local unchanged = existing and existing:read("*a") == data
-                if existing then existing:close() end
-                local to = not unchanged and io.open(dst .. "/" .. name, "wb")
-                if to then
-                    to:write(data)
-                    to:close()
-                elseif not unchanged then
-                    logger.warn("Notebook: cannot write icon", name)
-                end
-            end
-        end
-    end
-end
+local installIcons = require("pluginicons")
 
 -- The gallery currently on screen, if any. Held at module level because the
 -- plugin is instantiated once per UI (file manager and reader each get one)
@@ -134,6 +76,7 @@ function Scribe:init()
     self:onDispatcherRegisterActions()
     self.ui.menu:registerToMainMenu(self)
     installIcons()
+    Updater.start(plugin_dir)
 end
 
 function Scribe:addToMainMenu(menu_items)
@@ -151,6 +94,10 @@ end
 
 --- Opens the gallery: the list of notebooks, rather than one fixed notebook.
 function Scribe:openNotebook()
+    if Updater.installed or Updater.installing then
+        UIManager:show(InfoMessage:new{ text = _("Restart KOReader to use the updated Notebook plugin.") })
+        return
+    end
     if Safe.failed then
         UIManager:show(InfoMessage:new{
             text = _("Notebook encountered an error. Restart KOReader to reopen it; see notebook-error.log for details."),

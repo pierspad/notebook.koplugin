@@ -140,5 +140,25 @@ for _, color in ipairs{-1, 256, 0xFFFFFF, 0x2000000, 0x1000000+0.5, math.huge} d
     end
 end
 
+for _,parts in ipairs({false,{}, {2,8}, {4,7}, {4,9}, {4,4,8}, {4.5,8}, {0/0,8}}) do
+    test("rejects malformed marker contour boundaries "..tostring(parts),function()
+        local pts={10,10,1,30,10,1,30,30,1,10,30,1,80,80,1,100,80,1,100,100,1,80,100,1}
+        store["/bad-marker"]={version=1,pages={{strokes={{tool="highlighter",filled=true,
+            width=24,n=8,pts=pts,marker_parts=parts}}}}}
+        local doc=Document:new("/bad-marker")
+        local original=doc.pages
+        assert(not doc:load(),"malformed marker was accepted")
+        assert(doc.pages==original,"failed load replaced the open document")
+    end)
+end
+
+for _,points in ipairs({{1,nil,1}, {1,2,1,extra=3}, {[0]=1,1,2,1}, {1,2,1,[4.5]=2}, {1,2,1,[math.huge]=2}}) do
+    test("rejects sparse or extra point-array entries", function()
+        store["/bad-points"]={version=1,pages={{strokes={{n=1,pts=points,width=3}}}}}
+        local d=Document:new("/bad-points")
+        assert(not d:load(),"invalid point array was accepted")
+    end)
+end
+
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

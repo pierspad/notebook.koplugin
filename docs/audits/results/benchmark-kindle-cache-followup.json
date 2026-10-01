@@ -1,0 +1,318 @@
+{
+  "schema": 1,
+  "host": "Linux kindle 4.9.77-lab126 #1 SMP PREEMPT Wed Jul 29 05:38:34 UTC 2026 armv7l GNU/Linux",
+  "created_utc": "2026-10-01T11:23:55.736894+00:00",
+  "runtime_directory": "/mnt/us/koreader",
+  "runs": [
+    {
+      "results": [
+        {
+          "heap_delta_kib": {
+            "median": 5014.0390625,
+            "p95": 5015.828125,
+            "min": 5014.0390625
+          },
+          "retained_kib": {
+            "median": 2.0625,
+            "p95": 3.8671875,
+            "min": 2.0625
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 220,
+            "min": -84
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "draw_calls": 4000
+          },
+          "name": "cache/page-cold",
+          "cpu_ms": {
+            "median": 169.631,
+            "p95": 181.571,
+            "min": 168.447
+          },
+          "wall_ms": {
+            "median": 170.43209075928,
+            "p95": 183.00700187683,
+            "min": 169.23499107361
+          }
+        },
+        {
+          "heap_delta_kib": {
+            "median": 11.3046875,
+            "p95": 13.85546875,
+            "min": 10.91796875
+          },
+          "retained_kib": {
+            "median": 2.47265625,
+            "p95": 4.7890625,
+            "min": 2.0625
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 0,
+            "min": 0
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "blit_calls": 0,
+            "draw_calls": 0
+          },
+          "name": "cache/page-warm",
+          "cpu_ms": {
+            "median": 5.1566999999999,
+            "p95": 6.7661,
+            "min": 2.9007
+          },
+          "wall_ms": {
+            "median": 5.1789045333862,
+            "p95": 6.805419921875,
+            "min": 2.8981924057007
+          }
+        }
+      ],
+      "schema": 1,
+      "scale": 1,
+      "samples": 9,
+      "jit": "on",
+      "screen": {
+        "bpp": 8,
+        "width": 1860,
+        "height": 2480
+      },
+      "runtime": "LuaJIT 2.1.1783773675",
+      "arch": "arm",
+      "source_sha256": "1c8c2072a5c32cd318b0cea1de0ee2fce72e7aa9984bdac13ae73005aa2ce308"
+    }
+  ],
+  "baseline": [
+    {
+      "results": [
+        {
+          "heap_delta_kib": {
+            "median": 5014.1015625,
+            "p95": 5016.171875,
+            "min": 5014.0390625
+          },
+          "retained_kib": {
+            "median": 2.1875,
+            "p95": 4.2109375,
+            "min": 2.0625
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 100,
+            "min": -8
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "draw_calls": 4000
+          },
+          "name": "cache/page-cold",
+          "cpu_ms": {
+            "median": 163.17,
+            "p95": 172.598,
+            "min": 159.785
+          },
+          "wall_ms": {
+            "median": 164.10708427429,
+            "p95": 173.88391494751,
+            "min": 160.55703163147
+          }
+        },
+        {
+          "heap_delta_kib": {
+            "median": 11.19921875,
+            "p95": 20.46875,
+            "min": 10.89453125
+          },
+          "retained_kib": {
+            "median": 2.3125,
+            "p95": 11.58984375,
+            "min": 2.0625
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 0,
+            "min": 0
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "blit_calls": 0,
+            "draw_calls": 0
+          },
+          "name": "cache/page-warm",
+          "cpu_ms": {
+            "median": 7.8603,
+            "p95": 9.3315,
+            "min": 7.3352
+          },
+          "wall_ms": {
+            "median": 7.920503616333,
+            "p95": 9.3930006027222,
+            "min": 7.3732852935791
+          }
+        }
+      ],
+      "schema": 1,
+      "scale": 1,
+      "samples": 9,
+      "jit": "on",
+      "screen": {
+        "bpp": 8,
+        "width": 1860,
+        "height": 2480
+      },
+      "runtime": "LuaJIT 2.1.1783773675",
+      "arch": "arm",
+      "source_sha256": "fd64cd2e4162797d1b3fb05cda342926733752794900ab226c6ed90124406a91"
+    }
+  ],
+  "comparison": [
+    {
+      "jit": "on",
+      "name": "cache/page-cold",
+      "cpu_ratio": 1.0395967395967396,
+      "before_cpu_ms": 163.17,
+      "after_cpu_ms": 169.631,
+      "before": {
+        "heap_delta_kib": {
+          "median": 5014.1015625,
+          "p95": 5016.171875,
+          "min": 5014.0390625
+        },
+        "retained_kib": {
+          "median": 2.1875,
+          "p95": 4.2109375,
+          "min": 2.0625
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 100,
+          "min": -8
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "draw_calls": 4000
+        },
+        "name": "cache/page-cold",
+        "cpu_ms": {
+          "median": 163.17,
+          "p95": 172.598,
+          "min": 159.785
+        },
+        "wall_ms": {
+          "median": 164.10708427429,
+          "p95": 173.88391494751,
+          "min": 160.55703163147
+        }
+      },
+      "after": {
+        "heap_delta_kib": {
+          "median": 5014.0390625,
+          "p95": 5015.828125,
+          "min": 5014.0390625
+        },
+        "retained_kib": {
+          "median": 2.0625,
+          "p95": 3.8671875,
+          "min": 2.0625
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 220,
+          "min": -84
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "draw_calls": 4000
+        },
+        "name": "cache/page-cold",
+        "cpu_ms": {
+          "median": 169.631,
+          "p95": 181.571,
+          "min": 168.447
+        },
+        "wall_ms": {
+          "median": 170.43209075928,
+          "p95": 183.00700187683,
+          "min": 169.23499107361
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "cache/page-warm",
+      "cpu_ratio": 0.6560436624556188,
+      "before_cpu_ms": 7.8603,
+      "after_cpu_ms": 5.1566999999999,
+      "before": {
+        "heap_delta_kib": {
+          "median": 11.19921875,
+          "p95": 20.46875,
+          "min": 10.89453125
+        },
+        "retained_kib": {
+          "median": 2.3125,
+          "p95": 11.58984375,
+          "min": 2.0625
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 0,
+          "min": 0
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "blit_calls": 0,
+          "draw_calls": 0
+        },
+        "name": "cache/page-warm",
+        "cpu_ms": {
+          "median": 7.8603,
+          "p95": 9.3315,
+          "min": 7.3352
+        },
+        "wall_ms": {
+          "median": 7.920503616333,
+          "p95": 9.3930006027222,
+          "min": 7.3732852935791
+        }
+      },
+      "after": {
+        "heap_delta_kib": {
+          "median": 11.3046875,
+          "p95": 13.85546875,
+          "min": 10.91796875
+        },
+        "retained_kib": {
+          "median": 2.47265625,
+          "p95": 4.7890625,
+          "min": 2.0625
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 0,
+          "min": 0
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "blit_calls": 0,
+          "draw_calls": 0
+        },
+        "name": "cache/page-warm",
+        "cpu_ms": {
+          "median": 5.1566999999999,
+          "p95": 6.7661,
+          "min": 2.9007
+        },
+        "wall_ms": {
+          "median": 5.1789045333862,
+          "p95": 6.805419921875,
+          "min": 2.8981924057007
+        }
+      }
+    }
+  ]
+}

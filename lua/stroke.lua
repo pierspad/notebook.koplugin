@@ -50,6 +50,7 @@ function Stroke:new(opts)
         tint = opts.tint,
         pen_style = opts.pen_style,
         filled = opts.filled == true,
+        marker_parts = opts.marker_parts,
         shape_kind = opts.shape_kind,
         text = opts.text,
         font_size = opts.font_size,
@@ -221,6 +222,10 @@ function Stroke:clone()
     }
     local pts, spts = copy.pts, self.pts
     for i = 1, self.n * STRIDE do pts[i] = spts[i] end
+    if self.marker_parts then
+        copy.marker_parts={}
+        for i,last in ipairs(self.marker_parts) do copy.marker_parts[i]=last end
+    end
     copy.n = self.n
     copy.x_min, copy.y_min = self.x_min, self.y_min
     copy.x_max, copy.y_max = self.x_max, self.y_max
@@ -242,7 +247,7 @@ end
 -- @treturn number,number,number,number x, y, w, h
 function Stroke:getBounds()
     if self.n == 0 then return 0, 0, 0, 0 end
-    local pad = math.ceil(self.width / 2) + 1
+    local pad = self.tool == "highlighter" and self.filled and 1 or math.ceil(self.width / 2) + 1
     local x = self.x_min - pad
     local y = self.y_min - pad
     return x, y, (self.x_max + pad) - x, (self.y_max + pad) - y
@@ -282,6 +287,20 @@ function Stroke:hitTest(px, py, r)
         return false
     end
 
+    if self.tool == "highlighter" and self.filled then
+        for first,last in require("markerarea").parts(self) do
+            local inside=false
+            local ax,ay=self:getPoint(last)
+            for i=first,last do
+                local x,y=self:getPoint(i)
+                if (ay>py)~=(y>py) and px<(x-ax)*(py-ay)/(y-ay)+ax then inside=not inside end
+                if distToSegmentSq(px,py,ax,ay,x,y)<=r*r then return true end
+                ax,ay=x,y
+            end
+            if inside then return true end
+        end
+        return false
+    end
     local r2 = r * r
     if self.n == 1 then
         local x, y = self:getPoint(1)
@@ -459,7 +478,8 @@ dotted line of bites.
 -- everything between its two ends.
 --
 -- @treturn table,number,number,number,number fragments and x, y, w, h
-function Stroke:splitAlongPath(path, r)
+function Stroke:splitAlongPath(path, r, marker_context)
+    if self.tool == "highlighter" then return require("markerarea").erase(self,path,r,marker_context) end
     if #path < 2 then return nil end
 
     -- Settle first whether anything is taken at all. Almost always nothing is,
@@ -563,6 +583,7 @@ function Stroke:serialize()
         tool = self.tool,
         pen_style = self.pen_style,
         filled = self.filled,
+        marker_parts = self.marker_parts,
         width = self.width,
         color = self.color,
         tint = self.tint,
@@ -579,7 +600,7 @@ end
 --- Rebuilds a stroke from serialized data.
 function Stroke:deserialize(data)
     local o = Stroke:new{ tool = data.tool, pen_style = data.pen_style,
-        filled = data.filled, width = data.width, color = data.color,
+        filled = data.filled, marker_parts = data.marker_parts, width = data.width, color = data.color,
         tint = data.tint, shape_kind = data.shape_kind, text=data.text, font_size=data.font_size,
         font_family=data.font_family, text_bold=data.text_bold,
         text_italic=data.text_italic, text_underline=data.text_underline,

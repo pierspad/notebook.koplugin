@@ -143,7 +143,14 @@ function Row:init()
 end
 
 function Row:_buildIcon()
-    if self.swatch then
+    if self.checkbox then
+        self.icon_widget = TextWidget:new{
+            text = self.selected and "☑" or "☐",
+            face = Font:getFace("cfont", 21),
+            fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
+            max_width = ICON_SZ,
+        }
+    elseif self.swatch then
         self.icon_widget = ColorSwatch:new{ color = self.swatch, selected = self.selected }
     elseif self.icon_text then
         self.icon_widget = TextWidget:new{
@@ -240,6 +247,7 @@ function ActionMenu:init()
         local function makeRow(item)
         local row = Row:new{
             row_height = row_h,
+            checkbox = item.checkbox,
             icon = item.icon,
             icon_selected = item.icon_selected,
             swatch = item.swatch,

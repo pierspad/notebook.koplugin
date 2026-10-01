@@ -30,7 +30,6 @@ local MIN_PRESSURE_FACTOR = 0.35
 local HIGHLIGHT_TINT = 160
 
 local COLOR_BLACK = Blitbuffer.Color8(0)
-local COLOR_HIGHLIGHT_DEFAULT = Blitbuffer.Color8(HIGHLIGHT_TINT)
 local COLOR_HIGHLIGHT_YELLOW = 0x1FFFF66
 
 local function rgbColor(value)
@@ -53,6 +52,10 @@ local function displayColor(value, color_enabled)
         return Blitbuffer.Color8(value or 0)
     end
     return color
+end
+
+local function highlightColor(stroke,color_enabled)
+    return displayColor(stroke.tint or (color_enabled and COLOR_HIGHLIGHT_YELLOW) or HIGHLIGHT_TINT,color_enabled)
 end
 
 --- Returns the half-width, in pixels, a stroke should have at a given pressure.
@@ -138,12 +141,7 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
     local is_rgb_ink = color_enabled and type(stroke.color) == "number"
         and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF
     if is_highlight then
-        local tint = stroke.tint or (color_enabled and COLOR_HIGHLIGHT_YELLOW)
-        color = tint and displayColor(tint, color_enabled) or COLOR_HIGHLIGHT_DEFAULT
-        if not color_enabled and stroke.tint then
-            local stored_rgb = rgbColor(stroke.tint)
-            if stored_rgb then color = Blitbuffer.Color8(grayOfRGB(stored_rgb)) end
-        end
+        color = highlightColor(stroke,color_enabled)
     elseif stroke.color and stroke.color ~= 0 then
         color = displayColor(stroke.color, color_enabled)
     end
@@ -166,21 +164,10 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
         end
         stroke.accum_len = cur_len + dist
     else
-        -- Chisel stamps are squares two radii wide. At 0.8r consecutive
-        -- squares still overlap generously in every direction, while the old
-        -- 0.4r spacing blended most pixels several times and made a broad
-        -- marker spend CPU on work that could not change the result.
         local is_pencil = stroke.pen_style == "pencil"
-        local step_dist = is_highlight and math.max(2, math.floor(math.min(r0, r1) * 0.8))
-            or (is_pencil and math.max(1.0, math.floor(math.min(r0, r1) * 0.5)) or 1.0)
-        local steps = math.max(1, math.ceil(dist / step_dist))
-
-        local first = math.max(0, math.floor(first_t * steps))
-        local last = math.min(steps, math.ceil(last_t * steps))
         if is_highlight then
-            HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1,
-                color, first, last, steps, stroke.live_preview,
-                exclude_start or (stroke.live_preview and dist > 0))
+            HighlightInk.drawSegment(bb,x0,y0,r0,x1,y1,r1,color,0,1,1,
+                stroke.live_preview,exclude_start or (stroke.live_preview and dist>0))
         else
             require("penink").draw(bb,x0,y0,r0,x1,y1,r1,color,is_rgb_ink,is_pencil,grain_x,grain_y)
         end
@@ -259,6 +246,15 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
     local n = stroke:count()
     if n == 0 then return end
 
+    if stroke.tool == "highlighter" and stroke.filled then
+        local color=highlightColor(stroke,color_enabled)
+        for first,last in require("markerarea").parts(stroke) do
+            local points={}
+            for i=first,last do local x,y=stroke:getPoint(i);points[#points+1]={x,y} end
+            HighlightInk.polygon(bb,points,color,false,clip)
+        end
+        return
+    end
     if stroke.shape_kind and GeometryInk.draw(bb, stroke, clip,
         displayColor(stroke.color or 0, color_enabled), color_enabled) then return end
     local ox, oy = 0, 0
@@ -303,8 +299,7 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
         local x, y, p = stroke:getPoint(1)
         local r = Renderer.radiusFor(stroke, p)
         if stroke.tool == "highlighter" then
-            HighlightInk.stamp(target, x - ox, y - oy, r,
-                displayColor(stroke.tint or HIGHLIGHT_TINT, color_enabled))
+            HighlightInk.stamp(target,x-ox,y-oy,r,highlightColor(stroke,color_enabled))
         else
             require("penink").draw(target,x-ox,y-oy,r,x-ox,y-oy,r,
                 displayColor(stroke.color,color_enabled),
@@ -350,7 +345,7 @@ function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
                 require("textobject").draw(bb, stroke, scale, ox, oy, clip)
             else
                 local scaled = {
-                    shape_kind=stroke.shape_kind, filled=stroke.filled,
+                    shape_kind=stroke.shape_kind, filled=stroke.filled, marker_parts=stroke.marker_parts,
                     pen_style=stroke.pen_style, tool=stroke.tool,
                     color=stroke.color, tint=stroke.tint,
                     grain_x=-ox, grain_y=-oy,
@@ -363,7 +358,12 @@ function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
                         return x*scale+ox, y*scale+oy, p
                     end,
                 }
-                Renderer.drawStroke(bb, scaled, clip, color_enabled)
+                -- A stroke wholly inside the target needs no translated viewport
+                -- or per-segment clipping closures. Keep the conservative brush
+                -- margin so edge strokes retain the original clipping path.
+                local contained = scaled.x_min-pad >= 0 and scaled.y_min-pad >= 0
+                    and scaled.x_max+pad < clip.w and scaled.y_max+pad < clip.h
+                Renderer.drawStroke(bb, scaled, not contained and clip or nil, color_enabled)
             end
         end
     end

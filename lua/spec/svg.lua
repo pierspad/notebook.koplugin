@@ -24,8 +24,13 @@ assert(s:find('fill="white"',1,true))
 local marker=Stroke:new{tool='highlighter',width=20,tint=0x100ff00}
 marker:addPoint(1,2);marker:addPoint(20,2)
 assert(Svg.toSVG({pages={{strokes={marker}}},contentOrigin=function() return 0,100 end},path))
-assert(read():find('#00ff00',1,true) and read():find('opacity="0.4"',1,true))
+assert(read():find('#00ff00',1,true) and read():find('mix-blend-mode:darken',1,true) and not read():find('<circle',1,true))
 assert(read():find('viewBox="0 0 1860 2380"',1,true))
+local multipart=Stroke:new{tool='highlighter',filled=true,width=30,tint=160,marker_parts={4,8}}
+for _,p in ipairs({{10,10},{30,10},{30,30},{10,30},{80,80},{100,80},{100,100},{80,100}}) do multipart:addPoint(p[1],p[2]) end
+assert(Svg.toSVG({pages={{strokes={multipart}}}},path))
+local _,contours=read():gsub('<polygon','')
+assert(contours==2 and not read():find('<circle',1,true),'SVG joined disjoint marker contours')
 assert(Svg.toSVG(doc,path))
 -- Compact constant-width output must not flatten genuine pressure changes.
 local fine=Stroke:new{width=8,pen_style='fineliner'}

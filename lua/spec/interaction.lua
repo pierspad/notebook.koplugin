@@ -86,3 +86,86 @@ for _,line in ipairs({{10,10,3,80,10,3},{10,10,2,10,80,7},{10,15,7,75,80,2},
     end end
 end
 print('interaction: zoom shape/rotation/tool switch, cleanup, pen lift and input timestamps passed')
+-- Shape contact must use a visible binary outline, including colored fills.
+for _,zoom in ipairs({1,2}) do
+ Screen.bb=support.FakeBB.new(180,220)
+ local shapes=Canvas:new{document=Document:new('/tmp/shape-preview.scribe'),
+     content={x=0,y=0,w=180,h=220}}
+ shapes.zoom=zoom;shapes.zoom_x=0;shapes.zoom_y=0
+ shapes.shape_kind='rectangle';shapes.shape_color=160;shapes.shape_fill=true
+ shapes.pen_width=2
+ shapes:_beginShape(20,30);shapes:_extendShape(70,80)
+ local x,y=shapes:_viewPoint(20,50)
+ assert(Screen.bb:get(x,y)==0,'gray figure sent to binary waveform')
+ x,y=shapes:_viewPoint(45,55)
+ assert(Screen.bb:get(x,y)==255,'filled preview hides the underlying page')
+ shapes.stopping=true;shapes:_endShape()
+ assert(Screen.bb:get(x,y)==160,'pen lift failed to restore authoritative fill')
+end
+-- Event coalescing must retain the newest endpoint and finish it on pen-up.
+Screen.bb=support.FakeBB.new(180,220)
+local shapes=Canvas:new{document=Document:new('/tmp/shape-cadence.scribe'),
+ content={x=0,y=0,w=180,h=220}}
+shapes.stopping=true;shapes.shape_color=160;shapes.pen_width=2
+clock=1000;shapes:_beginShape(20,30);shapes:_extendShape(70,80)
+local preview=shapes.stroke;local paints=fast
+shapes:_extendShape(70,80)
+assert(shapes.stroke==preview and fast==paints,'stationary sample re-rasterized the figure')
+clock=1010;shapes:_extendShape(90,100)
+clock=1020;shapes:_extendShape(110,120)
+assert(shapes.stroke==preview and scheduled[shapes.shape_preview_cb],'preview throttle failed')
+local snapshot=shapes.shape_gesture.background
+shapes:_endShape()
+local final=shapes.document:getPage().strokes[1]
+assert(final.x_max==110 and final.y_max==120,'pen-up lost latest throttled endpoint')
+assert(snapshot.freed and not scheduled[shapes.shape_preview_cb],'shape left a snapshot or callback alive')
+-- Resizing and rotating recognized markers retain the actual brush metadata.
+local original=require('shape').create('rectangle',20,30,70,80,12,0,false)
+original.tool='highlighter';original.tint=160
+shapes.document:addStroke(original)
+clock=2000;shapes:_beginShape(20,30,original);shapes:_extendShape(110,120)
+local x,y=shapes:_viewPoint(20,50)
+assert(Screen.bb:get(x,y)==0,'marker figure preview is not black')
+shapes:_endShape()
+local resized=shapes.document:getPage().strokes[2]
+assert(resized.tool=='highlighter' and resized.tint==160,'shape resize changed the marker brush')
+local rotated=require('shape').transform(resized,'rotate',120,150,120,80)
+assert(rotated.tint==160 and rotated.tool=='highlighter','shape rotation lost marker tint')
+print('shape previews: binary outlines, final fills, 1x/2x, coalesced release, stationary input, brush metadata and snapshot cleanup passed')
+
+-- Direct layer controls must repaint immediately and retain shape selection.
+for _,zoom in ipairs({1,2}) do
+ Screen.bb=support.FakeBB.new(180,220)
+ local d=Document:new('/tmp/direct-order.scribe')
+ local shape=require('shape').create('rectangle',20,30,70,80,2,160,true)
+ local ink=require('stroke'):new{width=3};ink:addPoint(40,50);ink:addPoint(50,60)
+ d:addStroke(shape);d:addStroke(ink)
+ local canvas=Canvas:new{document=d,content={x=0,y=0,w=180,h=220}}
+ canvas.zoom=zoom;canvas.zoom_x=0;canvas.zoom_y=0
+ canvas:_showLassoMenu({shape})
+ assert(canvas.lasso_menu.on_order,'missing direct layer action')
+ canvas.lasso_menu.on_order(true)
+ assert(d:getPage().strokes[2]==shape,'direct front action failed')
+ assert(canvas.selected_strokes[1]==shape and canvas.lasso_menu,'layer action lost selection')
+ local depth=#d.undo_stack
+ canvas.lasso_menu.on_order(true)
+ assert(#d.undo_stack==depth,'unchanged layer action added undo')
+ canvas.lasso_menu.on_order(false)
+ assert(d:getPage().strokes[1]==shape,'direct back action failed')
+ d:undo();assert(d:getPage().strokes[2]==shape,'layer undo failed')
+ d:redo();assert(d:getPage().strokes[1]==shape,'layer redo failed')
+end
+print('direct shape layer controls: selection, no-op, undo/redo at 1x/2x passed')
+-- A preview already painted before pen-up is still the committed endpoint.
+Screen.bb=support.FakeBB.new(180,220)
+local transform_doc=Document:new('/tmp/transform-release.scribe')
+local original_shape=require('shape').create('rectangle',20,30,70,80,2,0,false)
+transform_doc:addStroke(original_shape)
+local transform_canvas=Canvas:new{document=transform_doc,content={x=0,y=0,w=180,h=220}}
+transform_canvas:_beginShapeTransform(original_shape,'se',70,80)
+clock=4000;transform_canvas:_extendShapeTransform(100,110)
+assert(transform_canvas.transform_gesture.preview,'fixture did not paint preview')
+transform_canvas:_endShapeTransform()
+assert(transform_doc:getPage().strokes[1].x_max==100,'painted transform endpoint lost at release')
+transform_doc:undo();assert(transform_doc:getPage().strokes[1]==original_shape,'transform undo lost original')
+print('shape transform release: painted endpoint commits once and undo restores original')

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 02:24+0200\n"
+"POT-Creation-Date: 2026-10-01 13:14+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Russian\n"
@@ -13,20 +13,166 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Cut"
-msgstr "Вырезать"
+msgid "Notebook name"
+msgstr "Название блокнота"
 
-msgid "Paste"
-msgstr "Вставить"
+msgid "New notebook"
+msgstr "Новый блокнот"
 
-msgid "Copy"
-msgstr "Копировать"
+msgid "Cancel"
+msgstr "Отмена"
 
-msgid "XOPP"
-msgstr "XOPP"
+msgid "Create"
+msgstr "Создать"
 
-msgid "PDF"
-msgstr "PDF"
+msgid "Preparing…"
+msgstr "Подготовка…"
+
+msgid "Cancelling…"
+msgstr "Отмена…"
+
+msgid "Exporting PDF…"
+msgstr "Экспорт PDF…"
+
+msgid "Rendering"
+msgstr "Отрисовка"
+
+msgid "Preparing image"
+msgstr "Подготовка изображения"
+
+msgid "Compressing"
+msgstr "Сжатие"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Страница %1 из %2 — %3"
+
+msgid "Open notebook"
+msgstr "Открыть блокнот"
+
+msgid "Notebook"
+msgstr "Блокнот"
+
+msgid "Restart KOReader to use the updated Notebook plugin."
+msgstr "Перезапустите KOReader для использования обновлённого плагина Notebook."
+
+msgid ""
+"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
+"error.log for details."
+msgstr ""
+"В плагине «Блокнот» произошла ошибка. Перезапустите KOReader, чтобы открыть "
+"его снова; подробности см. в notebook-error.log."
+
+msgid "Could not create the notebook folder."
+msgstr "Не удалось создать папку блокнотов."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr ""
+"Не удалось открыть этот блокнот; возможно, он создан в более новой версии."
+
+msgid "Pages (%1)"
+msgstr "Страницы (%1)"
+
+msgid "New page"
+msgstr "Новая страница"
+
+msgid "Notebook background"
+msgstr "Фон блокнота"
+
+msgid "Done"
+msgstr "Готово"
+
+msgid "Go to this page"
+msgstr "Перейти на эту страницу"
+
+msgid "Insert a page after this one"
+msgstr "Вставить страницу после этой"
+
+msgid "Duplicate"
+msgstr "Дублировать"
+
+msgid "Background of this page"
+msgstr "Фон этой страницы"
+
+msgid "Delete"
+msgstr "Удалить"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Удалить страницу %1 и всё её содержимое?"
+
+msgid "Page %1"
+msgstr "Страница %1"
+
+msgid "Background of page %1"
+msgstr "Фон страницы %1"
+
+msgid "Follow the notebook again"
+msgstr "Снова следовать блокноту"
+
+msgid "Background for every page"
+msgstr "Фон для всех страниц"
+
+msgid "Some pages have their own — change those too"
+msgstr "У некоторых страниц свой фон — изменить и их"
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine.\n"
+"\n"
+"Details were written to:\n"
+"%1"
+msgstr ""
+"В работе плагина «Блокнот» произошла ошибка, и он был закрыт.\n"
+"\n"
+"Сам KOReader работает нормально.\n"
+"\n"
+"Подробности записаны в:\n"
+"%1"
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine."
+msgstr ""
+"В работе плагина «Блокнот» произошла ошибка, и он был закрыт.\n"
+"\n"
+"Сам KOReader работает нормально."
+
+msgid "Ink"
+msgstr "Чернила"
+
+msgid "Eraser"
+msgstr "Ластик"
+
+msgid "Lasso"
+msgstr "Лассо"
+
+msgid "Shapes"
+msgstr "Фигуры"
+
+msgid "Input"
+msgstr "Ввод"
+
+msgid "Tuning written to the log"
+msgstr "Настройки записаны в журнал"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "Тестовый блокнот — переименуйте, если не выполняете настройку"
+
+msgid "Reset tab"
+msgstr "Сбросить вкладку"
+
+msgid "Reset all"
+msgstr "Сбросить всё"
+
+msgid "Write to log"
+msgstr "Записать в журнал"
+
+msgid "Whole strokes"
+msgstr "Штрихи целиком"
+
+msgid "Part of a stroke"
+msgstr "Часть штриха"
 
 msgid "Nothing here yet — use New notebook to start one"
 msgstr "Здесь пока ничего нет — используйте «Новый блокнот», чтобы начать"
@@ -43,8 +189,8 @@ msgstr "Имя (А–Я)"
 msgid "Name (Z to A)"
 msgstr "Имя (Я–А)"
 
-msgid "New notebook"
-msgstr "Новый блокнот"
+msgid "Updates"
+msgstr "Обновления"
 
 msgid "New folder"
 msgstr "Новая папка"
@@ -73,6 +219,12 @@ msgstr "Выбрано: %1"
 msgid "Page %1 of %2"
 msgstr "Страница %1 из %2"
 
+msgid "Restart KOReader after the update finishes before opening a notebook."
+msgstr "После завершения обновления перезапустите KOReader перед открытием блокнота."
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "Откройте этот файл SVG в браузере или векторном редакторе."
+
 msgid "Open this XOPP file with Xournal++."
 msgstr "Откройте этот файл XOPP с помощью Xournal++."
 
@@ -91,17 +243,29 @@ msgstr "Это имя слишком длинное."
 msgid "That name cannot be used."
 msgstr "Это имя нельзя использовать."
 
-msgid "Cancel"
-msgstr "Отмена"
-
 msgid "Save"
 msgstr "Сохранить"
 
-msgid "Export"
-msgstr "Экспорт"
+msgid "PDF"
+msgstr "PDF"
+
+msgid "SVG (ink only)"
+msgstr "SVG (только штрихи)"
 
 msgid "Xournal++"
 msgstr "Xournal++"
+
+msgid "Choose pages…"
+msgstr "Выбрать страницы…"
+
+msgid "Could not read notebook."
+msgstr "Не удалось прочитать блокнот."
+
+msgid "Export selected pages"
+msgstr "Экспорт выбранных страниц"
+
+msgid "Export"
+msgstr "Экспорт"
 
 msgid "Choose a PDF file."
 msgstr "Выберите PDF-файл."
@@ -130,12 +294,6 @@ msgstr "Переместить"
 msgid "Send"
 msgstr "Отправить"
 
-msgid "Duplicate"
-msgstr "Дублировать"
-
-msgid "Delete"
-msgstr "Удалить"
-
 msgid ""
 "Delete '%1'?\n"
 "\n"
@@ -162,6 +320,189 @@ msgstr "Переименовать папку"
 
 msgid "Rename notebook"
 msgstr "Переименовать блокнот"
+
+msgid "Notebooks (top level)"
+msgstr "Блокноты (верхний уровень)"
+
+msgid "Move to"
+msgstr "Переместить в"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "Перемещено: %1; %2 не удалось туда переместить."
+
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Above text"
+msgstr "Над текстом"
+
+msgid "Below text"
+msgstr "Под текстом"
+
+msgid "Cut"
+msgstr "Вырезать"
+
+msgid "Copy"
+msgstr "Копировать"
+
+msgid "Paste"
+msgstr "Вставить"
+
+msgid "Close"
+msgstr "Закрыть"
+
+msgid "Edit text"
+msgstr "Изменить текст"
+
+msgid "Insert text"
+msgstr "Вставить текст"
+
+msgid "Sharing format"
+msgstr "Формат отправки"
+
+msgid "Finger"
+msgstr "Палец"
+
+msgid "Turns pages"
+msgstr "Перелистывает страницы"
+
+msgid "Draws"
+msgstr "Рисует"
+
+msgid "Pen side button"
+msgstr "Боковая кнопка пера"
+
+msgid "Highlighter"
+msgstr "Маркер"
+
+msgid "Text size"
+msgstr "Размер текста"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Не удалось сохранить блокнот. Он оставлен открытым."
+
+msgid "Black"
+msgstr "Чёрный"
+
+msgid "White"
+msgstr "Белый"
+
+msgid "Red"
+msgstr "Красный"
+
+msgid "Blue"
+msgstr "Синий"
+
+msgid "Orange"
+msgstr "Оранжевый"
+
+msgid "Green"
+msgstr "Зелёный"
+
+msgid "Yellow"
+msgstr "Жёлтый"
+
+msgid "Purple"
+msgstr "Фиолетовый"
+
+msgid "Color"
+msgstr "Цвет"
+
+msgid "Fineliner"
+msgstr "Капиллярная ручка"
+
+msgid "Fountain pen"
+msgstr "Перьевая ручка"
+
+msgid "Pencil"
+msgstr "Карандаш"
+
+msgid "Line"
+msgstr "Линия"
+
+msgid "Stroke style"
+msgstr "Тип линии"
+
+msgid "Arrow"
+msgstr "Стрелка"
+
+msgid "Pen type"
+msgstr "Тип пера"
+
+msgid "Eraser type"
+msgstr "Тип ластика"
+
+msgid "Square"
+msgstr "Квадрат"
+
+msgid "Rectangle"
+msgstr "Прямоугольник"
+
+msgid "Circle"
+msgstr "Круг"
+
+msgid "Triangle"
+msgstr "Треугольник"
+
+msgid "Fill"
+msgstr "Заливка"
+
+msgid "Filled shape"
+msgstr "Залитая фигура"
+
+msgid "Sans-serif"
+msgstr "Без засечек"
+
+msgid "Serif"
+msgstr "С засечками"
+
+msgid "Monospace"
+msgstr "Моноширинный"
+
+msgid "Font family"
+msgstr "Семейство шрифтов"
+
+msgid "Bold"
+msgstr "Полужирный"
+
+msgid "Italic"
+msgstr "Курсив"
+
+msgid "Underline"
+msgstr "Подчёркнутый"
+
+msgid "Text style"
+msgstr "Начертание текста"
+
+msgid "Background"
+msgstr "Фон"
+
+msgid "Transparent"
+msgstr "Прозрачный"
+
+msgid "Text options"
+msgstr "Параметры текста"
+
+msgid "Blank"
+msgstr "Чистый лист"
+
+msgid "Lined"
+msgstr "В линейку"
+
+msgid "Narrow lined"
+msgstr "В узкую линейку"
+
+msgid "Grid"
+msgstr "В клетку"
+
+msgid "Dot grid"
+msgstr "Точечная сетка"
+
+msgid "Checklist"
+msgstr "Список задач"
+
+msgid "XOPP"
+msgstr "XOPP"
 
 msgid "There is nowhere to prepare the files for sending."
 msgstr "Нет места для подготовки файлов к отправке."
@@ -209,344 +550,70 @@ msgstr "Экспортировано блокнотов: %1."
 msgid "Exported %1 of %2; %3 could not be read."
 msgstr "Экспортировано %1 из %2; %3 не удалось прочитать."
 
-msgid "Notebooks (top level)"
-msgstr "Блокноты (верхний уровень)"
-
-msgid "Move to"
-msgstr "Переместить в"
-
-msgid "Moved %1; %2 could not be moved there."
-msgstr "Перемещено: %1; %2 не удалось туда переместить."
-
-msgid "Edit"
-msgstr "Редактировать"
-
-msgid "Close"
-msgstr "Закрыть"
-
-msgid "Open notebook"
-msgstr "Открыть блокнот"
-
-msgid "Notebook"
-msgstr "Блокнот"
-
-msgid ""
-"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
-"error.log for details."
-msgstr ""
-"В плагине «Блокнот» произошла ошибка. Перезапустите KOReader, чтобы открыть "
-"его снова; подробности см. в notebook-error.log."
-
-msgid "Could not create the notebook folder."
-msgstr "Не удалось создать папку блокнотов."
-
-msgid "This notebook could not be opened; it may be from a newer version."
-msgstr ""
-"Не удалось открыть этот блокнот; возможно, он создан в более новой версии."
-
-msgid "Notebook name"
-msgstr "Название блокнота"
-
-msgid "Create"
-msgstr "Создать"
-
-msgid "Fineliner"
-msgstr "Капиллярная ручка"
-
-msgid "Fountain pen"
-msgstr "Перьевая ручка"
-
-msgid "Pencil"
-msgstr "Карандаш"
-
-msgid "Black"
-msgstr "Чёрный"
-msgid "Red"
-msgstr "Красный"
-
-msgid "Orange"
-msgstr "Оранжевый"
-
-msgid "Yellow"
-msgstr "Жёлтый"
-
-msgid "Green"
-msgstr "Зелёный"
-
-msgid "Blue"
-msgstr "Синий"
-
-msgid "Purple"
-msgstr "Фиолетовый"
-
-
-msgid "White"
-msgstr "Белый"
-
-msgid "Color"
-msgstr "Цвет"
-
-msgid "Pen type"
-msgstr "Тип пера"
-
-msgid "Whole strokes"
-msgstr "Штрихи целиком"
-
-msgid "Part of a stroke"
-msgstr "Часть штриха"
-
-msgid "Eraser type"
-msgstr "Тип ластика"
-
-msgid "Square"
-msgstr "Квадрат"
-
-msgid "Rectangle"
-msgstr "Прямоугольник"
-
-msgid "Circle"
-msgstr "Круг"
-
-msgid "Shapes"
-msgstr "Фигуры"
-
-
-
-
-msgid "Sans-serif"
-msgstr "Без засечек"
-
-msgid "Serif"
-msgstr "С засечками"
-
-msgid "Monospace"
-msgstr "Моноширинный"
-
-msgid "Bold"
-msgstr "Полужирный"
-
-msgid "Italic"
-msgstr "Курсив"
-
-msgid "Underline"
-msgstr "Подчёркнутый"
-
-msgid "Background"
-msgstr "Фон"
-
-msgid "Transparent"
-msgstr "Прозрачный"
-
-msgid "Text options"
-msgstr "Параметры текста"
-
-msgid "Edit text"
-msgstr "Изменить текст"
-
-msgid "Insert text"
-msgstr "Вставить текст"
-
-msgid "Could not save the notebook. It has been left open."
-msgstr "Не удалось сохранить блокнот. Он оставлен открытым."
-
-msgid "Pages (%1)"
-msgstr "Страницы (%1)"
-
-msgid "New page"
-msgstr "Новая страница"
-
-msgid "Notebook background"
-msgstr "Фон блокнота"
-
-msgid "Done"
-msgstr "Готово"
-
-msgid "Go to this page"
-msgstr "Перейти на эту страницу"
-
-msgid "Insert a page after this one"
-msgstr "Вставить страницу после этой"
-
-msgid "Background of this page"
-msgstr "Фон этой страницы"
-
-msgid "Delete page %1 and everything on it?"
-msgstr "Удалить страницу %1 и всё её содержимое?"
-
-msgid "Page %1"
-msgstr "Страница %1"
-
-msgid "Background of page %1"
-msgstr "Фон страницы %1"
-
-msgid "Follow the notebook again"
-msgstr "Снова следовать блокноту"
-
-msgid "Background for every page"
-msgstr "Фон для всех страниц"
-
-msgid "Some pages have their own — change those too"
-msgstr "У некоторых страниц свой фон — изменить и их"
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine.\n"
-"\n"
-"Details were written to:\n"
-"%1"
-msgstr ""
-"В работе плагина «Блокнот» произошла ошибка, и он был закрыт.\n"
-"\n"
-"Сам KOReader работает нормально.\n"
-"\n"
-"Подробности записаны в:\n"
-"%1"
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine."
-msgstr ""
-"В работе плагина «Блокнот» произошла ошибка, и он был закрыт.\n"
-"\n"
-"Сам KOReader работает нормально."
-
-msgid "Sharing format"
-msgstr "Формат отправки"
-
-msgid "Finger"
-msgstr "Палец"
-
-msgid "Turns pages"
-msgstr "Перелистывает страницы"
-
-msgid "Draws"
-msgstr "Рисует"
-
-msgid "Blank"
-msgstr "Чистый лист"
-
-msgid "Lined"
-msgstr "В линейку"
-
-msgid "Narrow lined"
-msgstr "В узкую линейку"
-
-msgid "Grid"
-msgstr "В клетку"
-
-msgid "Dot grid"
-msgstr "Точечная сетка"
-
-msgid "Checklist"
-msgstr "Список задач"
-
-msgid "Ink"
-msgstr "Чернила"
-
-msgid "Eraser"
-msgstr "Ластик"
-
-msgid "Lasso"
-msgstr "Лассо"
-
-msgid "Input"
-msgstr "Ввод"
-
-msgid "Tuning written to the log"
-msgstr "Настройки записаны в журнал"
-
-msgid "Test notebook - rename it if you are not tuning"
-msgstr "Тестовый блокнот — переименуйте, если не выполняете настройку"
-
-msgid "Reset tab"
-msgstr "Сбросить вкладку"
-
-msgid "Reset all"
-msgstr "Сбросить всё"
-
-msgid "Write to log"
-msgstr "Записать в журнал"
-
-msgid "Preparing…"
-msgstr "Подготовка…"
-
-msgid "Cancelling…"
-msgstr "Отмена…"
-
-msgid "Exporting PDF…"
-msgstr "Экспорт PDF…"
-
-msgid "Rendering"
-msgstr "Отрисовка"
-
-msgid "Preparing image"
-msgstr "Подготовка изображения"
-
-msgid "Compressing"
-msgstr "Сжатие"
-
-msgid "Page %1 of %2 — %3"
-msgstr "Страница %1 из %2 — %3"
-
-#~ msgid "White background"
-#~ msgstr "Белый фон"
-
-msgid "Triangle"
-msgstr "Треугольник"
-
-msgid "Pen side button"
-msgstr "Боковая кнопка пера"
-
-msgid "Highlighter"
-msgstr "Маркер"
-
-
-
-
-
-msgid "Line"
-msgstr "Линия"
-
-msgid "Arrow"
-msgstr "Стрелка"
-
-msgid "Filled shape"
-msgstr "Залитая фигура"
-
-msgid "Stroke style"
-msgstr "Тип линии"
-
-msgid "Fill"
-msgstr "Заливка"
-
-msgid "Font family"
-msgstr "Семейство шрифтов"
-
-msgid "Text style"
-msgstr "Начертание текста"
-
-msgid "Text size"
-msgstr "Размер текста"
-
 msgid "SVG"
 msgstr "SVG"
 
-msgid "SVG (ink only)"
-msgstr "SVG (только штрихи)"
+msgid "Updates can only be installed in a packaged Notebook plugin."
+msgstr "Обновления можно устанавливать только в плагин Notebook, установленный из пакета."
 
-msgid "Open this SVG file in a browser or vector editor."
-msgstr "Откройте этот файл SVG в браузере или векторном редакторе."
+msgid ""
+"A previous update backup exists. Restart KOReader before updating again."
+msgstr "Существует резервная копия предыдущего обновления. Перезапустите KOReader перед повторным обновлением."
 
-msgid "Order"
-msgstr "Порядок"
+msgid "Downloading Notebook update…"
+msgstr "Загрузка обновления Notebook…"
 
-msgid "Shape order"
-msgstr "Порядок фигуры"
+msgid ""
+"Update failed:\n"
+"%1"
+msgstr "Ошибка обновления:\n%1"
 
-msgid "Above text"
-msgstr "Над текстом"
+msgid "Notebook update installed. Restart KOReader to use the new version."
+msgstr "Обновление Notebook установлено. Перезапустите KOReader для использования новой версии."
 
-msgid "Below text"
-msgstr "Под текстом"
+msgid "Restart"
+msgstr "Перезапустить"
+
+msgid "Later"
+msgstr "Позже"
+
+msgid "Notebook update available"
+msgstr "Доступно обновление Notebook"
+
+msgid "Install"
+msgstr "Установить"
+
+msgid "Checking for Notebook updates…"
+msgstr "Проверка обновлений Notebook…"
+
+msgid ""
+"Could not check updates:\n"
+"%1"
+msgstr "Не удалось проверить обновления:\n%1"
+
+msgid "Notebook update available: %1"
+msgstr "Доступно обновление Notebook: %1"
+
+msgid "No newer stable Notebook release is available."
+msgstr "Более новой стабильной версии Notebook нет."
+
+msgid "Check updates weekly"
+msgstr "Проверять обновления еженедельно"
+
+msgid "Check update"
+msgstr "Проверить обновление"
+
+msgid "Choose pages to export"
+msgstr "Выбрать страницы для экспорта"
+
+msgid "Pages 1–%1; for example: 1, 3-5"
+msgstr "Страницы 1–%1; например: 1, 3-5"
+
+msgid "Continue"
+msgstr "Продолжить"
+
+msgid "Invalid page range. Use page numbers or ranges separated by commas."
+msgstr "Неверный диапазон страниц. Укажите номера или диапазоны через запятую."
+
+#~ msgid "White background"
+#~ msgstr "Белый фон"

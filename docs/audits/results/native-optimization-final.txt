@@ -1,0 +1,77 @@
+has monolibtic? no (libs/libkoreader-monolibtic.so: cannot open shared object file: No such file or directory)
+lib_search_path: libs/?
+lib_basic_format: lib%s.so
+lib_version_format: lib%s.so.%s
+ffi.load: rt.so.1 (RTLD_GLOBAL)
+ffi.findlib: utf8proc [3]
+ffi.load: libs/libutf8proc.so.3
+ffi.findlib: blitbuffer
+ffi.load: libs/libblitbuffer.so
+ffi.findlib: sqlite3 [0]
+ffi.load: libs/libsqlite3.so.0
+ffi.findlib: fbink_input [1]
+ffi.load: libs/libfbink_input.so.1
+[ko-input] Forked off fake event generator (pid: 30602)
+10/01/26-14:42:21 INFO  initializing for device KindleScribe 
+10/01/26-14:42:21 INFO  framebuffer resolution: {
+  h = 2480,
+  w = 1860
+} --[[table: 0xb5d8a130]] 
+ffi.findlib: wrap-mupdf
+ffi.load: libs/libwrap-mupdf.so
+[ko-input] Closed input device with fd: 9 @ idx: 3 (matched by idx)
+[ko-input] Closed input device with fd: 8 @ idx: 2 (matched by idx)
+[ko-input] Closed input device with fd: 5 @ idx: 1 (matched by idx)
+[ko-input] Closed input device with fd: 4 @ idx: 0 (matched by idx)
+lipc-wait-event exited normally with status: 0
+Scaled renderer: 672 native grayscale/RGB, rotation, scale, offset and brush/fill comparisons passed
+[FBInk] /dev/input/event0: `bd71828-pwrkey` = KEY | POWER_BUTTON
+[FBInk] /dev/input/event1: `kx132-accel` = ACCELEROMETER | ROTATION_EVENT
+[FBInk] /dev/input/event2: `WacomDigitizer` = TABLET | ROTATION_EVENT
+[FBInk] /dev/input/event3: `pt_mt` = TOUCHSCREEN
+[FBInk] /dev/input/event4: `stylus-custom` = TABLET | ROTATION_EVENT | SCALED_TABLET
+[ko-input]: uevent listener ready for input device hotplug
+[ue_wait_for_event:269] poll: Interrupted system call
+
+has monolibtic? no (libs/libkoreader-monolibtic.so: cannot open shared object file: No such file or directory)
+lib_search_path: libs/?
+lib_basic_format: lib%s.so
+lib_version_format: lib%s.so.%s
+ffi.load: rt.so.1 (RTLD_GLOBAL)
+ffi.findlib: utf8proc [3]
+ffi.load: libs/libutf8proc.so.3
+ffi.findlib: blitbuffer
+ffi.load: libs/libblitbuffer.so
+ffi.findlib: sqlite3 [0]
+ffi.load: libs/libsqlite3.so.0
+ffi.findlib: fbink_input [1]
+ffi.load: libs/libfbink_input.so.1
+[ko-input] Forked off fake event generator (pid: 30615)
+10/01/26-14:42:37 INFO  initializing for device KindleScribe 
+10/01/26-14:42:37 INFO  framebuffer resolution: {
+  h = 2480,
+  w = 1860
+} --[[table: 0xb64d9400]] 
+ffi.findlib: wrap-mupdf
+ffi.load: libs/libwrap-mupdf.so
+ffi.findlib: zstd [1]
+ffi.load: libs/libzstd.so.1
+ffi.findlib: lodepng
+ffi.load: libs/liblodepng.so
+ffi.findlib: freetype [6]
+ffi.load: libs/libfreetype.so.6
+ffi.findlib: harfbuzz [0]
+ffi.load: libs/libharfbuzz.so.0
+[ko-input] Closed input device with fd: 9 @ idx: 3 (matched by idx)
+[ko-input] Closed input device with fd: 8 @ idx: 2 (matched by idx)
+[ko-input] Closed input device with fd: 5 @ idx: 1 (matched by idx)
+[ko-input] Closed input device with fd: 4 @ idx: 0 (matched by idx)
+lipc-wait-event exited normally with status: 0
+Preview/PDF cache: 29 native PNG/pixel comparisons passed
+[FBInk] /dev/input/event0: `bd71828-pwrkey` = KEY | POWER_BUTTON
+[FBInk] /dev/input/event1: `kx132-accel` = ACCELEROMETER | ROTATION_EVENT
+[FBInk] /dev/input/event2: `WacomDigitizer` = TABLET | ROTATION_EVENT
+[FBInk] /dev/input/event3: `pt_mt` = TOUCHSCREEN
+[FBInk] /dev/input/event4: `stylus-custom` = TABLET | ROTATION_EVENT | SCALED_TABLET
+[ko-input]: uevent listener ready for input device hotplug
+[ue_wait_for_event:269] poll: Interrupted system call

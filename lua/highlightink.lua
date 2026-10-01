@@ -1,60 +1,9 @@
--- Chisel highlighter rasterizer. Kept separate from the stroke and shape paths:
--- large markers are the dominant per-pixel cost at 2x zoom.
+-- Continuous chisel sweeps and filled marker fragments share the same
+-- idempotent darken blend. Pixel work scales with visible area, not samples.
 local HighlightInk = {}
 local BB = require("ffi/blitbuffer")
 local BLACK = BB.COLOR_BLACK
-local paintRow
-local function stampHighlight(bb, x, y, r, color)
-    local x0 = math.floor(x - r + 0.5)
-    local y0 = math.floor(y - r + 0.5)
-    local s = math.floor(r * 2 + 0.5)
-    if s < 1 then s = 1 end
-    local x1, y1 = x0 + s - 1, y0 + s - 1
-
-    --[[
-    A Color8 is FFI cdata on a device, and a plain number only in the tests.
-
-    `type()` on cdata answers neither "table" nor "number", so asking it those
-    two questions and defaulting to zero meant the threshold was zero
-    everywhere it mattered: the blend stopped being "darken towards the tint"
-    and became "repaint everything that is not already pure black". Pen ink
-    survived that, being black, and the dots of dot grid paper did not -- they
-    are darker than the tint, they are meant to be left alone, and highlighting
-    over them washed them out.
-    --]]
-    local tint
-    if type(color) == "number" then tint = color
-    else tint = color.getColor8 and color:getColor8().a or color.a or 0 end
-
-    --[[
-    Clipped to the buffer, because getPixel and setPixel are not.
-
-    Every other primitive here goes through blitbuffer's own painting calls,
-    which clip. These two index straight into the row pointer with the
-    coordinate they are given, so a stamp that overhangs the edge reads and
-    writes past the end of the allocation. Nothing on the drawing path can
-    reach that -- the canvas keeps the nib a full stroke width inside the page
-    -- but an export renders into a buffer of its own chosen size, and a page
-    written on a wider panel would hang over the side of it.
-    --]]
-    local w = bb.getWidth and bb:getWidth() or bb.w
-    local h = bb.getHeight and bb:getHeight() or bb.h
-    if w and h then
-        if x0 < 0 then x0 = 0 end
-        if y0 < 0 then y0 = 0 end
-        if x1 > w - 1 then x1 = w - 1 end
-        if y1 > h - 1 then y1 = h - 1 end
-    end
-
-    for j = y0, y1 do
-        if x0 <= x1 then paintRow(bb, j, x0, x1, color, tint, false) end
-    end
-end
-
-HighlightInk.stamp = stampHighlight
-
--- Shared blend for both constant-width and pressure-varying sweeps.
-paintRow = function(bb, py, left, right, color, tint, preview)
+local paintRow = function(bb, py, left, right, color, tint, preview)
     if preview then
         for px = left + (-(left+py) % 4), right, 4 do
             bb:setPixel(px, py, BLACK)
@@ -84,104 +33,93 @@ paintRow = function(bb, py, left, right, color, tint, preview)
     end
 end
 
--- A constant-width marker has monotone square stamps. Find the first/last
--- stamp touching each row directly, instead of building tables for every
--- overlapping stamp. Rounding is checked against the original stamp formula.
-local function constantSegment(bb, x0, y0, x1, y1, r, color, tint, first, last, steps, preview, exclude_start)
-    local dx, dy = x1-x0, y1-y0
-    local size = math.max(1, math.floor(r*2+0.5))
-    local function top(i) return math.floor(y0+dy*(i/steps)-r+0.5) end
-    local t0,t1 = top(first),top(last)
-    local yfirst = math.max(0,math.min(t0,t1))
-    local ylast = math.min(bb:getHeight()-1,math.max(t0,t1)+size-1)
-    local maxx = bb:getWidth()-1
-    local start_left = math.floor(x0-r+0.5)
-    local start_top = math.floor(y0-r+0.5)
-    if dy == 0 then
-        local a = math.floor(x0+dx*(first/steps)-r+0.5)
-        local b = math.floor(x0+dx*(last/steps)-r+0.5)
-        local left,right = math.max(0,math.min(a,b)),math.min(maxx,math.max(a,b)+size-1)
-        if left > right then return end
-        if exclude_start then
-            local lright, rleft = math.min(right,start_left-1), math.max(left,start_left+size)
-            for py=yfirst,ylast do
-                if left<=lright then paintRow(bb,py,left,lright,color,tint,preview) end
-                if rleft<=right then paintRow(bb,py,rleft,right,color,tint,preview) end
-            end
-        else
-            for py=yfirst,ylast do paintRow(bb,py,left,right,color,tint,preview) end
-        end
-        return
+
+-- Rasterize continuous marker polygons without repainting their borders as
+-- opaque pen ink. Inclusive scanlines give adjacent fragments identical seams.
+function HighlightInk.polygon(bb, points, color, preview, clip, exclude)
+    local tint = type(color) == "number" and color
+        or (color.getColor8 and color:getColor8().a or color.a or 0)
+    local top,bottom=math.huge,-math.huge
+    local x0,x1=math.huge,-math.huge
+    for _,p in ipairs(points) do
+        top=math.min(top,p[2]);bottom=math.max(bottom,p[2])
+        x0=math.min(x0,p[1]);x1=math.max(x1,p[1])
     end
-    for py=yfirst,ylast do
-        local lo,hi = first,last
-        if dy ~= 0 then
-            local a = (py-size+1-(y0-r+0.5))*steps/dy
-            local b = (py+1-(y0-r+0.5))*steps/dy
-            lo = math.max(first,math.ceil(math.min(a,b))-1)
-            hi = math.min(last,math.floor(math.max(a,b))+1)
-            while lo<=hi and (top(lo)>py or top(lo)+size<=py) do lo=lo+1 end
-            while hi>=lo and (top(hi)>py or top(hi)+size<=py) do hi=hi-1 end
+    top=math.max(0,math.ceil(top-1e-8),clip and math.ceil(clip.y) or 0)
+    bottom=math.min(bb:getHeight()-1,math.floor(bottom+1e-8),clip and math.ceil(clip.y+clip.h)-1 or math.huge)
+    local minx=math.max(0,clip and math.ceil(clip.x) or 0)
+    local maxx=math.min(bb:getWidth()-1,clip and math.ceil(clip.x+clip.w)-1 or math.huge)
+    -- Multipart fragments often overlap the dirty rectangle in Y only.
+    -- Reject before traversing every edge on every scanline of an invisible
+    -- contour, preserving the rasterizer's inclusive subpixel tolerance.
+    if top>bottom or x1+1e-8<minx or x0-1e-8>maxx then return end
+    for y=top,bottom do
+        local left,right=math.huge,-math.huge
+        local prev=points[#points]
+        for _,p in ipairs(points) do
+            if y>=math.min(prev[2],p[2])-1e-8 and y<=math.max(prev[2],p[2])+1e-8 then
+                if prev[2]==p[2] then
+                    left=math.min(left,prev[1],p[1]);right=math.max(right,prev[1],p[1])
+                else
+                    local x=prev[1]+(y-prev[2])*(p[1]-prev[1])/(p[2]-prev[2])
+                    left=math.min(left,x);right=math.max(right,x)
+                end
+            end
+            prev=p
         end
-        if lo<=hi then
-            local a = math.floor(x0+dx*(lo/steps)-r+0.5)
-            local b = math.floor(x0+dx*(hi/steps)-r+0.5)
-            local left,right = math.max(0,math.min(a,b)),math.min(maxx,math.max(a,b)+size-1)
-            if exclude_start and py >= start_top and py < start_top+size then
-                -- The previous segment already painted the shared endpoint.
-                -- Only the newly exposed strips need reads/writes; a dense
-                -- stream of samples otherwise repaints a width-squared square.
-                local a,b = math.min(right,start_left-1),math.max(left,start_left+size)
-                if left<=a then paintRow(bb,py,left,a,color,tint,preview) end
-                if b<=right then paintRow(bb,py,b,right,color,tint,preview) end
-            elseif left<=right then paintRow(bb,py,left,right,color,tint,preview) end
+        left,right=math.max(minx,math.ceil(left-1e-8)),math.min(maxx,math.floor(right+1e-8))
+        if left<=right then
+            if exclude and y>=exclude[2] and y<=exclude[4] then
+                local a,b=math.min(right,exclude[1]-1),math.max(left,exclude[3]+1)
+                if left<=a then paintRow(bb,y,left,a,color,tint,preview) end
+                if b<=right then paintRow(bb,y,b,right,color,tint,preview) end
+            else paintRow(bb,y,left,right,color,tint,preview) end
         end
     end
 end
 
--- Gather the union of overlapping square stamps by scanline, then blend each
--- pixel once. On a broad marker the previous loop visited most pixels in
--- several stamps; this preserves the same idempotent tint and clipping.
-function HighlightInk.drawSegment(bb, x0, y0, r0, x1, y1, r1, color,
-        first, last, steps, preview, exclude_start)
-    if math.min(r0, r1) < 2 and not preview then
-        for i = first, last do
-            local t = i / steps
-            stampHighlight(bb, x0 + (x1-x0)*t, y0 + (y1-y0)*t,
-                r0 + (r1-r0)*t, color)
-        end
-        return
-    end
-    local tint = type(color) == "number" and color
+function HighlightInk.drawSegment(bb,x0,y0,r0,x1,y1,r1,color,first,last,steps,preview,exclude_start)
+    if first>last then return end
+    local tint=type(color)=="number" and color
         or (color.getColor8 and color:getColor8().a or color.a or 0)
-    if r0 == r1 then
-        return constantSegment(bb,x0,y0,x1,y1,r0,color,tint,first,last,steps,preview,exclude_start)
-    end
-    local width = bb.getWidth and bb:getWidth() or bb.w
-    local height = bb.getHeight and bb:getHeight() or bb.h
-    local rows = {}
-    for i = first, last do
-        local t = i / steps
-        local x, y = x0 + (x1-x0)*t, y0 + (y1-y0)*t
-        local r = r0 + (r1-r0)*t
-        local left, top = math.floor(x-r+0.5), math.floor(y-r+0.5)
-        local size = math.max(1, math.floor(r*2+0.5))
-        local right, bottom = left+size-1, top+size-1
-        left, right = math.max(0,left), math.min(width-1,right)
-        top, bottom = math.max(0,top), math.min(height-1,bottom)
-        if left <= right then
-            for py = top, bottom do
-                local row = rows[py]
-                if row then
-                    if left < row[1] then row[1] = left end
-                    if right > row[2] then row[2] = right end
-                else rows[py] = {left, right} end
+    local dx,dy,dr=x1-x0,y1-y0,r1-r0
+    local a,b=first/steps,last/steps
+    local ymin=math.max(0,math.ceil(math.min(y0+(dy-dr)*a-r0,y0+(dy-dr)*b-r0)-1e-8))
+    local ymax=math.min(bb:getHeight()-1,math.floor(math.max(y0+(dy+dr)*a+r0,y0+(dy+dr)*b+r0)+1e-8))
+    local maxx=bb:getWidth()-1
+    local ex0,ex1=math.ceil(x0-r0-1e-8),math.floor(x0+r0+1e-8)
+    local ey0,ey1=math.ceil(y0-r0-1e-8),math.floor(y0+r0+1e-8)
+    -- Solve the two vertical square-side inequalities for t, then evaluate
+    -- both horizontal sides at the endpoints of that interval. This is the
+    -- exact continuous sweep, including pressure changes, without constructing
+    -- a polygon or sampling a series of stamps for each digitizer event.
+    for y=ymin,ymax do
+        local low,high=a,b
+        local c0,c1=y-y0-r0,y0-y-r0
+        local d0,d1=-dy-dr,dy-dr
+        local valid=true
+        if d0==0 then valid=c0<=1e-8
+        elseif d0>0 then high=math.min(high,-c0/d0)
+        else low=math.max(low,-c0/d0) end
+        if d1==0 then valid=valid and c1<=1e-8
+        elseif d1>0 then high=math.min(high,-c1/d1)
+        else low=math.max(low,-c1/d1) end
+        if valid and low<=high+1e-8 then
+            local left=math.max(0,math.ceil(math.min(x0+(dx-dr)*low-r0,x0+(dx-dr)*high-r0)-1e-8))
+            local right=math.min(maxx,math.floor(math.max(x0+(dx+dr)*low+r0,x0+(dx+dr)*high+r0)+1e-8))
+            if left<=right then
+                if exclude_start and y>=ey0 and y<=ey1 then
+                    local lright,rleft=math.min(right,ex0-1),math.max(left,ex1+1)
+                    if left<=lright then paintRow(bb,y,left,lright,color,tint,preview) end
+                    if rleft<=right then paintRow(bb,y,rleft,right,color,tint,preview) end
+                else paintRow(bb,y,left,right,color,tint,preview) end
             end
         end
     end
-    for py, row in pairs(rows) do
-        paintRow(bb,py,row[1],row[2],color,tint,preview)
-    end
+end
+
+function HighlightInk.stamp(bb,x,y,r,color)
+    HighlightInk.drawSegment(bb,x,y,r,x,y,r,color,0,1,1)
 end
 
 return HighlightInk

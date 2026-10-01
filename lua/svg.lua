@@ -60,15 +60,29 @@ local function strokeXML(s, write)
         end
     end
     -- Group opacity avoids dark joints between overlapping segment primitives.
-    write(string.format('<g fill="%s" opacity="%g">', ink,
-        s.tool == "highlighter" and 0.4 or (s.pen_style == "pencil" and 0.74 or 1)))
+    write(string.format('<g fill="%s" opacity="%g"%s>', ink,
+        s.pen_style == "pencil" and 0.74 or 1,
+        s.tool == "highlighter" and ' style="mix-blend-mode:darken"' or ""))
     if s.filled then
-        local points = {}
-        for i=1,s.n do
-            local x,y=s:getPoint(i)
-            points[#points+1]=string.format('%g,%g',x,y)
+        for first,last in require("markerarea").parts(s) do
+            local points = {}
+            for i=first,last do
+                local x,y=s:getPoint(i)
+                points[#points+1]=string.format('%g,%g',x,y)
+            end
+            write('<polygon points="'..table.concat(points,' ')..'"/>')
         end
-        write('<polygon points="'..table.concat(points,' ')..'"/>')
+    elseif s.tool == "highlighter" then
+        local x0,y0,p0=s:getPoint(1)
+        for i=math.min(2,s.n),s.n do
+            local x1,y1,p1=s:getPoint(i)
+            local polygon=require("markerarea").sweep(x0,y0,Renderer.radiusFor(s,p0,x1-x0,y1-y0),
+                x1,y1,Renderer.radiusFor(s,p1,x1-x0,y1-y0))
+            local points={}
+            for _,p in ipairs(polygon) do points[#points+1]=string.format('%g,%g',p[1],p[2]) end
+            write('<polygon points="'..table.concat(points,' ')..'"/>')
+            x0,y0,p0=x1,y1,p1
+        end
     else
         local function disc(x,y,r)
             write(string.format('<circle cx="%g" cy="%g" r="%g"/>',x,y,r))

@@ -1,0 +1,429 @@
+{
+  "schema": 1,
+  "host": "Linux kindle 4.9.77-lab126 #1 SMP PREEMPT Wed Jul 29 05:38:34 UTC 2026 armv7l GNU/Linux",
+  "created_utc": "2026-10-01T12:12:46.428791+00:00",
+  "storage_root": "/tmp",
+  "runtime_directory": "/mnt/us/koreader",
+  "runs": [
+    {
+      "results": [
+        {
+          "cpu_ms": {
+            "median": 260.385,
+            "p95": 268.122,
+            "min": 257.18
+          },
+          "wall_ms": {
+            "median": 261.57307624817,
+            "p95": 269.28615570068,
+            "min": 258.36300849915
+          },
+          "heap_delta_kib": {
+            "median": 5012.6298828125,
+            "p95": 5017.6884765625,
+            "min": 5012.6298828125
+          },
+          "retained_kib": {
+            "median": 0.03125,
+            "p95": 5.15625,
+            "min": 0.03125
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 40,
+            "min": -48
+          },
+          "explicit_gc_ms": {
+            "median": 64.998,
+            "p95": 65.48,
+            "min": 60.988
+          },
+          "cpu_frequency_khz": [
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000
+          ],
+          "name": "zoom/2x-cold",
+          "counters": {
+            "zoom_buffer_bytes": 18153600
+          }
+        },
+        {
+          "cpu_ms": {
+            "median": 8.0683000000001,
+            "p95": 8.2586,
+            "min": 7.2277
+          },
+          "wall_ms": {
+            "median": 8.1060886383057,
+            "p95": 8.3347082138062,
+            "min": 7.2515964508057
+          },
+          "heap_delta_kib": {
+            "median": 7.48046875,
+            "p95": 34.9453125,
+            "min": 6.4375
+          },
+          "retained_kib": {
+            "median": 0.515625,
+            "p95": 24.2421875,
+            "min": 0.03125
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 0,
+            "min": 0
+          },
+          "explicit_gc_ms": {
+            "median": 39.88,
+            "p95": 40.522,
+            "min": 38.391
+          },
+          "cpu_frequency_khz": [
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000
+          ],
+          "name": "zoom/2x-pan-warm",
+          "counters": {}
+        }
+      ],
+      "screen": {
+        "bpp": 8,
+        "width": 1860,
+        "height": 2480
+      },
+      "scale": 1,
+      "runtime": "LuaJIT 2.1.1783773675",
+      "jit": "on",
+      "samples": 9,
+      "arch": "arm",
+      "schema": 1,
+      "source_sha256": "0c9046292330f91680ec0426e781ae0824ef6ce1bdc670d6b3c0d618f422a64e",
+      "fixture_sha256": "7efa645aa32e7abd440561a889a960fbc9e4aba91eccf40bd378c2e12c888398"
+    }
+  ],
+  "baseline": [
+    {
+      "results": [
+        {
+          "cpu_ms": {
+            "median": 269.71,
+            "p95": 283.069,
+            "min": 257.054
+          },
+          "wall_ms": {
+            "median": 271.07310295105,
+            "p95": 284.98792648315,
+            "min": 259.92512702942
+          },
+          "heap_delta_kib": {
+            "median": 5207.62109375,
+            "p95": 5211.08984375,
+            "min": 5207.22265625
+          },
+          "retained_kib": {
+            "median": 0.4296875,
+            "p95": 3.91796875,
+            "min": 0.03125
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 524,
+            "min": -4
+          },
+          "explicit_gc_ms": {
+            "median": 75.183,
+            "p95": 76.851,
+            "min": 40.876
+          },
+          "cpu_frequency_khz": [
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000
+          ],
+          "name": "zoom/2x-cold",
+          "counters": {
+            "zoom_buffer_bytes": 18153600
+          }
+        },
+        {
+          "cpu_ms": {
+            "median": 9.018,
+            "p95": 9.5633,
+            "min": 8.4379
+          },
+          "wall_ms": {
+            "median": 9.0889930725098,
+            "p95": 9.6273899078369,
+            "min": 8.4875822067261
+          },
+          "heap_delta_kib": {
+            "median": 8.09375,
+            "p95": 43.96484375,
+            "min": 6.5546875
+          },
+          "retained_kib": {
+            "median": 1.26953125,
+            "p95": 33.08203125,
+            "min": 0.03125
+          },
+          "rss_delta_kib": {
+            "median": 0,
+            "p95": 0,
+            "min": 0
+          },
+          "explicit_gc_ms": {
+            "median": 43.186,
+            "p95": 45.732999999999,
+            "min": 41.846
+          },
+          "cpu_frequency_khz": [
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000,
+            2000000
+          ],
+          "name": "zoom/2x-pan-warm",
+          "counters": {}
+        }
+      ],
+      "screen": {
+        "bpp": 8,
+        "width": 1860,
+        "height": 2480
+      },
+      "scale": 1,
+      "runtime": "LuaJIT 2.1.1783773675",
+      "jit": "on",
+      "samples": 9,
+      "arch": "arm",
+      "schema": 1,
+      "source_sha256": "33a74cff888a0bcbd417b12426aa71800bbb6801991dcc1d8bffe68e92ca12b3",
+      "fixture_sha256": "7efa645aa32e7abd440561a889a960fbc9e4aba91eccf40bd378c2e12c888398"
+    }
+  ],
+  "comparison": [
+    {
+      "jit": "on",
+      "name": "zoom/2x-cold",
+      "cpu_ratio": 0.9654258277409069,
+      "before_cpu_ms": 269.71,
+      "after_cpu_ms": 260.385,
+      "before": {
+        "cpu_ms": {
+          "median": 269.71,
+          "p95": 283.069,
+          "min": 257.054
+        },
+        "wall_ms": {
+          "median": 271.07310295105,
+          "p95": 284.98792648315,
+          "min": 259.92512702942
+        },
+        "heap_delta_kib": {
+          "median": 5207.62109375,
+          "p95": 5211.08984375,
+          "min": 5207.22265625
+        },
+        "retained_kib": {
+          "median": 0.4296875,
+          "p95": 3.91796875,
+          "min": 0.03125
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 524,
+          "min": -4
+        },
+        "explicit_gc_ms": {
+          "median": 75.183,
+          "p95": 76.851,
+          "min": 40.876
+        },
+        "cpu_frequency_khz": [
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000
+        ],
+        "name": "zoom/2x-cold",
+        "counters": {
+          "zoom_buffer_bytes": 18153600
+        }
+      },
+      "after": {
+        "cpu_ms": {
+          "median": 260.385,
+          "p95": 268.122,
+          "min": 257.18
+        },
+        "wall_ms": {
+          "median": 261.57307624817,
+          "p95": 269.28615570068,
+          "min": 258.36300849915
+        },
+        "heap_delta_kib": {
+          "median": 5012.6298828125,
+          "p95": 5017.6884765625,
+          "min": 5012.6298828125
+        },
+        "retained_kib": {
+          "median": 0.03125,
+          "p95": 5.15625,
+          "min": 0.03125
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 40,
+          "min": -48
+        },
+        "explicit_gc_ms": {
+          "median": 64.998,
+          "p95": 65.48,
+          "min": 60.988
+        },
+        "cpu_frequency_khz": [
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000
+        ],
+        "name": "zoom/2x-cold",
+        "counters": {
+          "zoom_buffer_bytes": 18153600
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "zoom/2x-pan-warm",
+      "cpu_ratio": 0.8946884009758371,
+      "before_cpu_ms": 9.018,
+      "after_cpu_ms": 8.0683000000001,
+      "before": {
+        "cpu_ms": {
+          "median": 9.018,
+          "p95": 9.5633,
+          "min": 8.4379
+        },
+        "wall_ms": {
+          "median": 9.0889930725098,
+          "p95": 9.6273899078369,
+          "min": 8.4875822067261
+        },
+        "heap_delta_kib": {
+          "median": 8.09375,
+          "p95": 43.96484375,
+          "min": 6.5546875
+        },
+        "retained_kib": {
+          "median": 1.26953125,
+          "p95": 33.08203125,
+          "min": 0.03125
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 0,
+          "min": 0
+        },
+        "explicit_gc_ms": {
+          "median": 43.186,
+          "p95": 45.732999999999,
+          "min": 41.846
+        },
+        "cpu_frequency_khz": [
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000
+        ],
+        "name": "zoom/2x-pan-warm",
+        "counters": {}
+      },
+      "after": {
+        "cpu_ms": {
+          "median": 8.0683000000001,
+          "p95": 8.2586,
+          "min": 7.2277
+        },
+        "wall_ms": {
+          "median": 8.1060886383057,
+          "p95": 8.3347082138062,
+          "min": 7.2515964508057
+        },
+        "heap_delta_kib": {
+          "median": 7.48046875,
+          "p95": 34.9453125,
+          "min": 6.4375
+        },
+        "retained_kib": {
+          "median": 0.515625,
+          "p95": 24.2421875,
+          "min": 0.03125
+        },
+        "rss_delta_kib": {
+          "median": 0,
+          "p95": 0,
+          "min": 0
+        },
+        "explicit_gc_ms": {
+          "median": 39.88,
+          "p95": 40.522,
+          "min": 38.391
+        },
+        "cpu_frequency_khz": [
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000,
+          2000000
+        ],
+        "name": "zoom/2x-pan-warm",
+        "counters": {}
+      }
+    }
+  ]
+}

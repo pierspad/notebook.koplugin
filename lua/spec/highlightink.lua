@@ -1,93 +1,52 @@
-package.path = "./?.lua;./spec/?.lua;" .. package.path
-
-local support = require("support")
-support.installStubs()
-local HighlightInk = require("highlightink")
-local FakeBB = support.FakeBB
-
-local function check(x0, y0, x1, y1, r0, r1, steps, first, last)
-    local actual, reference = FakeBB.new(96, 88), FakeBB.new(96, 88)
-    -- Ink and a gray paper rule must survive the idempotent marker blend.
-    for x = 0, 95 do
-        actual:set(x, 32, 100)
-        reference:set(x, 32, 100)
+package.path='./?.lua;./spec/?.lua;'..package.path
+local support=require('support');support.installStubs()
+local Ink=require('highlightink')
+local FakeBB=support.FakeBB
+-- Independent membership oracle: the four square-side inequalities constrain
+-- an interval of t. No polygon construction, rasterizer or stamp sampling.
+local function inside(x,y,x0,y0,r0,x1,y1,r1,first,last,steps)
+    local low,high=first/steps,last/steps
+    local dx,dy,dr=x1-x0,y1-y0,r1-r0
+    for _,q in ipairs({{x-x0-r0,-dx-dr},{x0-x-r0,dx-dr},
+        {y-y0-r0,-dy-dr},{y0-y-r0,dy-dr}}) do
+        if q[2]==0 then if q[1]>1e-8 then return false end
+        elseif q[2]>0 then high=math.min(high,-q[1]/q[2])
+        else low=math.max(low,-q[1]/q[2]) end
     end
-    for i = first, last do
-        local t = i / steps
-        HighlightInk.stamp(reference, x0+(x1-x0)*t, y0+(y1-y0)*t,
-            r0+(r1-r0)*t, 160)
-    end
-    HighlightInk.drawSegment(actual, x0, y0, r0, x1, y1, r1,
-        160, first, last, steps)
-    for y = 0, 87 do
-        for x = 0, 95 do
-            assert(actual:get(x,y) == reference:get(x,y),
-                string.format("marker differs at (%d,%d) for (%d,%d)-(%d,%d)",
-                    x,y,x0,y0,x1,y1))
-        end
-    end
+    return low<=high+1e-8
 end
-
-for _, points in ipairs({
-    {10,10,80,70}, {80,10,10,70}, {5,45,92,45},
-    {-8,2,90,85}, {40,-9,40,100}, {80,70,6,3},
-}) do
-    for _, radius in ipairs({3, 8, 16, 24}) do
-        local x0,y0,x1,y1 = unpack(points)
-        local dist = math.sqrt((x1-x0)^2+(y1-y0)^2)
-        local steps = math.max(1, math.ceil(dist/math.max(2,math.floor(radius*0.8))))
-        check(x0,y0,x1,y1,radius,radius,steps,0,steps)
-        check(x0,y0,x1,y1,radius,radius,steps,
-            math.floor(steps/4), math.ceil(steps*3/4))
-    end
-end
-check(10,10,85,40,8,20,13,0,13)
-check(85,40,10,10,20,8,13,0,13)
 math.randomseed(1741)
-for _ = 1, 120 do
-    local x0, y0 = math.random(-15,105), math.random(-15,100)
-    local x1, y1 = math.random(-15,105), math.random(-15,100)
-    local r0, r1 = math.random(2,25), math.random(2,25)
-    local dist = math.sqrt((x1-x0)^2+(y1-y0)^2)
-    local steps = math.max(1, math.ceil(dist/math.max(2,math.floor(math.min(r0,r1)*0.8))))
-    check(x0,y0,x1,y1,r0,r1,steps,0,steps)
-end
-print("marker raster matches overlapping stamps and preserves dark ink")
-
--- Fractional coordinates/widths, clipping and reversed paths exercise the
--- direct constant-width scanline bounds against independent square stamping.
-for _=1,600 do
+for i=1,400 do
     local x0,y0=math.random(-400,1000)/10,math.random(-400,1000)/10
     local x1,y1=math.random(-400,1000)/10,math.random(-400,1000)/10
-    local radius=math.random(20,350)/10
-    local steps=math.max(1,math.ceil(math.sqrt((x1-x0)^2+(y1-y0)^2)/math.max(2,math.floor(radius*.8))))
-    local first,last=math.random(0,math.floor(steps/2)),math.random(math.ceil(steps/2),steps)
-    check(x0,y0,x1,y1,radius,radius,steps,first,last)
-    local actual,mask=FakeBB.new(96,88),FakeBB.new(96,88)
-    for i=first,last do
-        local t=i/steps
-        HighlightInk.stamp(mask,x0+(x1-x0)*t,y0+(y1-y0)*t,radius,0)
+    if i%10==0 then x1,y1=x0,y0 end
+    local r0,r1=math.random(5,350)/10,math.random(5,350)/10
+    if i%2==0 then r1=r0 end
+    local first,last,steps=math.random(0,4),math.random(6,10),10
+    for _,preview in ipairs({false,true}) do
+        local bb=FakeBB.new(96,88)
+        for x=0,95 do bb:set(x,32,100) end
+        Ink.drawSegment(bb,x0,y0,r0,x1,y1,r1,160,first,last,steps,preview)
+        for y=0,87 do for x=0,95 do
+            local expected=y==32 and 100 or 255
+            if inside(x,y,x0,y0,r0,x1,y1,r1,first,last,steps) then
+                if preview then if (x+y)%4==0 then expected=0 end
+                else expected=math.min(expected,160) end
+            end
+            assert(bb:get(x,y)==expected,string.format('continuous marker case %d pixel %d,%d',i,x,y))
+        end end
     end
-    HighlightInk.drawSegment(actual,x0,y0,radius,x1,y1,radius,160,first,last,steps,true)
-    for y=0,87 do for x=0,95 do
-        local expected=mask:get(x,y)==0 and (x+y)%4==0 and 0 or 255
-        assert(actual:get(x,y)==expected,'binary marker scanline changed coverage')
-    end end
 end
-print('marker: 600 fractional/clipped/reversed sweeps and binary previews match reference stamps')
-
--- Dense incremental sweeps must match full overlapping stamps, even on
--- reversals, with only new strips visited after the shared endpoint.
-for _, preview in ipairs({false,true}) do
-    local actual, expected = FakeBB.new(96,88), FakeBB.new(96,88)
-    local points={{30.2,30.5},{32.7,31.1},{33.1,33.8},{31.4,35.2},{30.2,30.5}}
+for _,preview in ipairs({false,true}) do
+    local actual,expected=FakeBB.new(96,88),FakeBB.new(96,88)
+    local points={{30.2,30.5,18},{32.7,31.1,18},{33.1,33.8,20},{31.4,35.2,15},{30.2,30.5,18}}
     for i=1,#points do
         local a,b=points[math.max(1,i-1)],points[i]
-        HighlightInk.drawSegment(actual,a[1],a[2],18,b[1],b[2],18,160,0,1,1,preview,i>1)
-        HighlightInk.drawSegment(expected,a[1],a[2],18,b[1],b[2],18,160,0,1,1,preview)
+        Ink.drawSegment(actual,a[1],a[2],a[3],b[1],b[2],b[3],160,0,1,1,preview,i>1)
+        Ink.drawSegment(expected,a[1],a[2],a[3],b[1],b[2],b[3],160,0,1,1,preview)
     end
     for y=0,87 do for x=0,95 do
-        assert(actual:get(x,y)==expected:get(x,y), 'incremental marker lost shared coverage')
+        assert(actual:get(x,y)==expected:get(x,y),'incremental marker lost shared coverage')
     end end
 end
-print('marker incremental strips match full raster on turns and reversals')
+print('marker: 800 continuous sweeps match independent inequalities; pressure, clipping, preview and incremental reversals passed')

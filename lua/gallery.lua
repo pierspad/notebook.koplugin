@@ -11,6 +11,7 @@ Folders are ordinary directories on disk, shown as cards of their own.
 --]]--
 
 local ActionMenu = require("actionmenu")
+local Updater = require("updater")
 local Blitbuffer = require("ffi/blitbuffer")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
@@ -21,8 +22,6 @@ local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
-local IconWidget = require("ui/widget/iconwidget")
-local ImageWidget = require("ui/widget/imagewidget")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local Library = require("library")
@@ -31,12 +30,10 @@ local TextWidget = require("ui/widget/textwidget")
 local NewNotebook = require("newnotebook")
 local Thumbnail = require("thumbnail")
 local UIManager = require("ui/uimanager")
-local Widgets = require("widgets")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
-local CenterContainer = require("ui/widget/container/centercontainer")
 local _ = require("i18n")
 local Safe = require("safe")
 local Share = require("share")
@@ -83,172 +80,8 @@ local function selectionMark(selection, item)
 end
 
 --- The area a card leaves for its picture, given the card's size.
-local function thumbSize(card_w, card_h)
-    return card_w - 2 * Size.border.thin,
-           card_h - Screen:scaleBySize(40) - 2 * Size.border.thin
-end
-
-local Card = InputContainer:extend{
-    item = nil,
-    width = nil,
-    height = nil,
-    -- Path of an already-rendered thumbnail, or nil to show a placeholder.
-    thumb = nil,
-    -- nil outside selection mode; true or false while choosing.
-    selected = nil,
-    on_open = nil,
-    on_hold = nil,
-}
-
-function Card:init()
-    local label_h = Screen:scaleBySize(40)
-    local thumb_w, thumb_h = thumbSize(self.width, self.height)
-
-    local picture
-    if self.item.is_folder then
-        picture = IconWidget:new{
-            icon = "notebook.folder",
-            width = math.floor(thumb_h * 0.55),
-            height = math.floor(thumb_h * 0.55),
-        }
-    elseif self.thumb then
-        picture = ImageWidget:new{
-            file = self.thumb,
-            width = thumb_w,
-            height = thumb_h,
-        }
-    else
-        -- Nothing written yet, the notebook this PDF came from is gone, or the
-        -- picture has not been drawn yet: show it as the blank page it is,
-        -- rather than a broken image.
-        picture = IconWidget:new{
-            icon = "notebook.page",
-            width = math.floor(thumb_h * 0.4),
-            height = math.floor(thumb_h * 0.4),
-        }
-    end
-
-    local caption = self.item.name
-
-    self.frame = FrameContainer:new{
-        background = Blitbuffer.COLOR_WHITE,
-        color = Blitbuffer.COLOR_BLACK,
-        bordersize = Size.border.thin,
-        radius = Size.radius.button,
-        margin = 0,
-        padding = 0,
-        VerticalGroup:new{
-            align = "center",
-            CenterContainer:new{
-                dimen = Geom:new{ w = thumb_w, h = thumb_h },
-                picture,
-            },
-            CenterContainer:new{
-                dimen = Geom:new{ w = thumb_w, h = label_h },
-                TextWidget:new{
-                    text = caption,
-                    face = Font:getFace("cfont", 17),
-                    max_width = thumb_w - 2 * Size.padding.small,
-                },
-            },
-        },
-    }
-    if isExport(self.item) then
-        self.ribbon = TextWidget:new{
-            text = self.item.is_svg and _("SVG") or (self.item.is_xopp and _("XOPP") or _("PDF")),
-            face = Font:getFace("cfont", 20),
-            fgcolor = Blitbuffer.COLOR_WHITE,
-            bold = true,
-        }
-    end
-
-    self[1] = self.frame
-    self.dimen = self.frame:getSize()
-    self.ges_events = {
-        Tap  = { GestureRange:new{ ges = "tap",  range = self.dimen } },
-        Hold = { GestureRange:new{ ges = "hold", range = self.dimen } },
-    }
-end
-
---[[--
-Puts back the rounded corners a full-bleed picture painted over.
-
-The frame draws its rounded border first and the thumbnail is blitted into it
-afterwards, as a plain rectangle filling the card's whole width. So the two top
-corners -- the only ones the picture reaches -- came out square, while the
-folder cards, whose icon is small and centred, and the bottom of every card,
-which is the white caption strip, kept theirs. One card in a grid with two
-corners of the wrong shape looks like a rendering fault, which is what it was.
-
-Cheaper than clipping the image: the corner is a few dozen pixels, and the
-alternative is a bounds test per pixel blitted.
---]]
-local function restoreCorners(bb, x, y, w, h, r)
-    if r < 1 then return end
-    for dy = 0, r - 1 do
-        -- How far in the card's edge sits on this row: the horizontal distance
-        -- from the corner's centre out to the quarter circle.
-        local o = r - dy - 0.5
-        local dx = r - math.floor(math.sqrt(r * r - o * o) + 0.5)
-        if dx > 0 then
-            bb:paintRect(x, y + dy, dx, 1, Blitbuffer.COLOR_WHITE)
-            bb:paintRect(x + w - dx, y + dy, dx, 1, Blitbuffer.COLOR_WHITE)
-            bb:paintRect(x, y + h - 1 - dy, dx, 1, Blitbuffer.COLOR_WHITE)
-            bb:paintRect(x + w - dx, y + h - 1 - dy, dx, 1, Blitbuffer.COLOR_WHITE)
-        end
-    end
-    bb:paintBorder(x, y, w, h, Size.border.thin, Blitbuffer.COLOR_BLACK, r)
-end
-
---- Paints the card, the PDF ribbon over its corner, and the selection mark.
-function Card:paintTo(bb, x, y)
-    InputContainer.paintTo(self, bb, x, y)
-
-    if self.ribbon then
-        local pad = Size.padding.default
-        local size = self.ribbon:getSize()
-        bb:paintRect(x + Size.border.thin, y + Size.border.thin,
-            size.w + 4 * pad, size.h + 2 * pad, Blitbuffer.COLOR_BLACK)
-        self.ribbon:paintTo(bb,
-            x + Size.border.thin + 2 * pad,
-            y + Size.border.thin + pad)
-    end
-
-    -- After the ribbon, which is itself a square block laid over one corner.
-    restoreCorners(bb, x, y, self.dimen.w, self.dimen.h, Size.radius.button)
-
-    if self.selected ~= nil then
-        -- A filled disc for chosen, an empty ring for not. On e-ink the two
-        -- have to differ in how much black there is, not in a small detail like
-        -- a tick, which vanishes at this size under a fast waveform.
-        local r = Screen:scaleBySize(16)
-        local pad = Size.padding.default
-        local cx = x + self.dimen.w - r - pad
-        local cy = y + r + pad
-        bb:paintCircle(cx, cy, r, Blitbuffer.COLOR_WHITE)
-        if self.selected then
-            bb:paintCircle(cx, cy, r, Blitbuffer.COLOR_BLACK)
-        else
-            bb:paintCircle(cx, cy, r, Blitbuffer.COLOR_BLACK, 2)
-        end
-    end
-end
-
---- The ribbon hangs off the card rather than sitting in it, so free it by hand.
-function Card:free(full)
-    InputContainer.free(self, full)
-    if self.ribbon then self.ribbon:free(full) end
-end
-
-function Card:onTap()
-    if self.on_open then self.on_open(self.item) end
-    return true
-end
-
-function Card:onHold()
-    if self.on_hold then self.on_hold(self.item) end
-    return true
-end
+local Card = require("gallerycard")
+local thumbSize = Card.thumbSize
 
 -- The gallery ---------------------------------------------------------------------
 
@@ -533,321 +366,8 @@ or one of the two ways of giving up. The sizes come first and are tried largest
 first, because shrinking a button is a much smaller loss than taking its icon or
 its words away.
 --]]
-local ICON_TO_FONT = 26 / 17
+require("galleryheader")(Gallery)
 
-local function headerButton(mode, text, icon, callback)
-    if mode == "icons" and icon then
-        return Widgets.iconButton(icon, callback)
-    end
-    if mode == "labels" then
-        return Widgets.textButton{ text = text, callback = callback }
-    end
-    return Widgets.textButton{
-        text = text,
-        icon = icon,
-        font_size = mode,
-        icon_size = math.floor(mode * ICON_TO_FONT),
-        callback = callback,
-    }
-end
-
--- Largest first. Below the smallest of these the words stop being readable at
--- arm's length, and giving something up beats shrinking further.
-local HEADER_MODES = { 17, 16, 15, 14, 13, "labels", "icons" }
-
---[[--
-What each listing order is called.
-
-Written out as literals rather than built from the keys, because the catalogue
-is checked against the literals in the source: a label assembled at runtime is
-one the check cannot see, and it would report every one of these as a
-translation for a string nothing says.
---]]
-local ORDER_LABELS = {
-    recent = _("Last edited"),
-    oldest = _("Least recently edited"),
-    name = _("Name (A to Z)"),
-    name_desc = _("Name (Z to A)"),
-}
-
---[[--
-Assembles a header from a back arrow, a title, and a row of buttons.
-
-The buttons are built and measured first, and the title is given whatever width
-is left over. Laid out the other way round -- title first, buttons after -- the
-row simply grew past the screen and the last button went off the right-hand
-edge, where it is invisible and cannot be tapped. Nothing says it has happened:
-a HorizontalGroup that does not fit neither wraps nor complains.
-
-That was already true in English at the width of a Scribe, and every language
-whose words for "New notebook" are longer than English's made it worse.
-
-What the row gives up, and in what order, matters. Dropping the icons is the
-cheapest change to describe and the worst one to look at: what had been a strip
-of recognisable buttons becomes a strip of plain words, and it reads as though
-something broke rather than as though something was added.
-
-So the height goes before the icons do. A set of buttons that will not fit
-beside the title gets a row of its own underneath, at the full width of the
-screen and still drawn the way it was -- which is nearly always enough, because
-the title is what was taking the room. Only if a full-width row of them still
-does not fit does the old ladder apply: labels first, then icons alone, which
-always fit.
-
-The header is then padded to the height of two rows whether it uses them or
-not. Without that the grid moves up and down as the buttons come and go -- the
-selection header needs the second row and the ordinary one does not -- and a
-page of cards that jumps every time you tick something is worse to use than one
-that starts a little lower.
-
-@tparam function make called with the mode; returns the title text, the back
-  arrow, and the list of buttons that follow the title
-@treturn widget the assembled header, always the same height
---]]
-function Gallery:_fitHeader(make)
-    local gap = Size.padding.large
-    local pad = Size.padding.small
-    -- The grid inside the holder is inset by a margin on each side.
-    local avail = self.dimen.w - 2 * gap
-
-    --- Width of the buttons laid out with a gap before each.
-    local function widthOf(buttons)
-        local w = 0
-        for _, button in ipairs(buttons) do
-            w = w + button:getSize().w + gap
-        end
-        return w
-    end
-
-    --[[
-    The largest the actions can be drawn and still fit on their row.
-
-    Eight of them at the size a menu uses are wider than a Scribe, so the row is
-    built at each size in turn until one fits. Only if the smallest still does
-    not -- a language far wider than any we ship, or a much narrower screen --
-    are the icons dropped, and then the words.
-    --]]
-    local title, back, buttons, corner, widest
-    for i, mode in ipairs(HEADER_MODES) do
-        if i > 1 then
-            back:free()
-            if corner then corner:free() end
-            for _, button in ipairs(buttons) do button:free() end
-        end
-        title, back, buttons, corner, widest = make(mode)
-        --[[
-        Sized for the most it will ever hold, not for what it holds now.
-
-        Which actions apply depends on what has been ticked, so sizing to the
-        buttons actually built would resize them as you tick -- five large ones
-        becoming seven small ones and back. A header whose lettering changes
-        size under your finger is worse to read than one that settled on a size
-        and kept it.
-        --]]
-        for _, button in ipairs(widest or {}) do button:free() end
-        if widthOf(widest or buttons) <= avail then break end
-    end
-
-    -- The title row: what you are looking at, and the one control that is about
-    -- the row itself rather than about what is in the grid.
-    local version = TextWidget:new{
-        text = require("_meta").version,
-        face = Font:getFace("cfont", 12),
-    }
-    self.version_text = version
-    local version_w = version:getSize().w
-    local top = HorizontalGroup:new{ align = "center" }
-    table.insert(top, back)
-    table.insert(top, HorizontalSpan:new{ width = gap })
-    table.insert(top, TextWidget:new{
-        text = title,
-        face = Font:getFace("tfont", 22),
-        max_width = math.max(
-            avail - back:getSize().w - gap
-                  - (corner and corner:getSize().w + gap or 0) - version_w - gap,
-            Screen:scaleBySize(40)),
-    })
-    if corner then
-        table.insert(top, HorizontalSpan:new{ width = gap })
-        table.insert(top, corner)
-    end
-
-    local used = 0
-    for _, widget in ipairs(top) do used = used + widget:getSize().w end
-    table.insert(top, HorizontalSpan:new{width=math.max(gap, avail-used-version_w)})
-    table.insert(top, version)
-
-    local bottom = HorizontalGroup:new{ align = "center" }
-    for _, button in ipairs(buttons) do
-        if #bottom > 0 then
-            table.insert(bottom, HorizontalSpan:new{ width = gap })
-        end
-        table.insert(bottom, button)
-    end
-
-    --[[
-    The height the header occupies, whether it needs all of it or not.
-
-    The actions keep a row of their own at all times, even while it is empty --
-    which it is with nothing chosen. They used to appear beside the title when
-    there were few of them and drop to their own row when there were many, and
-    a strip of controls that moves between two places depending on what you have
-    ticked is harder to use than one that is always in the same place.
-
-    So the row is measured from a button at the largest size rather than from
-    the buttons actually in it: that is the tallest one can be, and it is the
-    same answer whichever size was settled on and whatever is on the row. The
-    grid below starts at the same place with something ticked and with nothing
-    ticked.
-    --]]
-    local probe = headerButton(HEADER_MODES[1], "X", "notebook.page", function() end)
-    local action_h = probe:getSize().h
-    probe:free()
-
-    --[[
-    Built complete rather than grown after measuring.
-
-    A VerticalGroup measures itself once and remembers where each child goes.
-    Adding one afterwards leaves it painting past the end of that list: the
-    screen never appears, and it takes the plugin down with it.
-    --]]
-    local header = VerticalGroup:new{
-        align = "left",
-        top,
-        -- The same gap above the actions and below them, so the row reads as a
-        -- band of its own rather than as something stuck to the title.
-        VerticalSpan:new{ width = pad },
-        bottom,
-        VerticalSpan:new{ width = pad + math.max(0, action_h - bottom:getSize().h) },
-    }
-
-    self.header_row = header
-    return header
-end
-
---- A header button at the given level of detail; see _fitHeader.
-
-function Gallery:_buildHeader()
-    if self.selection then return self:_buildSelectionHeader() end
-
-    return self:_fitHeader(function(mode)
-        --[[
-        The back arrow is always there, and always means "out of here".
-
-        Inside a folder it goes up one. At the top it closes the notebooks,
-        which until now had no control at all: you left by tapping another tab
-        on the launcher bar, and if that bar is not installed there was nothing
-        to tap. Worse, a screen this one covers the whole panel with is one the
-        launcher bar itself cannot close -- it only knows how to close its own
-        -- so leaving had to be something the reader could always do from here.
-        --]]
-        local back = Widgets.iconButton("chevron.left", function()
-            if self.folder ~= "" then
-                return self:_goTo(Library.parentOf(self.folder) or "")
-            end
-            self:onClose()
-        end)
-
-        -- Direct creation saves the extra tap of the old Add menu.
-        local buttons = {
-            headerButton(mode, _("New notebook"), "notebook.page", function() self:_createNotebook() end),
-            headerButton(mode, _("New folder"), "notebook.folder", function() self:_createFolder() end),
-            headerButton(mode, _("Annotate PDF"), "notebook.export", function() self:_importPDF() end),
-        }
-
-        --[[
-        A way into choosing that does not depend on a hold.
-
-        Holding works with the pen and is unreliable with a finger, and not
-        because of anything here: the gesture detector never emits a hold once
-        the contact has moved or once a second contact -- a hand on the glass --
-        has voided the gesture. A finger wobbles and a hand rests, so the hold
-        that works every time with a nib fails often enough with a fingertip to
-        feel broken. A button cannot fail, and it also says that choosing
-        several things is possible at all, which a hold never did.
-        --]]
-        if #self.items > 0 then
-            table.insert(buttons, headerButton(mode, _("Select"),
-                "notebook.duplicate", function()
-                    self.selection = {}
-                    self:_layout()
-                    self:_repaint()
-                end))
-        end
-
-        local title = self.folder ~= "" and self.folder:match("[^/]+$")
-            or _("Notebooks")
-        return title, back, buttons, self:_orderButton()
-    end)
-end
-
---[[--
-The header while things are being chosen.
-
-Only three controls, and one of them opens a menu. Bulk actions do not all apply
-to everything that can be chosen -- a folder cannot be exported, a PDF export
-should not be duplicated away from the notebook it came from -- so which ones
-are offered depends on what is in the selection, and a row of buttons that
-appear and disappear as you tick things is harder to read than a single button
-that opens the list that applies.
---]]
-function Gallery:_buildSelectionHeader()
-    local chosen = self:_selected()
-    local count = #chosen
-
-    -- Fitted the same way as the ordinary header, and with more reason to be:
-    -- how many buttons this row carries depends on what has been chosen, so the
-    -- widest version of it is not something that can be checked once and then
-    -- relied on.
-    return self:_fitHeader(function(mode)
-        local back = Widgets.iconButton("chevron.left", function()
-            self:_endSelection()
-        end)
-
-        -- Ticking everything is about the selection itself rather than about
-        -- what is in it, so it sits up beside the count it changes rather than
-        -- among the actions that apply to what has been ticked.
-        local all = #chosen == #self.items and _("None") or _("All")
-        local corner = Widgets.textButton{ text = all, callback = function()
-            if not self.selection then return end
-            if #self:_selected() == #self.items then
-                for _, item in ipairs(self.items) do
-                    self.selection[item.path] = nil
-                end
-            else
-                for _, item in ipairs(self.items) do
-                    self.selection[item.path] = item
-                end
-            end
-            self:_layout()
-            self:_repaint()
-        end }
-
-        local buttons = {}
-        for _, action in ipairs(self:_bulkActions(chosen)) do
-            table.insert(buttons, headerButton(mode, action.text,
-                action.icon, action.callback))
-        end
-
-        -- The most this header can ever carry: one notebook chosen, which is
-        -- the case that offers everything at once. Built only to be measured.
-        local widest = {}
-        for _, action in ipairs(self:_bulkActions({
-            { name = "", path = "", is_folder = false, is_pdf = false },
-        })) do
-            table.insert(widest, headerButton(mode, action.text,
-                action.icon, action.callback))
-        end
-
-        local title = count == 1 and _("1 selected") or T(_("%1 selected"), count)
-        return title, back, buttons, corner, widest
-    end)
-end
-
--- The page counter's typeface, in one place: the height reserved for it below
--- the cards and the height it actually paints at have to be the same number,
--- and they were not -- the strip left for it was shorter than the line of text,
--- so the counter was drawn partly off the bottom of the screen.
 local FOOTER_FONT_SIZE = 17
 
 function Gallery:_buildFooter()
@@ -1097,6 +617,9 @@ function Gallery:onClose()
 end
 
 function Gallery:_open(item)
+    if Updater.installing or Updater.installed then
+        return self:_error(_("Restart KOReader after the update finishes before opening a notebook."))
+    end
     if item.is_folder then
         return self:_goTo(item.rel)
     end
@@ -1189,14 +712,22 @@ function Gallery:_askName(title, initial, commit, presets)
     dialog:onShowKeyboard()
 end
 
-function Gallery:_exportMenu(notebooks)
+function Gallery:_exportMenu(notebooks, selected_pages)
+    local actions = {
+        {icon="notebook.export", text=_("PDF"), callback=function() self:_exportMany(notebooks,"pdf",selected_pages) end},
+        {icon="notebook.export", text=_("SVG (ink only)"), callback=function() self:_exportMany(notebooks,"svg",selected_pages) end},
+        {icon="notebook.export", text=_("Xournal++"), callback=function() self:_exportMany(notebooks,"xopp",selected_pages) end},
+    }
+    if #notebooks==1 and not selected_pages then
+        actions[#actions+1]={icon="notebook.page",text=_("Choose pages…"),callback=function()
+            local doc=Document:new(notebooks[1].path)
+            if not doc:load() then return self:_error(_("Could not read notebook.")) end
+            require("exportpagesdialog").show(doc:pageCount(),function(indices) self:_exportMenu(notebooks,indices) end)
+        end}
+    end
     UIManager:show(ActionMenu:new{
-        title = _("Export"),
-        actions = {
-            {icon="notebook.export", text=_("PDF"), callback=function() self:_exportMany(notebooks,"pdf") end},
-            {icon="notebook.export", text=_("SVG (ink only)"), callback=function() self:_exportMany(notebooks,"svg") end},
-            {icon="notebook.export", text=_("Xournal++"), callback=function() self:_exportMany(notebooks,"xopp") end},
-        },
+        title = selected_pages and _("Export selected pages") or _("Export"),
+        actions = actions,
     })
 end
 
@@ -1431,39 +962,6 @@ it. Its label is the order in force, so what the grid is sorted by is on screen
 without opening anything -- a plain "Sort" button answers the question only
 after you have tapped it.
 --]]
-function Gallery:_orderButton()
-    return Widgets.textButton{
-        text = ORDER_LABELS[self.order],
-        icon = "notebook.refresh",
-        font_size = 15,
-        icon_size = 22,
-        callback = function() self:_chooseOrder() end,
-    }
-end
-
-function Gallery:_chooseOrder()
-    local actions = {}
-    for _, key in ipairs(Library.ORDER_SEQUENCE) do
-        table.insert(actions, {
-            -- The one in force is marked rather than left out: a list that
-            -- silently omits where you already are makes you count entries to
-            -- work out what changed.
-            icon = key == self.order and "notebook.open" or "notebook.page",
-            text = ORDER_LABELS[key],
-            callback = function()
-                if key == self.order then return end
-                self.order = key
-                if G_reader_settings then
-                    G_reader_settings:saveSetting("notebook_order", key)
-                end
-                self:_endSelection()
-                self:_rebuild()
-            end,
-        })
-    end
-    UIManager:show(ActionMenu:new{ title = _("Sort by"), actions = actions })
-end
-
 function Gallery:_renameOne(item)
     self:_askName(item.is_folder and _("Rename folder") or _("Rename notebook"),
         item.name, function(new_name)

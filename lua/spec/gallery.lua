@@ -111,7 +111,8 @@ local function newGallery(n, fields)
     -- previous test it would schedule into that test's recorder, not this one's.
     for _, name in ipairs{ "gallery", "galleryexport", "exportprogress", "share", "xopp", "svg",
                            "library", "actionmenu", "export",
-                           "document", "renderer", "stroke", "safe" } do
+                           "document", "documentstorage", "gallerycard", "galleryheader", "updater", "updateinstaller",
+                           "updatetransport", "renderer", "stroke", "safe" } do
         package.loaded[name] = nil
     end
     local fs = fixture(n or 12)

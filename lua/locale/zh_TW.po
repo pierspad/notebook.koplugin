@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 02:24+0200\n"
+"POT-Creation-Date: 2026-10-01 13:14+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Traditional Chinese\n"
@@ -13,20 +13,165 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Cut"
-msgstr "剪下"
+msgid "Notebook name"
+msgstr "筆記本名稱"
 
-msgid "Paste"
-msgstr "貼上"
+msgid "New notebook"
+msgstr "新建筆記本"
 
-msgid "Copy"
-msgstr "複製"
+msgid "Cancel"
+msgstr "取消"
 
-msgid "XOPP"
-msgstr "XOPP"
+msgid "Create"
+msgstr "建立"
 
-msgid "PDF"
-msgstr "PDF"
+msgid "Preparing…"
+msgstr "正在準備…"
+
+msgid "Cancelling…"
+msgstr "正在取消…"
+
+msgid "Exporting PDF…"
+msgstr "正在匯出 PDF…"
+
+msgid "Rendering"
+msgstr "繪製中"
+
+msgid "Preparing image"
+msgstr "正在準備影像"
+
+msgid "Compressing"
+msgstr "壓縮中"
+
+msgid "Page %1 of %2 — %3"
+msgstr "第 %1 頁，共 %2 頁 — %3"
+
+msgid "Open notebook"
+msgstr "開啟筆記本"
+
+msgid "Notebook"
+msgstr "筆記本"
+
+msgid "Restart KOReader to use the updated Notebook plugin."
+msgstr "請重新啟動 KOReader 以使用更新後的 Notebook 外掛。"
+
+msgid ""
+"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
+"error.log for details."
+msgstr ""
+"筆記本外掛程式遇到錯誤。請重新啟動 KOReader 以重新開啟；詳情請見 notebook-"
+"error.log。"
+
+msgid "Could not create the notebook folder."
+msgstr "無法建立筆記本資料夾。"
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr "無法開啟此筆記本；它可能來自較新的版本。"
+
+msgid "Pages (%1)"
+msgstr "頁面 (%1)"
+
+msgid "New page"
+msgstr "新增頁面"
+
+msgid "Notebook background"
+msgstr "筆記本背景"
+
+msgid "Done"
+msgstr "完成"
+
+msgid "Go to this page"
+msgstr "跳轉至此頁"
+
+msgid "Insert a page after this one"
+msgstr "在此頁後插入頁面"
+
+msgid "Duplicate"
+msgstr "建立複本"
+
+msgid "Background of this page"
+msgstr "目前頁背景"
+
+msgid "Delete"
+msgstr "刪除"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "刪除第 %1 頁及其所有內容？"
+
+msgid "Page %1"
+msgstr "第 %1 頁"
+
+msgid "Background of page %1"
+msgstr "第 %1 頁背景"
+
+msgid "Follow the notebook again"
+msgstr "恢復跟隨筆記本"
+
+msgid "Background for every page"
+msgstr "所有頁面的背景"
+
+msgid "Some pages have their own — change those too"
+msgstr "部分頁面有獨立背景 — 一併更改"
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine.\n"
+"\n"
+"Details were written to:\n"
+"%1"
+msgstr ""
+"筆記本外掛程式遇到問題已關閉。\n"
+"\n"
+"KOReader 運作正常。\n"
+"\n"
+"詳細資訊已寫入：\n"
+"%1"
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine."
+msgstr ""
+"筆記本外掛程式遇到問題已關閉。\n"
+"\n"
+"KOReader 運作正常。"
+
+msgid "Ink"
+msgstr "墨水"
+
+msgid "Eraser"
+msgstr "橡皮擦"
+
+msgid "Lasso"
+msgstr "套索"
+
+msgid "Shapes"
+msgstr "形狀"
+
+msgid "Input"
+msgstr "輸入"
+
+msgid "Tuning written to the log"
+msgstr "調校參數已寫入記錄"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "測試筆記本——未進行調校時請重新命名"
+
+msgid "Reset tab"
+msgstr "重設分頁"
+
+msgid "Reset all"
+msgstr "全部重設"
+
+msgid "Write to log"
+msgstr "寫入記錄"
+
+msgid "Whole strokes"
+msgstr "整個筆畫"
+
+msgid "Part of a stroke"
+msgstr "筆畫的一部分"
 
 msgid "Nothing here yet — use New notebook to start one"
 msgstr "這裡暫無內容 — 使用「新建筆記本」開始"
@@ -43,8 +188,8 @@ msgstr "名稱 (A 到 Z)"
 msgid "Name (Z to A)"
 msgstr "名稱 (Z 到 A)"
 
-msgid "New notebook"
-msgstr "新建筆記本"
+msgid "Updates"
+msgstr "更新"
 
 msgid "New folder"
 msgstr "新建資料夾"
@@ -73,6 +218,12 @@ msgstr "已選擇 %1 項"
 msgid "Page %1 of %2"
 msgstr "第 %1 頁，共 %2 頁"
 
+msgid "Restart KOReader after the update finishes before opening a notebook."
+msgstr "更新完成後，請先重新啟動 KOReader 再開啟筆記本。"
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "請在瀏覽器或向量編輯器中開啟此 SVG 檔案。"
+
 msgid "Open this XOPP file with Xournal++."
 msgstr "使用 Xournal++ 開啟此 XOPP 檔案。"
 
@@ -91,17 +242,29 @@ msgstr "該名稱過長。"
 msgid "That name cannot be used."
 msgstr "無法使用該名稱。"
 
-msgid "Cancel"
-msgstr "取消"
-
 msgid "Save"
 msgstr "儲存"
 
-msgid "Export"
-msgstr "匯出"
+msgid "PDF"
+msgstr "PDF"
+
+msgid "SVG (ink only)"
+msgstr "SVG（僅筆跡）"
 
 msgid "Xournal++"
 msgstr "Xournal++"
+
+msgid "Choose pages…"
+msgstr "選擇頁面…"
+
+msgid "Could not read notebook."
+msgstr "無法讀取筆記本。"
+
+msgid "Export selected pages"
+msgstr "匯出所選頁面"
+
+msgid "Export"
+msgstr "匯出"
 
 msgid "Choose a PDF file."
 msgstr "選擇一個 PDF 檔案。"
@@ -130,12 +293,6 @@ msgstr "移動"
 msgid "Send"
 msgstr "傳送"
 
-msgid "Duplicate"
-msgstr "建立複本"
-
-msgid "Delete"
-msgstr "刪除"
-
 msgid ""
 "Delete '%1'?\n"
 "\n"
@@ -162,6 +319,189 @@ msgstr "重新命名資料夾"
 
 msgid "Rename notebook"
 msgstr "重新命名筆記本"
+
+msgid "Notebooks (top level)"
+msgstr "筆記本 (最上層)"
+
+msgid "Move to"
+msgstr "移動到"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "已移動 %1；無法將 %2 移動到此處。"
+
+msgid "Edit"
+msgstr "編輯"
+
+msgid "Above text"
+msgstr "置於文字上方"
+
+msgid "Below text"
+msgstr "置於文字下方"
+
+msgid "Cut"
+msgstr "剪下"
+
+msgid "Copy"
+msgstr "複製"
+
+msgid "Paste"
+msgstr "貼上"
+
+msgid "Close"
+msgstr "關閉"
+
+msgid "Edit text"
+msgstr "編輯文字"
+
+msgid "Insert text"
+msgstr "插入文字"
+
+msgid "Sharing format"
+msgstr "分享格式"
+
+msgid "Finger"
+msgstr "手指"
+
+msgid "Turns pages"
+msgstr "翻頁"
+
+msgid "Draws"
+msgstr "繪畫"
+
+msgid "Pen side button"
+msgstr "筆側鍵"
+
+msgid "Highlighter"
+msgstr "螢光筆"
+
+msgid "Text size"
+msgstr "文字大小"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "無法儲存筆記本。筆記本仍保持開啟狀態。"
+
+msgid "Black"
+msgstr "黑色"
+
+msgid "White"
+msgstr "白色"
+
+msgid "Red"
+msgstr "紅色"
+
+msgid "Blue"
+msgstr "藍色"
+
+msgid "Orange"
+msgstr "橙色"
+
+msgid "Green"
+msgstr "綠色"
+
+msgid "Yellow"
+msgstr "黃色"
+
+msgid "Purple"
+msgstr "紫色"
+
+msgid "Color"
+msgstr "顏色"
+
+msgid "Fineliner"
+msgstr "針管筆"
+
+msgid "Fountain pen"
+msgstr "鋼筆"
+
+msgid "Pencil"
+msgstr "鉛筆"
+
+msgid "Line"
+msgstr "直線"
+
+msgid "Stroke style"
+msgstr "筆畫樣式"
+
+msgid "Arrow"
+msgstr "箭頭"
+
+msgid "Pen type"
+msgstr "筆類型"
+
+msgid "Eraser type"
+msgstr "橡皮擦類型"
+
+msgid "Square"
+msgstr "正方形"
+
+msgid "Rectangle"
+msgstr "矩形"
+
+msgid "Circle"
+msgstr "圓形"
+
+msgid "Triangle"
+msgstr "三角形"
+
+msgid "Fill"
+msgstr "填滿"
+
+msgid "Filled shape"
+msgstr "實心形狀"
+
+msgid "Sans-serif"
+msgstr "無襯線"
+
+msgid "Serif"
+msgstr "襯線"
+
+msgid "Monospace"
+msgstr "等寬"
+
+msgid "Font family"
+msgstr "字型"
+
+msgid "Bold"
+msgstr "粗體"
+
+msgid "Italic"
+msgstr "斜體"
+
+msgid "Underline"
+msgstr "底線"
+
+msgid "Text style"
+msgstr "文字樣式"
+
+msgid "Background"
+msgstr "背景"
+
+msgid "Transparent"
+msgstr "透明"
+
+msgid "Text options"
+msgstr "文字選項"
+
+msgid "Blank"
+msgstr "空白"
+
+msgid "Lined"
+msgstr "橫線"
+
+msgid "Narrow lined"
+msgstr "窄橫線"
+
+msgid "Grid"
+msgstr "格線"
+
+msgid "Dot grid"
+msgstr "點陣"
+
+msgid "Checklist"
+msgstr "清單"
+
+msgid "XOPP"
+msgstr "XOPP"
 
 msgid "There is nowhere to prepare the files for sending."
 msgstr "沒有空間可用於準備傳送檔案。"
@@ -209,343 +549,70 @@ msgstr "已匯出 %1 本筆記本。"
 msgid "Exported %1 of %2; %3 could not be read."
 msgstr "已匯出 %1 / %2；無法讀取 %3。"
 
-msgid "Notebooks (top level)"
-msgstr "筆記本 (最上層)"
-
-msgid "Move to"
-msgstr "移動到"
-
-msgid "Moved %1; %2 could not be moved there."
-msgstr "已移動 %1；無法將 %2 移動到此處。"
-
-msgid "Edit"
-msgstr "編輯"
-
-msgid "Close"
-msgstr "關閉"
-
-msgid "Open notebook"
-msgstr "開啟筆記本"
-
-msgid "Notebook"
-msgstr "筆記本"
-
-msgid ""
-"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
-"error.log for details."
-msgstr ""
-"筆記本外掛程式遇到錯誤。請重新啟動 KOReader 以重新開啟；詳情請見 notebook-"
-"error.log。"
-
-msgid "Could not create the notebook folder."
-msgstr "無法建立筆記本資料夾。"
-
-msgid "This notebook could not be opened; it may be from a newer version."
-msgstr "無法開啟此筆記本；它可能來自較新的版本。"
-
-msgid "Notebook name"
-msgstr "筆記本名稱"
-
-msgid "Create"
-msgstr "建立"
-
-msgid "Fineliner"
-msgstr "針管筆"
-
-msgid "Fountain pen"
-msgstr "鋼筆"
-
-msgid "Pencil"
-msgstr "鉛筆"
-
-msgid "Black"
-msgstr "黑色"
-msgid "Red"
-msgstr "紅色"
-
-msgid "Orange"
-msgstr "橙色"
-
-msgid "Yellow"
-msgstr "黃色"
-
-msgid "Green"
-msgstr "綠色"
-
-msgid "Blue"
-msgstr "藍色"
-
-msgid "Purple"
-msgstr "紫色"
-
-
-msgid "White"
-msgstr "白色"
-
-msgid "Color"
-msgstr "顏色"
-
-msgid "Pen type"
-msgstr "筆類型"
-
-msgid "Whole strokes"
-msgstr "整個筆畫"
-
-msgid "Part of a stroke"
-msgstr "筆畫的一部分"
-
-msgid "Eraser type"
-msgstr "橡皮擦類型"
-
-msgid "Square"
-msgstr "正方形"
-
-msgid "Rectangle"
-msgstr "矩形"
-
-msgid "Circle"
-msgstr "圓形"
-
-msgid "Shapes"
-msgstr "形狀"
-
-
-
-
-msgid "Sans-serif"
-msgstr "無襯線"
-
-msgid "Serif"
-msgstr "襯線"
-
-msgid "Monospace"
-msgstr "等寬"
-
-msgid "Bold"
-msgstr "粗體"
-
-msgid "Italic"
-msgstr "斜體"
-
-msgid "Underline"
-msgstr "底線"
-
-msgid "Background"
-msgstr "背景"
-
-msgid "Transparent"
-msgstr "透明"
-
-msgid "Text options"
-msgstr "文字選項"
-
-msgid "Edit text"
-msgstr "編輯文字"
-
-msgid "Insert text"
-msgstr "插入文字"
-
-msgid "Could not save the notebook. It has been left open."
-msgstr "無法儲存筆記本。筆記本仍保持開啟狀態。"
-
-msgid "Pages (%1)"
-msgstr "頁面 (%1)"
-
-msgid "New page"
-msgstr "新增頁面"
-
-msgid "Notebook background"
-msgstr "筆記本背景"
-
-msgid "Done"
-msgstr "完成"
-
-msgid "Go to this page"
-msgstr "跳轉至此頁"
-
-msgid "Insert a page after this one"
-msgstr "在此頁後插入頁面"
-
-msgid "Background of this page"
-msgstr "目前頁背景"
-
-msgid "Delete page %1 and everything on it?"
-msgstr "刪除第 %1 頁及其所有內容？"
-
-msgid "Page %1"
-msgstr "第 %1 頁"
-
-msgid "Background of page %1"
-msgstr "第 %1 頁背景"
-
-msgid "Follow the notebook again"
-msgstr "恢復跟隨筆記本"
-
-msgid "Background for every page"
-msgstr "所有頁面的背景"
-
-msgid "Some pages have their own — change those too"
-msgstr "部分頁面有獨立背景 — 一併更改"
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine.\n"
-"\n"
-"Details were written to:\n"
-"%1"
-msgstr ""
-"筆記本外掛程式遇到問題已關閉。\n"
-"\n"
-"KOReader 運作正常。\n"
-"\n"
-"詳細資訊已寫入：\n"
-"%1"
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine."
-msgstr ""
-"筆記本外掛程式遇到問題已關閉。\n"
-"\n"
-"KOReader 運作正常。"
-
-msgid "Sharing format"
-msgstr "分享格式"
-
-msgid "Finger"
-msgstr "手指"
-
-msgid "Turns pages"
-msgstr "翻頁"
-
-msgid "Draws"
-msgstr "繪畫"
-
-msgid "Blank"
-msgstr "空白"
-
-msgid "Lined"
-msgstr "橫線"
-
-msgid "Narrow lined"
-msgstr "窄橫線"
-
-msgid "Grid"
-msgstr "格線"
-
-msgid "Dot grid"
-msgstr "點陣"
-
-msgid "Checklist"
-msgstr "清單"
-
-msgid "Ink"
-msgstr "墨水"
-
-msgid "Eraser"
-msgstr "橡皮擦"
-
-msgid "Lasso"
-msgstr "套索"
-
-msgid "Input"
-msgstr "輸入"
-
-msgid "Tuning written to the log"
-msgstr "調校參數已寫入記錄"
-
-msgid "Test notebook - rename it if you are not tuning"
-msgstr "測試筆記本——未進行調校時請重新命名"
-
-msgid "Reset tab"
-msgstr "重設分頁"
-
-msgid "Reset all"
-msgstr "全部重設"
-
-msgid "Write to log"
-msgstr "寫入記錄"
-
-msgid "Preparing…"
-msgstr "正在準備…"
-
-msgid "Cancelling…"
-msgstr "正在取消…"
-
-msgid "Exporting PDF…"
-msgstr "正在匯出 PDF…"
-
-msgid "Rendering"
-msgstr "繪製中"
-
-msgid "Preparing image"
-msgstr "正在準備影像"
-
-msgid "Compressing"
-msgstr "壓縮中"
-
-msgid "Page %1 of %2 — %3"
-msgstr "第 %1 頁，共 %2 頁 — %3"
-
-#~ msgid "White background"
-#~ msgstr "白色背景"
-
-msgid "Triangle"
-msgstr "三角形"
-
-msgid "Pen side button"
-msgstr "筆側鍵"
-
-msgid "Highlighter"
-msgstr "螢光筆"
-
-
-
-
-
-msgid "Line"
-msgstr "直線"
-
-msgid "Arrow"
-msgstr "箭頭"
-
-msgid "Filled shape"
-msgstr "實心形狀"
-
-msgid "Stroke style"
-msgstr "筆畫樣式"
-
-msgid "Fill"
-msgstr "填滿"
-
-msgid "Font family"
-msgstr "字型"
-
-msgid "Text style"
-msgstr "文字樣式"
-
-msgid "Text size"
-msgstr "文字大小"
-
 msgid "SVG"
 msgstr "SVG"
 
-msgid "SVG (ink only)"
-msgstr "SVG（僅筆跡）"
+msgid "Updates can only be installed in a packaged Notebook plugin."
+msgstr "只能為透過安裝套件安裝的 Notebook 外掛安裝更新。"
 
-msgid "Open this SVG file in a browser or vector editor."
-msgstr "請在瀏覽器或向量編輯器中開啟此 SVG 檔案。"
+msgid ""
+"A previous update backup exists. Restart KOReader before updating again."
+msgstr "已有上次更新的備份。再次更新前請重新啟動 KOReader。"
 
-msgid "Order"
-msgstr "堆疊順序"
+msgid "Downloading Notebook update…"
+msgstr "正在下載 Notebook 更新…"
 
-msgid "Shape order"
-msgstr "形狀堆疊順序"
+msgid ""
+"Update failed:\n"
+"%1"
+msgstr "更新失敗：\n%1"
 
-msgid "Above text"
-msgstr "置於文字上方"
+msgid "Notebook update installed. Restart KOReader to use the new version."
+msgstr "Notebook 更新已安裝。請重新啟動 KOReader 以使用新版本。"
 
-msgid "Below text"
-msgstr "置於文字下方"
+msgid "Restart"
+msgstr "重新啟動"
+
+msgid "Later"
+msgstr "稍後"
+
+msgid "Notebook update available"
+msgstr "有可用的 Notebook 更新"
+
+msgid "Install"
+msgstr "安裝"
+
+msgid "Checking for Notebook updates…"
+msgstr "正在檢查 Notebook 更新…"
+
+msgid ""
+"Could not check updates:\n"
+"%1"
+msgstr "無法檢查更新：\n%1"
+
+msgid "Notebook update available: %1"
+msgstr "有可用的 Notebook 更新：%1"
+
+msgid "No newer stable Notebook release is available."
+msgstr "沒有更新的 Notebook 穩定版。"
+
+msgid "Check updates weekly"
+msgstr "每週檢查更新"
+
+msgid "Check update"
+msgstr "檢查更新"
+
+msgid "Choose pages to export"
+msgstr "選擇要匯出的頁面"
+
+msgid "Pages 1–%1; for example: 1, 3-5"
+msgstr "頁碼 1–%1；例如：1, 3-5"
+
+msgid "Continue"
+msgstr "繼續"
+
+msgid "Invalid page range. Use page numbers or ranges separated by commas."
+msgstr "頁碼範圍無效。請用逗號分隔頁碼或範圍。"
+
+#~ msgid "White background"
+#~ msgstr "白色背景"

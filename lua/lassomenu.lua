@@ -47,6 +47,10 @@ function FloatingButton:init()
         table.insert(children, HorizontalSpan:new{ width = Size.padding.small })
     end
 
+    if not self.text then
+        table.insert(children, HorizontalSpan:new{ width = pad })
+    end
+
     if self.text then
         table.insert(children, TextWidget:new{
             text = self.text,
@@ -73,7 +77,23 @@ function FloatingButton:init()
     self.dimen = self.frame:getSize()
     self.ges_events = {
         Tap = { GestureRange:new{ ges = "tap", range = self.dimen } },
+        Hold = { GestureRange:new{ ges = "hold", range = self.dimen } },
     }
+end
+
+function FloatingButton:paintTo(bb, x, y)
+    InputContainer.paintTo(self, bb, x, y)
+    if self.active then
+        local inset = Size.padding.button + Size.border.thin
+        bb:paintRect(x + inset, y + self.dimen.h - inset - 2,
+            self.dimen.w - 2 * inset, 2, Blitbuffer.COLOR_BLACK)
+    end
+end
+
+function FloatingButton:onHold()
+    if not self.hint then return false end
+    UIManager:show(require("ui/widget/infomessage"):new{text = self.hint})
+    return true
 end
 
 function FloatingButton:onTap()
@@ -109,13 +129,20 @@ function LassoMenu:init()
     end
 
     if self.on_order then
-        table.insert(buttons, FloatingButton:new{
-            text = _("Order"),
-            callback = function()
-                UIManager:close(self)
-                self.on_order()
-            end,
-        })
+        local switch = HorizontalGroup:new{ align = "center" }
+        for direction = 1, 2 do
+            local front = direction == 1
+            table.insert(switch, FloatingButton:new{
+                active = self.order_front == front,
+                hint = front and _("Above text") or _("Below text"),
+                icon = front and "notebook.above-text" or "notebook.below-text",
+                callback = function()
+                    UIManager:close(self)
+                    self.on_order(front)
+                end,
+            })
+        end
+        table.insert(buttons, switch)
         table.insert(buttons, HorizontalSpan:new{ width = pad })
     end
 

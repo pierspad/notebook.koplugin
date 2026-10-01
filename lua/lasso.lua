@@ -70,6 +70,19 @@ local function strokeSelected(stroke, poly_pts, bounds)
         return false
     end
 
+    if stroke.tool == "highlighter" and stroke.filled then
+        for _,point in ipairs(poly_pts) do
+            if stroke:hitTest(point.x,point.y,0) then return true end
+        end
+        for first,last in require("markerarea").parts(stroke) do
+            local count=last-first+2
+            local contour=setmetatable({tool="pen",count=function() return count end,
+                getPoint=function(_,i) return stroke:getPoint(i==count and first or first+i-1) end},
+                {__index=stroke})
+            if strokeSelected(contour,poly_pts,bounds) then return true end
+        end
+        return false
+    end
     local spacing = Tuning.lasso_sample_spacing
     local count = stroke:count()
     local px, py = stroke:getPoint(1)

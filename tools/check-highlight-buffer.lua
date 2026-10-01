@@ -1,5 +1,5 @@
 -- Run from the KOReader runtime with the plugin lua directory as argument.
--- Verify the BB8 rasterization against the stamp reference, including
+-- Verify the BB8 rasterization against independent sweep inequalities, including
 -- rotated, inverted and shared-memory viewport buffers.
 require("setupkoenv")
 package.path = assert(arg[1], "plugin lua directory required") .. "/?.lua;" .. package.path
@@ -15,10 +15,15 @@ for rotation=0,3 do
         a:paintRect(0,60,180,2,BB.Color8(70)); b:paintRect(0,60,180,2,BB.Color8(70))
         local tint = BB.Color8(160)
         Ink.drawSegment(a, -5, 10, 12, 180, 175, 24, tint, 0, 30, 30)
-        for i=0,30 do
-            local t=i/30
-            Ink.stamp(b, -5+185*t, 10+165*t, 12+12*t, tint)
-        end
+        for y=0,189 do for x=0,179 do
+            local low,high=0,1
+            for _,q in ipairs({{x+5-12,-185-12},{-5-x-12,185-12},
+                {y-10-12,-165-12},{10-y-12,165-12}}) do
+                if q[2]>0 then high=math.min(high,-q[1]/q[2])
+                else low=math.max(low,-q[1]/q[2]) end
+            end
+            if low<=high+1e-8 and b:getPixel(x,y).a>160 then b:setPixel(x,y,tint) end
+        end end
         for y=0,actual:getHeight()-1 do for x=0,actual:getWidth()-1 do
             assert(actual:getPixel(x,y).a==expected:getPixel(x,y).a,
                 string.format("pixel mismatch: rotation %d inverse %d at %d,%d",rotation,inverse,x,y))

@@ -1,0 +1,2725 @@
+{
+  "schema": 1,
+  "host": "Linux kindle 4.9.77-lab126 #1 SMP PREEMPT Wed Jul 29 05:38:34 UTC 2026 armv7l GNU/Linux",
+  "created_utc": "2026-10-01T11:19:52.658264+00:00",
+  "runtime_directory": "/mnt/us/koreader",
+  "runs": [
+    {
+      "results": [
+        {
+          "rss_delta_kib": {
+            "min": 1564,
+            "median": 1572,
+            "p95": 1580
+          },
+          "counters": {
+            "strokes_per_page": 400,
+            "pages": 4,
+            "file_bytes": 1644535
+          },
+          "cpu_ms": {
+            "min": 79.772,
+            "median": 80.193,
+            "p95": 81.277
+          },
+          "name": "save/unchanged",
+          "wall_ms": {
+            "min": 80.143928527832,
+            "median": 80.638885498047,
+            "p95": 81.494092941284
+          },
+          "heap_delta_kib": {
+            "min": 4851.3408203125,
+            "median": 4853.0947265625,
+            "p95": 4858.2236328125
+          },
+          "retained_kib": {
+            "min": 2.15625,
+            "median": 3.86328125,
+            "p95": 8.97265625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 1564,
+            "median": 1572,
+            "p95": 1580
+          },
+          "counters": {
+            "strokes_per_page": 400,
+            "pages": 4,
+            "file_bytes": 1645568
+          },
+          "cpu_ms": {
+            "min": 83.69,
+            "median": 83.931,
+            "p95": 84.583
+          },
+          "name": "save/one-page-edit",
+          "wall_ms": {
+            "min": 84.036827087402,
+            "median": 84.381818771362,
+            "p95": 84.991931915283
+          },
+          "heap_delta_kib": {
+            "min": 5174.8837890625,
+            "median": 5175.5244140625,
+            "p95": 5181.0009765625
+          },
+          "retained_kib": {
+            "min": 2.09375,
+            "median": 2.734375,
+            "p95": 8.2734375
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 2108,
+            "median": 2636,
+            "p95": 2636
+          },
+          "counters": {
+            "strokes_per_page": 400,
+            "pages": 4,
+            "file_bytes": 1645568
+          },
+          "cpu_ms": {
+            "min": 96.409,
+            "median": 100.191,
+            "p95": 102.299
+          },
+          "name": "load/full-notebook",
+          "wall_ms": {
+            "min": 96.865892410278,
+            "median": 100.85415840149,
+            "p95": 102.80203819275
+          },
+          "heap_delta_kib": {
+            "min": 10765.3125,
+            "median": 11272.2890625,
+            "p95": 11285.83203125
+          },
+          "retained_kib": {
+            "min": 8.7421875,
+            "median": 515.7578125,
+            "p95": 529.2578125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 1.6612,
+            "median": 1.7775,
+            "p95": 2.2231000000001
+          },
+          "name": "lasso/200-vertices",
+          "wall_ms": {
+            "min": 1.6622066497803,
+            "median": 1.7900943756104,
+            "p95": 2.2381067276001
+          },
+          "heap_delta_kib": {
+            "min": 4.625,
+            "median": 10.625,
+            "p95": 10.890625
+          },
+          "retained_kib": {
+            "min": -249.625,
+            "median": 2.0625,
+            "p95": 2.3125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 4
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "draw_calls": 4000
+          },
+          "cpu_ms": {
+            "min": 177.975,
+            "median": 181.356,
+            "p95": 190.482
+          },
+          "name": "render/full-mixed-page",
+          "wall_ms": {
+            "min": 178.82180213928,
+            "median": 182.54089355469,
+            "p95": 219.50697898865
+          },
+          "heap_delta_kib": {
+            "min": 5013.3017578125,
+            "median": 5013.3017578125,
+            "p95": 5013.5400390625
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.0625,
+            "p95": 2.34765625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 16
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "draw_calls": 18400
+          },
+          "cpu_ms": {
+            "min": 44.7136,
+            "median": 44.8076,
+            "p95": 46.6412
+          },
+          "name": "render/dirty-64x64",
+          "wall_ms": {
+            "min": 44.881200790405,
+            "median": 45.042562484741,
+            "p95": 46.921396255493
+          },
+          "heap_delta_kib": {
+            "min": 7711.5869140625,
+            "median": 7711.7119140625,
+            "p95": 7725.2802734375
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.1875,
+            "p95": 15.390625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 252
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "draw_calls": 4000
+          },
+          "cpu_ms": {
+            "min": 167.339,
+            "median": 171.84,
+            "p95": 172.275
+          },
+          "name": "cache/page-cold",
+          "wall_ms": {
+            "min": 167.84381866455,
+            "median": 172.62721061707,
+            "p95": 173.34699630737
+          },
+          "heap_delta_kib": {
+            "min": 5014.0390625,
+            "median": 5014.0390625,
+            "p95": 5014.765625
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.0625,
+            "p95": 2.8203125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {
+            "buffer_bytes": 4612800,
+            "draw_calls": 0
+          },
+          "cpu_ms": {
+            "min": 3.4459000000002,
+            "median": 6.7409000000001,
+            "p95": 6.9043999999998
+          },
+          "name": "cache/page-warm",
+          "wall_ms": {
+            "min": 3.4469842910767,
+            "median": 6.7738056182861,
+            "p95": 6.9478988647461
+          },
+          "heap_delta_kib": {
+            "min": 10.91796875,
+            "median": 10.98046875,
+            "p95": 20.71875
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.0625,
+            "p95": 11.96484375
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": -44,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {
+            "zoom_buffer_bytes": 18153600
+          },
+          "cpu_ms": {
+            "min": 348.713,
+            "median": 349.744,
+            "p95": 351.424
+          },
+          "name": "zoom/2x-cold",
+          "wall_ms": {
+            "min": 350.23403167725,
+            "median": 351.29499435425,
+            "p95": 353.43408584595
+          },
+          "heap_delta_kib": {
+            "min": 5209.22265625,
+            "median": 5209.25390625,
+            "p95": 5212.7314453125
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.125,
+            "p95": 5.6171875
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 3.1652000000001,
+            "median": 5.0292000000002,
+            "p95": 7.6636000000001
+          },
+          "name": "zoom/2x-pan-warm",
+          "wall_ms": {
+            "min": 3.1734943389893,
+            "median": 5.0470113754272,
+            "p95": 7.7239036560059
+          },
+          "heap_delta_kib": {
+            "min": 6.97265625,
+            "median": 8.5625,
+            "p95": 17.6171875
+          },
+          "retained_kib": {
+            "min": 0.64453125,
+            "median": 2.125,
+            "p95": 11.15625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 120.403,
+            "median": 120.775,
+            "p95": 121.453
+          },
+          "name": "render/thumbnail-page",
+          "wall_ms": {
+            "min": 120.97096443176,
+            "median": 121.39296531677,
+            "p95": 122.0920085907
+          },
+          "heap_delta_kib": {
+            "min": 5228.9638671875,
+            "median": 5228.9951171875,
+            "p95": 5229.8349609375
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.125,
+            "p95": 2.93359375
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 16
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 4.1839999999986,
+            "median": 4.9860000000024,
+            "p95": 7.6490000000007
+          },
+          "name": "eraser/area-pen",
+          "wall_ms": {
+            "min": 4.1859149932861,
+            "median": 5.112886428833,
+            "p95": 7.7710151672363
+          },
+          "heap_delta_kib": {
+            "min": 332.44921875,
+            "median": 337.06640625,
+            "p95": 349.13671875
+          },
+          "retained_kib": {
+            "min": 4.07421875,
+            "median": 7.953125,
+            "p95": 17.30859375
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 28
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 95.932999999999,
+            "median": 102.488,
+            "p95": 112.782
+          },
+          "name": "eraser/area-highlighter",
+          "wall_ms": {
+            "min": 96.437931060791,
+            "median": 102.95391082764,
+            "p95": 113.42692375183
+          },
+          "heap_delta_kib": {
+            "min": 5568.96875,
+            "median": 5576.6640625,
+            "p95": 5597.36328125
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 9.7890625,
+            "p95": 27.87890625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 32
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 0.25294999999996,
+            "median": 0.27539999999995,
+            "p95": 0.97500000000004
+          },
+          "name": "history/bulk-undo-redo",
+          "wall_ms": {
+            "min": 0.25370121002197,
+            "median": 0.27575492858887,
+            "p95": 0.97548961639404
+          },
+          "heap_delta_kib": {
+            "min": 213.59375,
+            "median": 213.65625,
+            "p95": 221.3671875
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.1875,
+            "p95": 9.8828125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 1316,
+            "median": 1844,
+            "p95": 1844
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 184.677,
+            "median": 185.567,
+            "p95": 186.207
+          },
+          "name": "export/xopp",
+          "wall_ms": {
+            "min": 185.49513816833,
+            "median": 186.66195869446,
+            "p95": 187.01887130737
+          },
+          "heap_delta_kib": {
+            "min": 6985.1953125,
+            "median": 7497.2109375,
+            "p95": 7499.46875
+          },
+          "retained_kib": {
+            "min": 0.15625,
+            "median": 512.21875,
+            "p95": 514.5390625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 840,
+            "median": 1228,
+            "p95": 4056
+          },
+          "counters": {
+            "height": 1240,
+            "width": 930,
+            "file_bytes": 182343
+          },
+          "cpu_ms": {
+            "min": 663.573,
+            "median": 665.484,
+            "p95": 677.888
+          },
+          "name": "export/pdf-4-pages",
+          "wall_ms": {
+            "min": 666.42713546753,
+            "median": 668.8289642334,
+            "p95": 680.79090118408
+          },
+          "heap_delta_kib": {
+            "min": 14119.0390625,
+            "median": 14627.35546875,
+            "p95": 14640.40625
+          },
+          "retained_kib": {
+            "min": 4.0078125,
+            "median": 512.4921875,
+            "p95": 525.203125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 4748,
+            "median": 6860,
+            "p95": 6860
+          },
+          "counters": {
+            "input_bytes": 4612800,
+            "output_bytes": 4648839
+          },
+          "cpu_ms": {
+            "min": 71.412000000002,
+            "median": 73.256000000001,
+            "p95": 73.639
+          },
+          "name": "export/rle-dense",
+          "wall_ms": {
+            "min": 71.900129318237,
+            "median": 73.585033416748,
+            "p95": 74.009895324707
+          },
+          "heap_delta_kib": {
+            "min": 9661.4140625,
+            "median": 11709.3671875,
+            "p95": 11711.12890625
+          },
+          "retained_kib": {
+            "min": 0.15625,
+            "median": 2048.0625,
+            "p95": 2049.94921875
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {
+            "input_bytes": 4612800,
+            "output_bytes": 72077
+          },
+          "cpu_ms": {
+            "min": 37.910000000004,
+            "median": 39.828999999997,
+            "p95": 40.353000000003
+          },
+          "name": "export/rle-paper",
+          "wall_ms": {
+            "min": 38.087844848633,
+            "median": 40.083885192871,
+            "p95": 40.573835372925
+          },
+          "heap_delta_kib": {
+            "min": 583.5390625,
+            "median": 679.5390625,
+            "p95": 680.58984375
+          },
+          "retained_kib": {
+            "min": -2047.078125,
+            "median": 32.0625,
+            "p95": 33.23828125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": -132,
+            "median": 580,
+            "p95": 588
+          },
+          "counters": {
+            "selected_pages": 2,
+            "source_pages": 4,
+            "file_bytes": 91290
+          },
+          "cpu_ms": {
+            "min": 318.564,
+            "median": 492.41,
+            "p95": 610.848
+          },
+          "name": "export/pdf-selected-2-pages",
+          "wall_ms": {
+            "min": 319.88191604614,
+            "median": 494.40002441406,
+            "p95": 613.77906799316
+          },
+          "heap_delta_kib": {
+            "min": 8350.517578125,
+            "median": 8865.23828125,
+            "p95": 9043.8154296875
+          },
+          "retained_kib": {
+            "min": -5320.1455078125,
+            "median": 513.9609375,
+            "p95": 520.96484375
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 182.571,
+            "median": 183.618,
+            "p95": 188.489
+          },
+          "name": "render/text-and-filled-shapes",
+          "wall_ms": {
+            "min": 183.35795402527,
+            "median": 184.37695503235,
+            "p95": 189.40901756287
+          },
+          "heap_delta_kib": {
+            "min": 556.2333984375,
+            "median": 561.7373046875,
+            "p95": 566.6904296875
+          },
+          "retained_kib": {
+            "min": -247.10546875,
+            "median": 3.15625,
+            "p95": 4.5
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 0.011200000000144,
+            "median": 0.014800000001003,
+            "p95": 0.020000000000664
+          },
+          "name": "paper/blank",
+          "wall_ms": {
+            "min": 0.0051975250244141,
+            "median": 0.0077724456787109,
+            "p95": 0.010442733764648
+          },
+          "heap_delta_kib": {
+            "min": 7.65625,
+            "median": 7.65625,
+            "p95": 7.78125
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.0625,
+            "p95": 2.3125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 0.011200000000144,
+            "median": 0.019199999999842,
+            "p95": 0.089600000001155
+          },
+          "name": "paper/ruled",
+          "wall_ms": {
+            "min": 0.0061988830566406,
+            "median": 0.0097751617431641,
+            "p95": 0.081014633178711
+          },
+          "heap_delta_kib": {
+            "min": 7.03125,
+            "median": 7.65625,
+            "p95": 8.12890625
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.125,
+            "p95": 2.78515625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 5.2611999999996,
+            "median": 6.892400000001,
+            "p95": 7.1749999999994
+          },
+          "name": "paper/grid",
+          "wall_ms": {
+            "min": 5.2832126617432,
+            "median": 6.9396018981934,
+            "p95": 7.2991847991943
+          },
+          "heap_delta_kib": {
+            "min": 7.65625,
+            "median": 10.6474609375,
+            "p95": 13.1259765625
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 4.9921875,
+            "p95": 7.63671875
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 0.31639999999982,
+            "median": 0.42380000000009,
+            "p95": 0.57599999999951
+          },
+          "name": "paper/dots",
+          "wall_ms": {
+            "min": 0.31819343566895,
+            "median": 0.43001174926758,
+            "p95": 0.58059692382812
+          },
+          "heap_delta_kib": {
+            "min": 7.65625,
+            "median": 7.78125,
+            "p95": 12.8291015625
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.3125,
+            "p95": 7.1640625
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 1292,
+            "median": 1296,
+            "p95": 1300
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 402.386,
+            "median": 403.02000000001,
+            "p95": 403.612
+          },
+          "name": "background/pdf-cold",
+          "wall_ms": {
+            "min": 403.2130241394,
+            "median": 404.2809009552,
+            "p95": 404.64615821838
+          },
+          "heap_delta_kib": {
+            "min": 8.3203125,
+            "median": 8.4453125,
+            "p95": 9.23828125
+          },
+          "retained_kib": {
+            "min": 2.0859375,
+            "median": 2.3359375,
+            "p95": 3.29296875
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 3.5116000000002,
+            "median": 6.4425,
+            "p95": 9.3661999999995
+          },
+          "name": "background/pdf-warm",
+          "wall_ms": {
+            "min": 3.5144090652466,
+            "median": 6.5018177032471,
+            "p95": 9.4377040863037
+          },
+          "heap_delta_kib": {
+            "min": 9.765625,
+            "median": 9.765625,
+            "p95": 10.15625
+          },
+          "retained_kib": {
+            "min": 2.0625,
+            "median": 2.0625,
+            "p95": 2.359375
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 896,
+            "median": 1760,
+            "p95": 4600
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 303.482,
+            "median": 308.307,
+            "p95": 318.76
+          },
+          "name": "thumbnail/disk-cold",
+          "wall_ms": {
+            "min": 304.89015579224,
+            "median": 309.9992275238,
+            "p95": 320.63698768616
+          },
+          "heap_delta_kib": {
+            "min": 14882.932617188,
+            "median": 14886.58203125,
+            "p95": 14903.375976562
+          },
+          "retained_kib": {
+            "min": 512.46875,
+            "median": 516.1484375,
+            "p95": 530.828125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 0
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 0.028649999999999,
+            "median": 0.030159999999881,
+            "p95": 0.033970000000068
+          },
+          "name": "thumbnail/disk-warm",
+          "wall_ms": {
+            "min": 0.028588771820068,
+            "median": 0.029721260070801,
+            "p95": 0.033929347991943
+          },
+          "heap_delta_kib": {
+            "min": 82.7734375,
+            "median": 88.7734375,
+            "p95": 89.53125
+          },
+          "retained_kib": {
+            "min": -254.74609375,
+            "median": 2.0625,
+            "p95": 2.8828125
+          }
+        },
+        {
+          "rss_delta_kib": {
+            "min": 0,
+            "median": 0,
+            "p95": 16
+          },
+          "counters": {},
+          "cpu_ms": {
+            "min": 69.293000000002,
+            "median": 70.25999999999,
+            "p95": 71.185
+          },
+          "name": "library/list-1001",
+          "wall_ms": {
+            "min": 69.588184356689,
+            "median": 70.598125457764,
+            "p95": 71.852922439575
+          },
+          "heap_delta_kib": {
+            "min": 983.60546875,
+            "median": 984.3203125,
+            "p95": 985.9921875
+          },
+          "retained_kib": {
+            "min": -28.24609375,
+            "median": 3.703125,
+            "p95": 5.375
+          }
+        }
+      ],
+      "scale": 1,
+      "schema": 1,
+      "runtime": "LuaJIT 2.1.1783773675",
+      "jit": "on",
+      "samples": 9,
+      "screen": {
+        "height": 2480,
+        "width": 1860,
+        "bpp": 8
+      },
+      "arch": "arm",
+      "source_sha256": "1c8c2072a5c32cd318b0cea1de0ee2fce72e7aa9984bdac13ae73005aa2ce308"
+    }
+  ],
+  "baseline": [
+    {
+      "results": [
+        {
+          "retained_kib": {
+            "p95": 9.49609375,
+            "min": 2.09375,
+            "median": 3.87890625
+          },
+          "rss_delta_kib": {
+            "p95": 1580,
+            "min": 1560,
+            "median": 1572
+          },
+          "counters": {
+            "file_bytes": 1644535,
+            "strokes_per_page": 400,
+            "pages": 4
+          },
+          "name": "save/unchanged",
+          "cpu_ms": {
+            "p95": 80.869,
+            "min": 79.813,
+            "median": 80.261
+          },
+          "wall_ms": {
+            "p95": 81.315040588379,
+            "min": 80.290079116821,
+            "median": 80.71494102478
+          },
+          "heap_delta_kib": {
+            "p95": 4858.7705078125,
+            "min": 4851.3095703125,
+            "median": 4853.1064453125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 8.06640625,
+            "min": 2.09375,
+            "median": 2.51171875
+          },
+          "rss_delta_kib": {
+            "p95": 1580,
+            "min": 1568,
+            "median": 1572
+          },
+          "counters": {
+            "file_bytes": 1645568,
+            "strokes_per_page": 400,
+            "pages": 4
+          },
+          "name": "save/one-page-edit",
+          "cpu_ms": {
+            "p95": 84.875,
+            "min": 76.664,
+            "median": 82.666
+          },
+          "wall_ms": {
+            "p95": 85.467100143433,
+            "min": 76.894044876099,
+            "median": 83.280801773071
+          },
+          "heap_delta_kib": {
+            "p95": 5180.7939453125,
+            "min": 5174.8837890625,
+            "median": 5175.3017578125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 519.55859375,
+            "min": 1.73828125,
+            "median": 514.11328125
+          },
+          "rss_delta_kib": {
+            "p95": 2636,
+            "min": 2108,
+            "median": 2632
+          },
+          "counters": {
+            "file_bytes": 1645568,
+            "strokes_per_page": 400,
+            "pages": 4
+          },
+          "name": "load/full-notebook",
+          "cpu_ms": {
+            "p95": 101.506,
+            "min": 93.972,
+            "median": 99.271
+          },
+          "wall_ms": {
+            "p95": 102.31494903564,
+            "min": 94.550132751465,
+            "median": 99.797010421753
+          },
+          "heap_delta_kib": {
+            "p95": 11325.77734375,
+            "min": 10808.01171875,
+            "median": 11320.09765625
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 2.3125,
+            "min": -248.01171875,
+            "median": 2.0625
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {},
+          "name": "lasso/200-vertices",
+          "cpu_ms": {
+            "p95": 2.4179,
+            "min": 1.8914,
+            "median": 1.9988
+          },
+          "wall_ms": {
+            "p95": 2.4186134338379,
+            "min": 1.9038915634155,
+            "median": 2.0225048065186
+          },
+          "heap_delta_kib": {
+            "p95": 12.50390625,
+            "min": 4.625,
+            "median": 10.625
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 3.7578125,
+            "min": 2.0625,
+            "median": 2.0625
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {
+            "draw_calls": 4000,
+            "buffer_bytes": 4612800
+          },
+          "name": "render/full-mixed-page",
+          "cpu_ms": {
+            "p95": 180.713,
+            "min": 163.143,
+            "median": 165.092
+          },
+          "wall_ms": {
+            "p95": 181.97393417358,
+            "min": 163.9130115509,
+            "median": 165.77911376953
+          },
+          "heap_delta_kib": {
+            "p95": 5014.9501953125,
+            "min": 5013.3017578125,
+            "median": 5013.3017578125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 11.84765625,
+            "min": 2.0625,
+            "median": 2.3125
+          },
+          "rss_delta_kib": {
+            "p95": 144,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {
+            "draw_calls": 18400,
+            "buffer_bytes": 4612800
+          },
+          "name": "render/dirty-64x64",
+          "cpu_ms": {
+            "p95": 58.8278,
+            "min": 56.9444,
+            "median": 57.0316
+          },
+          "wall_ms": {
+            "p95": 59.140968322754,
+            "min": 57.231378555298,
+            "median": 57.341766357422
+          },
+          "heap_delta_kib": {
+            "p95": 7721.7783203125,
+            "min": 7711.689453125,
+            "median": 7711.939453125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 2.73046875,
+            "min": 2.0625,
+            "median": 2.0625
+          },
+          "rss_delta_kib": {
+            "p95": 172,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {
+            "draw_calls": 4000,
+            "buffer_bytes": 4612800
+          },
+          "name": "cache/page-cold",
+          "cpu_ms": {
+            "p95": 235.802,
+            "min": 232.171,
+            "median": 233.052
+          },
+          "wall_ms": {
+            "p95": 237.05983161926,
+            "min": 233.31499099731,
+            "median": 234.25197601318
+          },
+          "heap_delta_kib": {
+            "p95": 5035.330078125,
+            "min": 5034.693359375,
+            "median": 5034.693359375
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 11.75390625,
+            "min": 2.0625,
+            "median": 2.125
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {
+            "draw_calls": 0,
+            "buffer_bytes": 4612800
+          },
+          "name": "cache/page-warm",
+          "cpu_ms": {
+            "p95": 6.4375000000002,
+            "min": 3.0073999999999,
+            "median": 3.4056
+          },
+          "wall_ms": {
+            "p95": 6.4867973327637,
+            "min": 3.0077934265137,
+            "median": 3.4239053726196
+          },
+          "heap_delta_kib": {
+            "p95": 20.7734375,
+            "min": 10.89453125,
+            "median": 10.92578125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 10.3125,
+            "min": 2.0625,
+            "median": 2.0625
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": -40,
+            "median": 0
+          },
+          "counters": {
+            "zoom_buffer_bytes": 18153600
+          },
+          "name": "zoom/2x-cold",
+          "cpu_ms": {
+            "p95": 764.724,
+            "min": 759.574,
+            "median": 762.139
+          },
+          "wall_ms": {
+            "p95": 770.23196220398,
+            "min": 763.41485977173,
+            "median": 766.25680923462
+          },
+          "heap_delta_kib": {
+            "p95": 6677.1435546875,
+            "min": 6668.939453125,
+            "median": 6668.939453125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 14.90234375,
+            "min": 0.64453125,
+            "median": 2.41796875
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {},
+          "name": "zoom/2x-pan-warm",
+          "cpu_ms": {
+            "p95": 6.3768,
+            "min": 3.3514,
+            "median": 5.0697000000003
+          },
+          "wall_ms": {
+            "p95": 6.4280033111572,
+            "min": 3.3551931381226,
+            "median": 5.1115036010742
+          },
+          "heap_delta_kib": {
+            "p95": 21.30078125,
+            "min": 6.97265625,
+            "median": 8.5
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 4.3515625,
+            "min": 2.0625,
+            "median": 2.125
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {},
+          "name": "render/thumbnail-page",
+          "cpu_ms": {
+            "p95": 282.291,
+            "min": 280.634,
+            "median": 280.931
+          },
+          "wall_ms": {
+            "p95": 284.01780128479,
+            "min": 282.05299377441,
+            "median": 282.57203102112
+          },
+          "heap_delta_kib": {
+            "p95": 6670.916015625,
+            "min": 6668.626953125,
+            "median": 6668.658203125
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 15.390625,
+            "min": 2.0625,
+            "median": 5.79296875
+          },
+          "rss_delta_kib": {
+            "p95": 20,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {},
+          "name": "eraser/area-pen",
+          "cpu_ms": {
+            "p95": 7.8859999999992,
+            "min": 3.2619999999994,
+            "median": 4.7040000000003
+          },
+          "wall_ms": {
+            "p95": 7.889986038208,
+            "min": 3.3931732177734,
+            "median": 4.7030448913574
+          },
+          "heap_delta_kib": {
+            "p95": 346.265625,
+            "min": 333.0625,
+            "median": 336.79296875
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 33.671875,
+            "min": 2.0625,
+            "median": 8.6953125
+          },
+          "rss_delta_kib": {
+            "p95": 28,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {},
+          "name": "eraser/area-highlighter",
+          "cpu_ms": {
+            "p95": 112.485,
+            "min": 95.985999999996,
+            "median": 100.344
+          },
+          "wall_ms": {
+            "p95": 113.18588256836,
+            "min": 96.369981765747,
+            "median": 100.93188285828
+          },
+          "heap_delta_kib": {
+            "p95": 5602.71875,
+            "min": 5569.1875,
+            "median": 5576.2265625
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 10.64453125,
+            "min": 2.0625,
+            "median": 2.125
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {},
+          "name": "history/bulk-undo-redo",
+          "cpu_ms": {
+            "p95": 1.3141999999998,
+            "min": 0.30605000000001,
+            "median": 0.35640000000008
+          },
+          "wall_ms": {
+            "p95": 1.3201475143433,
+            "min": 0.30640363693237,
+            "median": 0.35719871520996
+          },
+          "heap_delta_kib": {
+            "p95": 222.12890625,
+            "min": 213.59375,
+            "median": 213.625
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 515.95703125,
+            "min": 2.05078125,
+            "median": 512.2421875
+          },
+          "rss_delta_kib": {
+            "p95": 1844,
+            "min": 1300,
+            "median": 1840
+          },
+          "counters": {},
+          "name": "export/xopp",
+          "cpu_ms": {
+            "p95": 180.849,
+            "min": 176.08,
+            "median": 177.705
+          },
+          "wall_ms": {
+            "p95": 181.73313140869,
+            "min": 176.73897743225,
+            "median": 178.51614952087
+          },
+          "heap_delta_kib": {
+            "p95": 7500.88671875,
+            "min": 6987.08984375,
+            "median": 7497.296875
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 526.19140625,
+            "min": 1.3515625,
+            "median": 512.55859375
+          },
+          "rss_delta_kib": {
+            "p95": 3396,
+            "min": 580,
+            "median": 584
+          },
+          "counters": {
+            "file_bytes": 182343,
+            "height": 1240,
+            "width": 930
+          },
+          "name": "export/pdf-4-pages",
+          "cpu_ms": {
+            "p95": 1214.685,
+            "min": 1184.52,
+            "median": 1206.28
+          },
+          "wall_ms": {
+            "p95": 1220.4749584198,
+            "min": 1190.7570362091,
+            "median": 1212.4080657959
+          },
+          "heap_delta_kib": {
+            "p95": 9027.4677734375,
+            "min": 5022.8720703125,
+            "median": 5024.5634765625
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 33.23828125,
+            "min": -2047.84375,
+            "median": 32.0625
+          },
+          "rss_delta_kib": {
+            "p95": 0,
+            "min": 0,
+            "median": 0
+          },
+          "counters": {
+            "output_bytes": 72077,
+            "input_bytes": 4612800
+          },
+          "name": "export/rle-paper",
+          "cpu_ms": {
+            "p95": 42.155000000001,
+            "min": 39.625000000001,
+            "median": 40.848000000004
+          },
+          "wall_ms": {
+            "p95": 42.376041412354,
+            "min": 39.798021316528,
+            "median": 41.169166564941
+          },
+          "heap_delta_kib": {
+            "p95": 680.58984375,
+            "min": 583.5390625,
+            "median": 679.5390625
+          }
+        },
+        {
+          "retained_kib": {
+            "p95": 2049.94921875,
+            "min": 0.15625,
+            "median": 2048.0625
+          },
+          "rss_delta_kib": {
+            "p95": 6860,
+            "min": 4748,
+            "median": 6860
+          },
+          "counters": {
+            "output_bytes": 4648839,
+            "input_bytes": 4612800
+          },
+          "name": "export/rle-dense",
+          "cpu_ms": {
+            "p95": 69.587999999996,
+            "min": 67.169999999997,
+            "median": 68.932000000004
+          },
+          "wall_ms": {
+            "p95": 70.035934448242,
+            "min": 67.566871643066,
+            "median": 69.330930709839
+          },
+          "heap_delta_kib": {
+            "p95": 11711.12890625,
+            "min": 9661.4140625,
+            "median": 11709.3671875
+          }
+        }
+      ],
+      "scale": 1,
+      "schema": 1,
+      "runtime": "LuaJIT 2.1.1783773675",
+      "jit": "on",
+      "samples": 9,
+      "screen": {
+        "bpp": 8,
+        "height": 2480,
+        "width": 1860
+      },
+      "arch": "arm",
+      "source_sha256": "fd64cd2e4162797d1b3fb05cda342926733752794900ab226c6ed90124406a91"
+    }
+  ],
+  "comparison": [
+    {
+      "jit": "on",
+      "name": "save/unchanged",
+      "cpu_ratio": 0.9991527641071006,
+      "before_cpu_ms": 80.261,
+      "after_cpu_ms": 80.193,
+      "before": {
+        "retained_kib": {
+          "p95": 9.49609375,
+          "min": 2.09375,
+          "median": 3.87890625
+        },
+        "rss_delta_kib": {
+          "p95": 1580,
+          "min": 1560,
+          "median": 1572
+        },
+        "counters": {
+          "file_bytes": 1644535,
+          "strokes_per_page": 400,
+          "pages": 4
+        },
+        "name": "save/unchanged",
+        "cpu_ms": {
+          "p95": 80.869,
+          "min": 79.813,
+          "median": 80.261
+        },
+        "wall_ms": {
+          "p95": 81.315040588379,
+          "min": 80.290079116821,
+          "median": 80.71494102478
+        },
+        "heap_delta_kib": {
+          "p95": 4858.7705078125,
+          "min": 4851.3095703125,
+          "median": 4853.1064453125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 1564,
+          "median": 1572,
+          "p95": 1580
+        },
+        "counters": {
+          "strokes_per_page": 400,
+          "pages": 4,
+          "file_bytes": 1644535
+        },
+        "cpu_ms": {
+          "min": 79.772,
+          "median": 80.193,
+          "p95": 81.277
+        },
+        "name": "save/unchanged",
+        "wall_ms": {
+          "min": 80.143928527832,
+          "median": 80.638885498047,
+          "p95": 81.494092941284
+        },
+        "heap_delta_kib": {
+          "min": 4851.3408203125,
+          "median": 4853.0947265625,
+          "p95": 4858.2236328125
+        },
+        "retained_kib": {
+          "min": 2.15625,
+          "median": 3.86328125,
+          "p95": 8.97265625
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "save/one-page-edit",
+      "cpu_ratio": 1.0153025427624416,
+      "before_cpu_ms": 82.666,
+      "after_cpu_ms": 83.931,
+      "before": {
+        "retained_kib": {
+          "p95": 8.06640625,
+          "min": 2.09375,
+          "median": 2.51171875
+        },
+        "rss_delta_kib": {
+          "p95": 1580,
+          "min": 1568,
+          "median": 1572
+        },
+        "counters": {
+          "file_bytes": 1645568,
+          "strokes_per_page": 400,
+          "pages": 4
+        },
+        "name": "save/one-page-edit",
+        "cpu_ms": {
+          "p95": 84.875,
+          "min": 76.664,
+          "median": 82.666
+        },
+        "wall_ms": {
+          "p95": 85.467100143433,
+          "min": 76.894044876099,
+          "median": 83.280801773071
+        },
+        "heap_delta_kib": {
+          "p95": 5180.7939453125,
+          "min": 5174.8837890625,
+          "median": 5175.3017578125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 1564,
+          "median": 1572,
+          "p95": 1580
+        },
+        "counters": {
+          "strokes_per_page": 400,
+          "pages": 4,
+          "file_bytes": 1645568
+        },
+        "cpu_ms": {
+          "min": 83.69,
+          "median": 83.931,
+          "p95": 84.583
+        },
+        "name": "save/one-page-edit",
+        "wall_ms": {
+          "min": 84.036827087402,
+          "median": 84.381818771362,
+          "p95": 84.991931915283
+        },
+        "heap_delta_kib": {
+          "min": 5174.8837890625,
+          "median": 5175.5244140625,
+          "p95": 5181.0009765625
+        },
+        "retained_kib": {
+          "min": 2.09375,
+          "median": 2.734375,
+          "p95": 8.2734375
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "load/full-notebook",
+      "cpu_ratio": 1.009267560516163,
+      "before_cpu_ms": 99.271,
+      "after_cpu_ms": 100.191,
+      "before": {
+        "retained_kib": {
+          "p95": 519.55859375,
+          "min": 1.73828125,
+          "median": 514.11328125
+        },
+        "rss_delta_kib": {
+          "p95": 2636,
+          "min": 2108,
+          "median": 2632
+        },
+        "counters": {
+          "file_bytes": 1645568,
+          "strokes_per_page": 400,
+          "pages": 4
+        },
+        "name": "load/full-notebook",
+        "cpu_ms": {
+          "p95": 101.506,
+          "min": 93.972,
+          "median": 99.271
+        },
+        "wall_ms": {
+          "p95": 102.31494903564,
+          "min": 94.550132751465,
+          "median": 99.797010421753
+        },
+        "heap_delta_kib": {
+          "p95": 11325.77734375,
+          "min": 10808.01171875,
+          "median": 11320.09765625
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 2108,
+          "median": 2636,
+          "p95": 2636
+        },
+        "counters": {
+          "strokes_per_page": 400,
+          "pages": 4,
+          "file_bytes": 1645568
+        },
+        "cpu_ms": {
+          "min": 96.409,
+          "median": 100.191,
+          "p95": 102.299
+        },
+        "name": "load/full-notebook",
+        "wall_ms": {
+          "min": 96.865892410278,
+          "median": 100.85415840149,
+          "p95": 102.80203819275
+        },
+        "heap_delta_kib": {
+          "min": 10765.3125,
+          "median": 11272.2890625,
+          "p95": 11285.83203125
+        },
+        "retained_kib": {
+          "min": 8.7421875,
+          "median": 515.7578125,
+          "p95": 529.2578125
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "lasso/200-vertices",
+      "cpu_ratio": 0.8892835701420854,
+      "before_cpu_ms": 1.9988,
+      "after_cpu_ms": 1.7775,
+      "before": {
+        "retained_kib": {
+          "p95": 2.3125,
+          "min": -248.01171875,
+          "median": 2.0625
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {},
+        "name": "lasso/200-vertices",
+        "cpu_ms": {
+          "p95": 2.4179,
+          "min": 1.8914,
+          "median": 1.9988
+        },
+        "wall_ms": {
+          "p95": 2.4186134338379,
+          "min": 1.9038915634155,
+          "median": 2.0225048065186
+        },
+        "heap_delta_kib": {
+          "p95": 12.50390625,
+          "min": 4.625,
+          "median": 10.625
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 0
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 1.6612,
+          "median": 1.7775,
+          "p95": 2.2231000000001
+        },
+        "name": "lasso/200-vertices",
+        "wall_ms": {
+          "min": 1.6622066497803,
+          "median": 1.7900943756104,
+          "p95": 2.2381067276001
+        },
+        "heap_delta_kib": {
+          "min": 4.625,
+          "median": 10.625,
+          "p95": 10.890625
+        },
+        "retained_kib": {
+          "min": -249.625,
+          "median": 2.0625,
+          "p95": 2.3125
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "render/full-mixed-page",
+      "cpu_ratio": 1.0985147675235625,
+      "before_cpu_ms": 165.092,
+      "after_cpu_ms": 181.356,
+      "before": {
+        "retained_kib": {
+          "p95": 3.7578125,
+          "min": 2.0625,
+          "median": 2.0625
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {
+          "draw_calls": 4000,
+          "buffer_bytes": 4612800
+        },
+        "name": "render/full-mixed-page",
+        "cpu_ms": {
+          "p95": 180.713,
+          "min": 163.143,
+          "median": 165.092
+        },
+        "wall_ms": {
+          "p95": 181.97393417358,
+          "min": 163.9130115509,
+          "median": 165.77911376953
+        },
+        "heap_delta_kib": {
+          "p95": 5014.9501953125,
+          "min": 5013.3017578125,
+          "median": 5013.3017578125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 4
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "draw_calls": 4000
+        },
+        "cpu_ms": {
+          "min": 177.975,
+          "median": 181.356,
+          "p95": 190.482
+        },
+        "name": "render/full-mixed-page",
+        "wall_ms": {
+          "min": 178.82180213928,
+          "median": 182.54089355469,
+          "p95": 219.50697898865
+        },
+        "heap_delta_kib": {
+          "min": 5013.3017578125,
+          "median": 5013.3017578125,
+          "p95": 5013.5400390625
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.0625,
+          "p95": 2.34765625
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "render/dirty-64x64",
+      "cpu_ratio": 0.7856626852481783,
+      "before_cpu_ms": 57.0316,
+      "after_cpu_ms": 44.8076,
+      "before": {
+        "retained_kib": {
+          "p95": 11.84765625,
+          "min": 2.0625,
+          "median": 2.3125
+        },
+        "rss_delta_kib": {
+          "p95": 144,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {
+          "draw_calls": 18400,
+          "buffer_bytes": 4612800
+        },
+        "name": "render/dirty-64x64",
+        "cpu_ms": {
+          "p95": 58.8278,
+          "min": 56.9444,
+          "median": 57.0316
+        },
+        "wall_ms": {
+          "p95": 59.140968322754,
+          "min": 57.231378555298,
+          "median": 57.341766357422
+        },
+        "heap_delta_kib": {
+          "p95": 7721.7783203125,
+          "min": 7711.689453125,
+          "median": 7711.939453125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 16
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "draw_calls": 18400
+        },
+        "cpu_ms": {
+          "min": 44.7136,
+          "median": 44.8076,
+          "p95": 46.6412
+        },
+        "name": "render/dirty-64x64",
+        "wall_ms": {
+          "min": 44.881200790405,
+          "median": 45.042562484741,
+          "p95": 46.921396255493
+        },
+        "heap_delta_kib": {
+          "min": 7711.5869140625,
+          "median": 7711.7119140625,
+          "p95": 7725.2802734375
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.1875,
+          "p95": 15.390625
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "cache/page-cold",
+      "cpu_ratio": 0.737346171669842,
+      "before_cpu_ms": 233.052,
+      "after_cpu_ms": 171.84,
+      "before": {
+        "retained_kib": {
+          "p95": 2.73046875,
+          "min": 2.0625,
+          "median": 2.0625
+        },
+        "rss_delta_kib": {
+          "p95": 172,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {
+          "draw_calls": 4000,
+          "buffer_bytes": 4612800
+        },
+        "name": "cache/page-cold",
+        "cpu_ms": {
+          "p95": 235.802,
+          "min": 232.171,
+          "median": 233.052
+        },
+        "wall_ms": {
+          "p95": 237.05983161926,
+          "min": 233.31499099731,
+          "median": 234.25197601318
+        },
+        "heap_delta_kib": {
+          "p95": 5035.330078125,
+          "min": 5034.693359375,
+          "median": 5034.693359375
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 252
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "draw_calls": 4000
+        },
+        "cpu_ms": {
+          "min": 167.339,
+          "median": 171.84,
+          "p95": 172.275
+        },
+        "name": "cache/page-cold",
+        "wall_ms": {
+          "min": 167.84381866455,
+          "median": 172.62721061707,
+          "p95": 173.34699630737
+        },
+        "heap_delta_kib": {
+          "min": 5014.0390625,
+          "median": 5014.0390625,
+          "p95": 5014.765625
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.0625,
+          "p95": 2.8203125
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "cache/page-warm",
+      "cpu_ratio": 1.9793575287761627,
+      "before_cpu_ms": 3.4056,
+      "after_cpu_ms": 6.7409000000001,
+      "before": {
+        "retained_kib": {
+          "p95": 11.75390625,
+          "min": 2.0625,
+          "median": 2.125
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {
+          "draw_calls": 0,
+          "buffer_bytes": 4612800
+        },
+        "name": "cache/page-warm",
+        "cpu_ms": {
+          "p95": 6.4375000000002,
+          "min": 3.0073999999999,
+          "median": 3.4056
+        },
+        "wall_ms": {
+          "p95": 6.4867973327637,
+          "min": 3.0077934265137,
+          "median": 3.4239053726196
+        },
+        "heap_delta_kib": {
+          "p95": 20.7734375,
+          "min": 10.89453125,
+          "median": 10.92578125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 0
+        },
+        "counters": {
+          "buffer_bytes": 4612800,
+          "draw_calls": 0
+        },
+        "cpu_ms": {
+          "min": 3.4459000000002,
+          "median": 6.7409000000001,
+          "p95": 6.9043999999998
+        },
+        "name": "cache/page-warm",
+        "wall_ms": {
+          "min": 3.4469842910767,
+          "median": 6.7738056182861,
+          "p95": 6.9478988647461
+        },
+        "heap_delta_kib": {
+          "min": 10.91796875,
+          "median": 10.98046875,
+          "p95": 20.71875
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.0625,
+          "p95": 11.96484375
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "zoom/2x-cold",
+      "cpu_ratio": 0.45889791757146664,
+      "before_cpu_ms": 762.139,
+      "after_cpu_ms": 349.744,
+      "before": {
+        "retained_kib": {
+          "p95": 10.3125,
+          "min": 2.0625,
+          "median": 2.0625
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": -40,
+          "median": 0
+        },
+        "counters": {
+          "zoom_buffer_bytes": 18153600
+        },
+        "name": "zoom/2x-cold",
+        "cpu_ms": {
+          "p95": 764.724,
+          "min": 759.574,
+          "median": 762.139
+        },
+        "wall_ms": {
+          "p95": 770.23196220398,
+          "min": 763.41485977173,
+          "median": 766.25680923462
+        },
+        "heap_delta_kib": {
+          "p95": 6677.1435546875,
+          "min": 6668.939453125,
+          "median": 6668.939453125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": -44,
+          "median": 0,
+          "p95": 0
+        },
+        "counters": {
+          "zoom_buffer_bytes": 18153600
+        },
+        "cpu_ms": {
+          "min": 348.713,
+          "median": 349.744,
+          "p95": 351.424
+        },
+        "name": "zoom/2x-cold",
+        "wall_ms": {
+          "min": 350.23403167725,
+          "median": 351.29499435425,
+          "p95": 353.43408584595
+        },
+        "heap_delta_kib": {
+          "min": 5209.22265625,
+          "median": 5209.25390625,
+          "p95": 5212.7314453125
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.125,
+          "p95": 5.6171875
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "zoom/2x-pan-warm",
+      "cpu_ratio": 0.9920113616190115,
+      "before_cpu_ms": 5.0697000000003,
+      "after_cpu_ms": 5.0292000000002,
+      "before": {
+        "retained_kib": {
+          "p95": 14.90234375,
+          "min": 0.64453125,
+          "median": 2.41796875
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {},
+        "name": "zoom/2x-pan-warm",
+        "cpu_ms": {
+          "p95": 6.3768,
+          "min": 3.3514,
+          "median": 5.0697000000003
+        },
+        "wall_ms": {
+          "p95": 6.4280033111572,
+          "min": 3.3551931381226,
+          "median": 5.1115036010742
+        },
+        "heap_delta_kib": {
+          "p95": 21.30078125,
+          "min": 6.97265625,
+          "median": 8.5
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 0
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 3.1652000000001,
+          "median": 5.0292000000002,
+          "p95": 7.6636000000001
+        },
+        "name": "zoom/2x-pan-warm",
+        "wall_ms": {
+          "min": 3.1734943389893,
+          "median": 5.0470113754272,
+          "p95": 7.7239036560059
+        },
+        "heap_delta_kib": {
+          "min": 6.97265625,
+          "median": 8.5625,
+          "p95": 17.6171875
+        },
+        "retained_kib": {
+          "min": 0.64453125,
+          "median": 2.125,
+          "p95": 11.15625
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "render/thumbnail-page",
+      "cpu_ratio": 0.429909835511211,
+      "before_cpu_ms": 280.931,
+      "after_cpu_ms": 120.775,
+      "before": {
+        "retained_kib": {
+          "p95": 4.3515625,
+          "min": 2.0625,
+          "median": 2.125
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {},
+        "name": "render/thumbnail-page",
+        "cpu_ms": {
+          "p95": 282.291,
+          "min": 280.634,
+          "median": 280.931
+        },
+        "wall_ms": {
+          "p95": 284.01780128479,
+          "min": 282.05299377441,
+          "median": 282.57203102112
+        },
+        "heap_delta_kib": {
+          "p95": 6670.916015625,
+          "min": 6668.626953125,
+          "median": 6668.658203125
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 0
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 120.403,
+          "median": 120.775,
+          "p95": 121.453
+        },
+        "name": "render/thumbnail-page",
+        "wall_ms": {
+          "min": 120.97096443176,
+          "median": 121.39296531677,
+          "p95": 122.0920085907
+        },
+        "heap_delta_kib": {
+          "min": 5228.9638671875,
+          "median": 5228.9951171875,
+          "p95": 5229.8349609375
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.125,
+          "p95": 2.93359375
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "eraser/area-pen",
+      "cpu_ratio": 1.0599489795922792,
+      "before_cpu_ms": 4.7040000000003,
+      "after_cpu_ms": 4.9860000000024,
+      "before": {
+        "retained_kib": {
+          "p95": 15.390625,
+          "min": 2.0625,
+          "median": 5.79296875
+        },
+        "rss_delta_kib": {
+          "p95": 20,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {},
+        "name": "eraser/area-pen",
+        "cpu_ms": {
+          "p95": 7.8859999999992,
+          "min": 3.2619999999994,
+          "median": 4.7040000000003
+        },
+        "wall_ms": {
+          "p95": 7.889986038208,
+          "min": 3.3931732177734,
+          "median": 4.7030448913574
+        },
+        "heap_delta_kib": {
+          "p95": 346.265625,
+          "min": 333.0625,
+          "median": 336.79296875
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 16
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 4.1839999999986,
+          "median": 4.9860000000024,
+          "p95": 7.6490000000007
+        },
+        "name": "eraser/area-pen",
+        "wall_ms": {
+          "min": 4.1859149932861,
+          "median": 5.112886428833,
+          "p95": 7.7710151672363
+        },
+        "heap_delta_kib": {
+          "min": 332.44921875,
+          "median": 337.06640625,
+          "p95": 349.13671875
+        },
+        "retained_kib": {
+          "min": 4.07421875,
+          "median": 7.953125,
+          "p95": 17.30859375
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "eraser/area-highlighter",
+      "cpu_ratio": 1.0213664992426055,
+      "before_cpu_ms": 100.344,
+      "after_cpu_ms": 102.488,
+      "before": {
+        "retained_kib": {
+          "p95": 33.671875,
+          "min": 2.0625,
+          "median": 8.6953125
+        },
+        "rss_delta_kib": {
+          "p95": 28,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {},
+        "name": "eraser/area-highlighter",
+        "cpu_ms": {
+          "p95": 112.485,
+          "min": 95.985999999996,
+          "median": 100.344
+        },
+        "wall_ms": {
+          "p95": 113.18588256836,
+          "min": 96.369981765747,
+          "median": 100.93188285828
+        },
+        "heap_delta_kib": {
+          "p95": 5602.71875,
+          "min": 5569.1875,
+          "median": 5576.2265625
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 28
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 95.932999999999,
+          "median": 102.488,
+          "p95": 112.782
+        },
+        "name": "eraser/area-highlighter",
+        "wall_ms": {
+          "min": 96.437931060791,
+          "median": 102.95391082764,
+          "p95": 113.42692375183
+        },
+        "heap_delta_kib": {
+          "min": 5568.96875,
+          "median": 5576.6640625,
+          "p95": 5597.36328125
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 9.7890625,
+          "p95": 27.87890625
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "history/bulk-undo-redo",
+      "cpu_ratio": 0.7727272727269591,
+      "before_cpu_ms": 0.35640000000008,
+      "after_cpu_ms": 0.27539999999995,
+      "before": {
+        "retained_kib": {
+          "p95": 10.64453125,
+          "min": 2.0625,
+          "median": 2.125
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {},
+        "name": "history/bulk-undo-redo",
+        "cpu_ms": {
+          "p95": 1.3141999999998,
+          "min": 0.30605000000001,
+          "median": 0.35640000000008
+        },
+        "wall_ms": {
+          "p95": 1.3201475143433,
+          "min": 0.30640363693237,
+          "median": 0.35719871520996
+        },
+        "heap_delta_kib": {
+          "p95": 222.12890625,
+          "min": 213.59375,
+          "median": 213.625
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 32
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 0.25294999999996,
+          "median": 0.27539999999995,
+          "p95": 0.97500000000004
+        },
+        "name": "history/bulk-undo-redo",
+        "wall_ms": {
+          "min": 0.25370121002197,
+          "median": 0.27575492858887,
+          "p95": 0.97548961639404
+        },
+        "heap_delta_kib": {
+          "min": 213.59375,
+          "median": 213.65625,
+          "p95": 221.3671875
+        },
+        "retained_kib": {
+          "min": 2.0625,
+          "median": 2.1875,
+          "p95": 9.8828125
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "export/xopp",
+      "cpu_ratio": 1.0442418615120566,
+      "before_cpu_ms": 177.705,
+      "after_cpu_ms": 185.567,
+      "before": {
+        "retained_kib": {
+          "p95": 515.95703125,
+          "min": 2.05078125,
+          "median": 512.2421875
+        },
+        "rss_delta_kib": {
+          "p95": 1844,
+          "min": 1300,
+          "median": 1840
+        },
+        "counters": {},
+        "name": "export/xopp",
+        "cpu_ms": {
+          "p95": 180.849,
+          "min": 176.08,
+          "median": 177.705
+        },
+        "wall_ms": {
+          "p95": 181.73313140869,
+          "min": 176.73897743225,
+          "median": 178.51614952087
+        },
+        "heap_delta_kib": {
+          "p95": 7500.88671875,
+          "min": 6987.08984375,
+          "median": 7497.296875
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 1316,
+          "median": 1844,
+          "p95": 1844
+        },
+        "counters": {},
+        "cpu_ms": {
+          "min": 184.677,
+          "median": 185.567,
+          "p95": 186.207
+        },
+        "name": "export/xopp",
+        "wall_ms": {
+          "min": 185.49513816833,
+          "median": 186.66195869446,
+          "p95": 187.01887130737
+        },
+        "heap_delta_kib": {
+          "min": 6985.1953125,
+          "median": 7497.2109375,
+          "p95": 7499.46875
+        },
+        "retained_kib": {
+          "min": 0.15625,
+          "median": 512.21875,
+          "p95": 514.5390625
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "export/pdf-4-pages",
+      "cpu_ratio": 0.5516828597008987,
+      "before_cpu_ms": 1206.28,
+      "after_cpu_ms": 665.484,
+      "before": {
+        "retained_kib": {
+          "p95": 526.19140625,
+          "min": 1.3515625,
+          "median": 512.55859375
+        },
+        "rss_delta_kib": {
+          "p95": 3396,
+          "min": 580,
+          "median": 584
+        },
+        "counters": {
+          "file_bytes": 182343,
+          "height": 1240,
+          "width": 930
+        },
+        "name": "export/pdf-4-pages",
+        "cpu_ms": {
+          "p95": 1214.685,
+          "min": 1184.52,
+          "median": 1206.28
+        },
+        "wall_ms": {
+          "p95": 1220.4749584198,
+          "min": 1190.7570362091,
+          "median": 1212.4080657959
+        },
+        "heap_delta_kib": {
+          "p95": 9027.4677734375,
+          "min": 5022.8720703125,
+          "median": 5024.5634765625
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 840,
+          "median": 1228,
+          "p95": 4056
+        },
+        "counters": {
+          "height": 1240,
+          "width": 930,
+          "file_bytes": 182343
+        },
+        "cpu_ms": {
+          "min": 663.573,
+          "median": 665.484,
+          "p95": 677.888
+        },
+        "name": "export/pdf-4-pages",
+        "wall_ms": {
+          "min": 666.42713546753,
+          "median": 668.8289642334,
+          "p95": 680.79090118408
+        },
+        "heap_delta_kib": {
+          "min": 14119.0390625,
+          "median": 14627.35546875,
+          "p95": 14640.40625
+        },
+        "retained_kib": {
+          "min": 4.0078125,
+          "median": 512.4921875,
+          "p95": 525.203125
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "export/rle-dense",
+      "cpu_ratio": 1.0627284860441704,
+      "before_cpu_ms": 68.932000000004,
+      "after_cpu_ms": 73.256000000001,
+      "before": {
+        "retained_kib": {
+          "p95": 2049.94921875,
+          "min": 0.15625,
+          "median": 2048.0625
+        },
+        "rss_delta_kib": {
+          "p95": 6860,
+          "min": 4748,
+          "median": 6860
+        },
+        "counters": {
+          "output_bytes": 4648839,
+          "input_bytes": 4612800
+        },
+        "name": "export/rle-dense",
+        "cpu_ms": {
+          "p95": 69.587999999996,
+          "min": 67.169999999997,
+          "median": 68.932000000004
+        },
+        "wall_ms": {
+          "p95": 70.035934448242,
+          "min": 67.566871643066,
+          "median": 69.330930709839
+        },
+        "heap_delta_kib": {
+          "p95": 11711.12890625,
+          "min": 9661.4140625,
+          "median": 11709.3671875
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 4748,
+          "median": 6860,
+          "p95": 6860
+        },
+        "counters": {
+          "input_bytes": 4612800,
+          "output_bytes": 4648839
+        },
+        "cpu_ms": {
+          "min": 71.412000000002,
+          "median": 73.256000000001,
+          "p95": 73.639
+        },
+        "name": "export/rle-dense",
+        "wall_ms": {
+          "min": 71.900129318237,
+          "median": 73.585033416748,
+          "p95": 74.009895324707
+        },
+        "heap_delta_kib": {
+          "min": 9661.4140625,
+          "median": 11709.3671875,
+          "p95": 11711.12890625
+        },
+        "retained_kib": {
+          "min": 0.15625,
+          "median": 2048.0625,
+          "p95": 2049.94921875
+        }
+      }
+    },
+    {
+      "jit": "on",
+      "name": "export/rle-paper",
+      "cpu_ratio": 0.9750538582058632,
+      "before_cpu_ms": 40.848000000004,
+      "after_cpu_ms": 39.828999999997,
+      "before": {
+        "retained_kib": {
+          "p95": 33.23828125,
+          "min": -2047.84375,
+          "median": 32.0625
+        },
+        "rss_delta_kib": {
+          "p95": 0,
+          "min": 0,
+          "median": 0
+        },
+        "counters": {
+          "output_bytes": 72077,
+          "input_bytes": 4612800
+        },
+        "name": "export/rle-paper",
+        "cpu_ms": {
+          "p95": 42.155000000001,
+          "min": 39.625000000001,
+          "median": 40.848000000004
+        },
+        "wall_ms": {
+          "p95": 42.376041412354,
+          "min": 39.798021316528,
+          "median": 41.169166564941
+        },
+        "heap_delta_kib": {
+          "p95": 680.58984375,
+          "min": 583.5390625,
+          "median": 679.5390625
+        }
+      },
+      "after": {
+        "rss_delta_kib": {
+          "min": 0,
+          "median": 0,
+          "p95": 0
+        },
+        "counters": {
+          "input_bytes": 4612800,
+          "output_bytes": 72077
+        },
+        "cpu_ms": {
+          "min": 37.910000000004,
+          "median": 39.828999999997,
+          "p95": 40.353000000003
+        },
+        "name": "export/rle-paper",
+        "wall_ms": {
+          "min": 38.087844848633,
+          "median": 40.083885192871,
+          "p95": 40.573835372925
+        },
+        "heap_delta_kib": {
+          "min": 583.5390625,
+          "median": 679.5390625,
+          "p95": 680.58984375
+        },
+        "retained_kib": {
+          "min": -2047.078125,
+          "median": 32.0625,
+          "p95": 33.23828125
+        }
+      }
+    }
+  ]
+}

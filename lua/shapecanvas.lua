@@ -9,6 +9,13 @@ local time = require("ui/time")
 local Screen = Device.screen
 local ShapeCanvas = {}
 
+-- Binary contour feedback is legible under the fast waveform and avoids
+-- rasterizing a large fill on every movement. The stored shape stays intact.
+function ShapeCanvas:_drawShapePreview(shape)
+    local preview=setmetatable({color=0,filled=false,tool="pen",pen_style="fineliner"}, {__index=shape})
+    self:_drawViewStroke(preview)
+end
+
 function ShapeCanvas:_beginShape(x, y, original)
     UIManager:unschedule(self.reconcile_cb)
     self.shape_gesture = {x=x, y=y, original=original,
@@ -23,6 +30,8 @@ end
 
 function ShapeCanvas:_extendShape(x, y)
     local gesture = self.shape_gesture
+    if not gesture or (x==(gesture.next_x or gesture.paint_x)
+        and y==(gesture.next_y or gesture.paint_y)) then return end
     gesture.next_x, gesture.next_y = x, y
     local interval=0.05
     local elapsed=gesture.last_paint and time.to_ms(time.now()-gesture.last_paint)/1000 or interval
@@ -57,6 +66,9 @@ function ShapeCanvas:_paintShape()
             original and original.color or self.shape_color,
             original ~= nil and original.filled == true or (original == nil and self.shape_fill == true))
     end
+    if clean and original and not original.text then
+        clean.tool,clean.pen_style,clean.tint=original.tool,original.pen_style,original.tint
+    end
     local old = self.stroke
     self.stroke = nil
     if old then
@@ -70,7 +82,7 @@ function ShapeCanvas:_paintShape()
     end
     self.stroke = clean
     if clean then
-        self:_drawViewStroke(clean)
+        self:_drawShapePreview(clean)
         self:_accumulate(self:_viewBounds(clean))
     end
     self:_flush()
@@ -87,8 +99,19 @@ function ShapeCanvas:_endShape()
     UIManager:unschedule(self.shape_preview_cb)
     self:_paintShape()
     local gesture, stroke = self.shape_gesture, self.stroke
+    if stroke and gesture.background then
+        local x,y,w,h=self:_viewBounds(stroke)
+        x,y,w,h=Rect.clamp(x,y,w,h,self.content)
+        if x then
+            Screen.bb:blitFrom(gesture.background,x,y,x,y,w,h)
+            self:_drawViewStroke(stroke)
+            self:_accumulate(x,y,w,h)
+        end
+    end
     if gesture.background then gesture.background:free(); gesture.background = nil end
     self.shape_gesture, self.stroke = nil, nil
+    self.refresh_mode = stroke and (stroke.tool == "highlighter"
+        or stroke.pen_style == "pencil" or stroke.color ~= 0) and "ui" or "fast"
     self:_flush()
     if stroke and stroke.x_max-stroke.x_min >= 4 and stroke.y_max-stroke.y_min >= 4 then
         if gesture.original then
@@ -101,7 +124,7 @@ function ShapeCanvas:_endShape()
             self:_repaintRegion(dirty.x, dirty.y, dirty.w, dirty.h)
         else
             self.document:addStroke(stroke)
-            -- The final preview is already the exact stored shape. Repainting
+            -- The final pixels already contain the exact stored shape. Repainting
             -- it from the document here made pen-up look frozen, especially
             -- for a large, thick figure.
         end
@@ -150,7 +173,8 @@ end
 
 function ShapeCanvas:_extendShapeTransform(x, y)
     local gesture = self.transform_gesture
-    if not gesture then return end
+    if not gesture or (x==(gesture.next_x or gesture.paint_x)
+        and y==(gesture.next_y or gesture.paint_y)) then return end
     gesture.next_x, gesture.next_y = x, y
     local interval = 0.05
     local elapsed = gesture.last_paint and time.to_ms(time.now()-gesture.last_paint)/1000 or interval
@@ -169,6 +193,8 @@ function ShapeCanvas:_paintShapeTransform()
     gesture.scheduled=nil
     gesture.last_paint=time.now()
     local x,y=gesture.next_x,gesture.next_y
+    if x==gesture.paint_x and y==gesture.paint_y then return end
+    gesture.paint_x,gesture.paint_y=x,y
     local next_shape = Shape.transform(gesture.original, gesture.handle, x, y, gesture.x, gesture.y)
     -- The snapshot was taken after removing the original figure. During a
     -- drag only the previous preview needs clearing; including the original
@@ -178,8 +204,8 @@ function ShapeCanvas:_paintShapeTransform()
     local rx, ry, rw, rh = Rect.clamp(dirty.x, dirty.y, dirty.w, dirty.h, self.content)
     if rx then
         Screen.bb:blitFrom(gesture.background, rx, ry, rx, ry, rw, rh)
-        self:_drawViewStroke(next_shape)
-        self:_refreshNow(rx, ry, rw, rh, next_shape.color == 0 and "fast" or "ui")
+        self:_drawShapePreview(next_shape)
+        self:_refreshNow(rx, ry, rw, rh, "fast")
     end
     gesture.preview = next_shape
 end
@@ -202,7 +228,8 @@ function ShapeCanvas:_endShapeTransform()
     if rx and gesture.background then
         Screen.bb:blitFrom(gesture.background, rx, ry, rx, ry, rw, rh)
         self:_drawViewStroke(shape)
-        self:_refreshNow(rx, ry, rw, rh, shape.color == 0 and "fast" or "ui")
+        self:_refreshNow(rx, ry, rw, rh, shape.color == 0 and shape.tool ~= "highlighter"
+            and shape.pen_style ~= "pencil" and "fast" or "ui")
     end
     if gesture.background then gesture.background:free() end
     if moved then

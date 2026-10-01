@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 02:24+0200\n"
+"POT-Creation-Date: 2026-10-01 13:14+0200\n"
 "PO-Revision-Date: 2026-09-23 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Italian\n"
@@ -15,20 +15,167 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Cut"
-msgstr "Taglia"
+msgid "Notebook name"
+msgstr "Nome del blocco note"
 
-msgid "Paste"
-msgstr "Incolla"
+msgid "New notebook"
+msgstr "Nuovo blocco note"
 
-msgid "Copy"
-msgstr "Copia"
+msgid "Cancel"
+msgstr "Annulla"
 
-msgid "XOPP"
-msgstr "XOPP"
+msgid "Create"
+msgstr "Crea"
 
-msgid "PDF"
-msgstr "PDF"
+msgid "Preparing…"
+msgstr "Preparazione…"
+
+msgid "Cancelling…"
+msgstr "Annullamento…"
+
+msgid "Exporting PDF…"
+msgstr "Esportazione PDF…"
+
+msgid "Rendering"
+msgstr "Disegno pagina"
+
+msgid "Preparing image"
+msgstr "Preparazione immagine"
+
+msgid "Compressing"
+msgstr "Compressione"
+
+msgid "Page %1 of %2 — %3"
+msgstr "Pagina %1 di %2 — %3"
+
+msgid "Open notebook"
+msgstr "Apri blocco note"
+
+msgid "Notebook"
+msgstr "Blocco note"
+
+msgid "Restart KOReader to use the updated Notebook plugin."
+msgstr "Riavvia KOReader per usare il plugin Notebook aggiornato."
+
+msgid ""
+"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
+"error.log for details."
+msgstr ""
+"Notebook ha riscontrato un errore. Riavvia KOReader per riaprirlo; i "
+"dettagli sono in notebook-error.log."
+
+msgid "Could not create the notebook folder."
+msgstr "Impossibile creare la cartella dei blocchi note."
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr ""
+"Impossibile aprire questo blocco note; potrebbe venire da una versione più "
+"recente."
+
+msgid "Pages (%1)"
+msgstr "Pagine (%1)"
+
+msgid "New page"
+msgstr "Nuova pagina"
+
+msgid "Notebook background"
+msgstr "Sfondo del blocco note"
+
+msgid "Done"
+msgstr "Fatto"
+
+msgid "Go to this page"
+msgstr "Vai a questa pagina"
+
+msgid "Insert a page after this one"
+msgstr "Inserisci una pagina dopo questa"
+
+msgid "Duplicate"
+msgstr "Duplica"
+
+msgid "Background of this page"
+msgstr "Sfondo di questa pagina"
+
+msgid "Delete"
+msgstr "Elimina"
+
+msgid "Delete page %1 and everything on it?"
+msgstr "Eliminare la pagina %1 e tutto ciò che contiene?"
+
+msgid "Page %1"
+msgstr "Pagina %1"
+
+msgid "Background of page %1"
+msgstr "Sfondo della pagina %1"
+
+msgid "Follow the notebook again"
+msgstr "Torna a seguire il blocco note"
+
+msgid "Background for every page"
+msgstr "Sfondo per ogni pagina"
+
+msgid "Some pages have their own — change those too"
+msgstr "Alcune pagine hanno il proprio — cambia anche quelle"
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine.\n"
+"\n"
+"Details were written to:\n"
+"%1"
+msgstr ""
+"Il plugin dei blocchi note ha avuto un problema e si è chiuso.\n"
+"\n"
+"KOReader sta bene.\n"
+"\n"
+"I dettagli sono stati scritti in:\n"
+"%1"
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine."
+msgstr ""
+"Il plugin dei blocchi note ha avuto un problema e si è chiuso.\n"
+"\n"
+"KOReader sta bene."
+
+msgid "Ink"
+msgstr "Inchiostro"
+
+msgid "Eraser"
+msgstr "Gomma"
+
+msgid "Lasso"
+msgstr "Lazo"
+
+msgid "Shapes"
+msgstr "Forme"
+
+msgid "Input"
+msgstr "Input"
+
+msgid "Tuning written to the log"
+msgstr "Regolazioni scritte nel registro"
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr "Quaderno di prova: rinominalo se non stai eseguendo regolazioni"
+
+msgid "Reset tab"
+msgstr "Ripristina scheda"
+
+msgid "Reset all"
+msgstr "Ripristina tutto"
+
+msgid "Write to log"
+msgstr "Scrivi nel registro"
+
+msgid "Whole strokes"
+msgstr "Tratti interi"
+
+msgid "Part of a stroke"
+msgstr "Parte di un tratto"
 
 msgid "Nothing here yet — use New notebook to start one"
 msgstr "Ancora niente — usa Nuovo blocco note per cominciare"
@@ -45,8 +192,8 @@ msgstr "Nome (dalla A alla Z)"
 msgid "Name (Z to A)"
 msgstr "Nome (dalla Z alla A)"
 
-msgid "New notebook"
-msgstr "Nuovo blocco note"
+msgid "Updates"
+msgstr "Aggiornamenti"
 
 msgid "New folder"
 msgstr "Nuova cartella"
@@ -75,6 +222,12 @@ msgstr "%1 selezionati"
 msgid "Page %1 of %2"
 msgstr "Pagina %1 di %2"
 
+msgid "Restart KOReader after the update finishes before opening a notebook."
+msgstr "Al termine dell’aggiornamento riavvia KOReader prima di aprire un quaderno."
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr "Apri questo file SVG in un browser o editor vettoriale."
+
 msgid "Open this XOPP file with Xournal++."
 msgstr "Apri questo file XOPP con Xournal++."
 
@@ -93,17 +246,29 @@ msgstr "Questo nome è troppo lungo."
 msgid "That name cannot be used."
 msgstr "Questo nome non si può usare."
 
-msgid "Cancel"
-msgstr "Annulla"
-
 msgid "Save"
 msgstr "Salva"
 
-msgid "Export"
-msgstr "Esporta"
+msgid "PDF"
+msgstr "PDF"
+
+msgid "SVG (ink only)"
+msgstr "SVG (solo inchiostro)"
 
 msgid "Xournal++"
 msgstr "Xournal++"
+
+msgid "Choose pages…"
+msgstr "Scegli pagine…"
+
+msgid "Could not read notebook."
+msgstr "Impossibile leggere il quaderno."
+
+msgid "Export selected pages"
+msgstr "Esporta pagine selezionate"
+
+msgid "Export"
+msgstr "Esporta"
 
 msgid "Choose a PDF file."
 msgstr "Scegli un file PDF."
@@ -132,12 +297,6 @@ msgstr "Sposta"
 msgid "Send"
 msgstr "Invia"
 
-msgid "Duplicate"
-msgstr "Duplica"
-
-msgid "Delete"
-msgstr "Elimina"
-
 msgid ""
 "Delete '%1'?\n"
 "\n"
@@ -165,6 +324,189 @@ msgstr "Rinomina cartella"
 
 msgid "Rename notebook"
 msgstr "Rinomina blocco note"
+
+msgid "Notebooks (top level)"
+msgstr "Blocchi note (livello principale)"
+
+msgid "Move to"
+msgstr "Sposta in"
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr "Spostati %1; %2 non potevano andare lì."
+
+msgid "Edit"
+msgstr "Modifica"
+
+msgid "Above text"
+msgstr "Sopra il testo"
+
+msgid "Below text"
+msgstr "Sotto il testo"
+
+msgid "Cut"
+msgstr "Taglia"
+
+msgid "Copy"
+msgstr "Copia"
+
+msgid "Paste"
+msgstr "Incolla"
+
+msgid "Close"
+msgstr "Chiudi"
+
+msgid "Edit text"
+msgstr "Modifica testo"
+
+msgid "Insert text"
+msgstr "Inserisci testo"
+
+msgid "Sharing format"
+msgstr "Formato di condivisione"
+
+msgid "Finger"
+msgstr "Dito"
+
+msgid "Turns pages"
+msgstr "Gira pagina"
+
+msgid "Draws"
+msgstr "Disegna"
+
+msgid "Pen side button"
+msgstr "Pulsante laterale della penna"
+
+msgid "Highlighter"
+msgstr "Evidenziatore"
+
+msgid "Text size"
+msgstr "Dimensione del testo"
+
+msgid "Could not save the notebook. It has been left open."
+msgstr "Impossibile salvare il quaderno. È stato lasciato aperto."
+
+msgid "Black"
+msgstr "Nero"
+
+msgid "White"
+msgstr "Bianco"
+
+msgid "Red"
+msgstr "Rosso"
+
+msgid "Blue"
+msgstr "Blu"
+
+msgid "Orange"
+msgstr "Arancione"
+
+msgid "Green"
+msgstr "Verde"
+
+msgid "Yellow"
+msgstr "Giallo"
+
+msgid "Purple"
+msgstr "Viola"
+
+msgid "Color"
+msgstr "Colore"
+
+msgid "Fineliner"
+msgstr "Penna a tratto uniforme"
+
+msgid "Fountain pen"
+msgstr "Stilografica"
+
+msgid "Pencil"
+msgstr "Matita"
+
+msgid "Line"
+msgstr "Linea"
+
+msgid "Stroke style"
+msgstr "Tipo di tratto"
+
+msgid "Arrow"
+msgstr "Freccia"
+
+msgid "Pen type"
+msgstr "Tipo di penna"
+
+msgid "Eraser type"
+msgstr "Tipo di gomma"
+
+msgid "Square"
+msgstr "Quadrato"
+
+msgid "Rectangle"
+msgstr "Rettangolo"
+
+msgid "Circle"
+msgstr "Cerchio"
+
+msgid "Triangle"
+msgstr "Triangolo"
+
+msgid "Fill"
+msgstr "Riempimento"
+
+msgid "Filled shape"
+msgstr "Forma piena"
+
+msgid "Sans-serif"
+msgstr "Senza grazie"
+
+msgid "Serif"
+msgstr "Con grazie"
+
+msgid "Monospace"
+msgstr "Monospaziato"
+
+msgid "Font family"
+msgstr "Carattere"
+
+msgid "Bold"
+msgstr "Grassetto"
+
+msgid "Italic"
+msgstr "Corsivo"
+
+msgid "Underline"
+msgstr "Sottolineato"
+
+msgid "Text style"
+msgstr "Stile del testo"
+
+msgid "Background"
+msgstr "Sfondo"
+
+msgid "Transparent"
+msgstr "Trasparente"
+
+msgid "Text options"
+msgstr "Opzioni testo"
+
+msgid "Blank"
+msgstr "Bianco"
+
+msgid "Lined"
+msgstr "Righe"
+
+msgid "Narrow lined"
+msgstr "Righe strette"
+
+msgid "Grid"
+msgstr "Quadretti"
+
+msgid "Dot grid"
+msgstr "Puntini"
+
+msgid "Checklist"
+msgstr "Elenco"
+
+msgid "XOPP"
+msgstr "XOPP"
 
 msgid "There is nowhere to prepare the files for sending."
 msgstr "Non c'è spazio dove preparare i file per l'invio."
@@ -212,345 +554,70 @@ msgstr "Esportati %1 blocchi note."
 msgid "Exported %1 of %2; %3 could not be read."
 msgstr "Esportati %1 di %2; %3 non sono leggibili."
 
-msgid "Notebooks (top level)"
-msgstr "Blocchi note (livello principale)"
-
-msgid "Move to"
-msgstr "Sposta in"
-
-msgid "Moved %1; %2 could not be moved there."
-msgstr "Spostati %1; %2 non potevano andare lì."
-
-msgid "Edit"
-msgstr "Modifica"
-
-msgid "Close"
-msgstr "Chiudi"
-
-msgid "Open notebook"
-msgstr "Apri blocco note"
-
-msgid "Notebook"
-msgstr "Blocco note"
-
-msgid ""
-"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
-"error.log for details."
-msgstr ""
-"Notebook ha riscontrato un errore. Riavvia KOReader per riaprirlo; i "
-"dettagli sono in notebook-error.log."
-
-msgid "Could not create the notebook folder."
-msgstr "Impossibile creare la cartella dei blocchi note."
-
-msgid "This notebook could not be opened; it may be from a newer version."
-msgstr ""
-"Impossibile aprire questo blocco note; potrebbe venire da una versione più "
-"recente."
-
-msgid "Notebook name"
-msgstr "Nome del blocco note"
-
-msgid "Create"
-msgstr "Crea"
-
-msgid "Fineliner"
-msgstr "Penna a tratto uniforme"
-
-msgid "Fountain pen"
-msgstr "Stilografica"
-
-msgid "Pencil"
-msgstr "Matita"
-
-msgid "Black"
-msgstr "Nero"
-
-msgid "Red"
-msgstr "Rosso"
-
-msgid "Orange"
-msgstr "Arancione"
-
-msgid "Yellow"
-msgstr "Giallo"
-
-msgid "Green"
-msgstr "Verde"
-
-msgid "Blue"
-msgstr "Blu"
-
-msgid "Purple"
-msgstr "Viola"
-
-msgid "White"
-msgstr "Bianco"
-
-msgid "Color"
-msgstr "Colore"
-
-msgid "Pen type"
-msgstr "Tipo di penna"
-
-msgid "Whole strokes"
-msgstr "Tratti interi"
-
-msgid "Part of a stroke"
-msgstr "Parte di un tratto"
-
-msgid "Eraser type"
-msgstr "Tipo di gomma"
-
-msgid "Square"
-msgstr "Quadrato"
-
-msgid "Rectangle"
-msgstr "Rettangolo"
-
-msgid "Circle"
-msgstr "Cerchio"
-
-msgid "Shapes"
-msgstr "Forme"
-
-
-
-
-msgid "Sans-serif"
-msgstr "Senza grazie"
-
-msgid "Serif"
-msgstr "Con grazie"
-
-msgid "Monospace"
-msgstr "Monospaziato"
-
-msgid "Bold"
-msgstr "Grassetto"
-
-msgid "Italic"
-msgstr "Corsivo"
-
-msgid "Underline"
-msgstr "Sottolineato"
-
-msgid "Background"
-msgstr "Sfondo"
-
-msgid "Transparent"
-msgstr "Trasparente"
-
-msgid "Text options"
-msgstr "Opzioni testo"
-
-msgid "Edit text"
-msgstr "Modifica testo"
-
-msgid "Insert text"
-msgstr "Inserisci testo"
-
-msgid "Could not save the notebook. It has been left open."
-msgstr "Impossibile salvare il quaderno. È stato lasciato aperto."
-
-msgid "Pages (%1)"
-msgstr "Pagine (%1)"
-
-msgid "New page"
-msgstr "Nuova pagina"
-
-msgid "Notebook background"
-msgstr "Sfondo del blocco note"
-
-msgid "Done"
-msgstr "Fatto"
-
-msgid "Go to this page"
-msgstr "Vai a questa pagina"
-
-msgid "Insert a page after this one"
-msgstr "Inserisci una pagina dopo questa"
-
-msgid "Background of this page"
-msgstr "Sfondo di questa pagina"
-
-msgid "Delete page %1 and everything on it?"
-msgstr "Eliminare la pagina %1 e tutto ciò che contiene?"
-
-msgid "Page %1"
-msgstr "Pagina %1"
-
-msgid "Background of page %1"
-msgstr "Sfondo della pagina %1"
-
-msgid "Follow the notebook again"
-msgstr "Torna a seguire il blocco note"
-
-msgid "Background for every page"
-msgstr "Sfondo per ogni pagina"
-
-msgid "Some pages have their own — change those too"
-msgstr "Alcune pagine hanno il proprio — cambia anche quelle"
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine.\n"
-"\n"
-"Details were written to:\n"
-"%1"
-msgstr ""
-"Il plugin dei blocchi note ha avuto un problema e si è chiuso.\n"
-"\n"
-"KOReader sta bene.\n"
-"\n"
-"I dettagli sono stati scritti in:\n"
-"%1"
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine."
-msgstr ""
-"Il plugin dei blocchi note ha avuto un problema e si è chiuso.\n"
-"\n"
-"KOReader sta bene."
-
-msgid "Sharing format"
-msgstr "Formato di condivisione"
-
-msgid "Finger"
-msgstr "Dito"
-
-msgid "Turns pages"
-msgstr "Gira pagina"
-
-msgid "Draws"
-msgstr "Disegna"
-
-msgid "Blank"
-msgstr "Bianco"
-
-msgid "Lined"
-msgstr "Righe"
-
-msgid "Narrow lined"
-msgstr "Righe strette"
-
-msgid "Grid"
-msgstr "Quadretti"
-
-msgid "Dot grid"
-msgstr "Puntini"
-
-msgid "Checklist"
-msgstr "Elenco"
-
-msgid "Ink"
-msgstr "Inchiostro"
-
-msgid "Eraser"
-msgstr "Gomma"
-
-msgid "Lasso"
-msgstr "Lazo"
-
-msgid "Input"
-msgstr "Input"
-
-msgid "Tuning written to the log"
-msgstr "Regolazioni scritte nel registro"
-
-msgid "Test notebook - rename it if you are not tuning"
-msgstr "Quaderno di prova: rinominalo se non stai eseguendo regolazioni"
-
-msgid "Reset tab"
-msgstr "Ripristina scheda"
-
-msgid "Reset all"
-msgstr "Ripristina tutto"
-
-msgid "Write to log"
-msgstr "Scrivi nel registro"
-
-msgid "Preparing…"
-msgstr "Preparazione…"
-
-msgid "Cancelling…"
-msgstr "Annullamento…"
-
-msgid "Exporting PDF…"
-msgstr "Esportazione PDF…"
-
-msgid "Rendering"
-msgstr "Disegno pagina"
-
-msgid "Preparing image"
-msgstr "Preparazione immagine"
-
-msgid "Compressing"
-msgstr "Compressione"
-
-msgid "Page %1 of %2 — %3"
-msgstr "Pagina %1 di %2 — %3"
-
-#~ msgid "White background"
-#~ msgstr "Sfondo bianco"
-
-msgid "Triangle"
-msgstr "Triangolo"
-
-msgid "Pen side button"
-msgstr "Pulsante laterale della penna"
-
-msgid "Highlighter"
-msgstr "Evidenziatore"
-
-
-
-
-
-msgid "Line"
-msgstr "Linea"
-
-msgid "Arrow"
-msgstr "Freccia"
-
-msgid "Filled shape"
-msgstr "Forma piena"
-
-msgid "Stroke style"
-msgstr "Tipo di tratto"
-
-msgid "Fill"
-msgstr "Riempimento"
-
-msgid "Font family"
-msgstr "Carattere"
-
-msgid "Text style"
-msgstr "Stile del testo"
-
-msgid "Text size"
-msgstr "Dimensione del testo"
-
 msgid "SVG"
 msgstr "SVG"
 
-msgid "SVG (ink only)"
-msgstr "SVG (solo inchiostro)"
+msgid "Updates can only be installed in a packaged Notebook plugin."
+msgstr "Gli aggiornamenti si possono installare solo in un plugin Notebook distribuito come pacchetto."
 
-msgid "Open this SVG file in a browser or vector editor."
-msgstr "Apri questo file SVG in un browser o editor vettoriale."
+msgid ""
+"A previous update backup exists. Restart KOReader before updating again."
+msgstr "Esiste un backup del precedente aggiornamento. Riavvia KOReader prima di aggiornare di nuovo."
 
-msgid "Order"
-msgstr "Ordine"
+msgid "Downloading Notebook update…"
+msgstr "Download dell’aggiornamento di Notebook…"
 
-msgid "Shape order"
-msgstr "Ordine della forma"
+msgid ""
+"Update failed:\n"
+"%1"
+msgstr "Aggiornamento non riuscito:\n%1"
 
-msgid "Above text"
-msgstr "Sopra il testo"
+msgid "Notebook update installed. Restart KOReader to use the new version."
+msgstr "Aggiornamento di Notebook installato. Riavvia KOReader per usare la nuova versione."
 
-msgid "Below text"
-msgstr "Sotto il testo"
+msgid "Restart"
+msgstr "Riavvia"
+
+msgid "Later"
+msgstr "Più tardi"
+
+msgid "Notebook update available"
+msgstr "Aggiornamento di Notebook disponibile"
+
+msgid "Install"
+msgstr "Installa"
+
+msgid "Checking for Notebook updates…"
+msgstr "Controllo degli aggiornamenti di Notebook…"
+
+msgid ""
+"Could not check updates:\n"
+"%1"
+msgstr "Impossibile controllare gli aggiornamenti:\n%1"
+
+msgid "Notebook update available: %1"
+msgstr "Aggiornamento di Notebook disponibile: %1"
+
+msgid "No newer stable Notebook release is available."
+msgstr "Non è disponibile una versione stabile più recente di Notebook."
+
+msgid "Check updates weekly"
+msgstr "Controlla aggiornamenti ogni settimana"
+
+msgid "Check update"
+msgstr "Controlla aggiornamento"
+
+msgid "Choose pages to export"
+msgstr "Scegli le pagine da esportare"
+
+msgid "Pages 1–%1; for example: 1, 3-5"
+msgstr "Pagine 1–%1; per esempio: 1, 3-5"
+
+msgid "Continue"
+msgstr "Continua"
+
+msgid "Invalid page range. Use page numbers or ranges separated by commas."
+msgstr "Intervallo di pagine non valido. Usa numeri o intervalli separati da virgole."
+
+#~ msgid "White background"
+#~ msgstr "Sfondo bianco"

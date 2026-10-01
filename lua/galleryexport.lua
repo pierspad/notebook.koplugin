@@ -1,5 +1,6 @@
 -- Gallery export/share jobs and progress; gallery.lua owns navigation and selection.
 local Document = require("document")
+local PageSelection = require("pageselection")
 local Export = require("export")
 local ExportProgress = require("exportprogress")
 local Xopp = require("xopp")
@@ -195,7 +196,7 @@ back to back would freeze the panel for the whole run with nothing to show for
 it. One per tick keeps the screen answering, and the message says which one is
 being worked on so the wait is legible rather than mysterious.
 --]]
-function Gallery:_exportMany(notebooks, format)
+function Gallery:_exportMany(notebooks, format, selected_pages)
     self:_endSelection()
     format=format or "pdf"
 
@@ -242,7 +243,15 @@ function Gallery:_exportMany(notebooks, format)
 
         local doc = Document:new(item.path)
         if doc:load() then
-            local out = Library.abs(self.folder) .. "/" .. item.name .. "." .. format
+            if selected_pages then
+                local view=PageSelection.view(doc,selected_pages)
+                if not view then
+                    failed=failed+1
+                    return Safe.later("gallery:export",step)
+                end
+                doc=view
+            end
+            local out = Library.abs(self.folder) .. "/" .. item.name .. (selected_pages and "-pages" or "") .. "." .. format
             if format == "pdf" then
                 local job = Export.beginPDF(doc, out)
                 if not job then

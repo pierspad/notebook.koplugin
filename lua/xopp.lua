@@ -98,7 +98,16 @@ function Xopp.toXOPP(doc,path)
             lines[#lines+1]=string.format('<background type="solid" color="#ffffffff" style="%s"/>',templateStyle(doc:templateFor(index)))
         end
         lines[#lines+1]='<layer>'
-        for _,stroke in ipairs(page.strokes) do
+        local export_strokes={}
+        for _,original in ipairs(page.strokes) do
+            if original.marker_parts then
+                for first,last in require("markerarea").parts(original) do
+                    export_strokes[#export_strokes+1]=setmetatable({n=last-first+1,
+                        getPoint=function(_,i) return original:getPoint(first+i-1) end}, {__index=original})
+                end
+            else export_strokes[#export_strokes+1]=original end
+        end
+        for _,stroke in ipairs(export_strokes) do
             if stroke.text then
                 local family=stroke.font_family=="serif" and "Serif"
                     or (stroke.font_family=="mono" and "Monospace" or "Sans")
@@ -113,7 +122,16 @@ function Xopp.toXOPP(doc,path)
                 end
                 local gray=stroke.tool=="highlighter" and "#99999980" or "#000000ff"
                 local width=stroke.width*(.35+.65*pressure/stroke.n)*scale
-                lines[#lines+1]=string.format('<stroke tool="pen" color="%s" width="%.3f">%s</stroke>',gray,width,table.concat(points," "))
+                local fill=""
+                if stroke.tool=="highlighter" and stroke.filled then
+                    -- Xournal++ fill is an alpha byte; the closed polygon is
+                    -- the remaining area, not a path to retrace with the nib.
+                    points[#points+1]=points[1]
+                    width=0.001
+                    fill=' fill="255"'
+                end
+                lines[#lines+1]=string.format('<stroke tool="%s" color="%s" width="%.3f"%s>%s</stroke>',
+                    stroke.tool=="highlighter" and "highlighter" or "pen",gray,width,fill,table.concat(points," "))
             end
         end
         lines[#lines+1]='</layer></page>'

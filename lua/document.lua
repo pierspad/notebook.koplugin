@@ -12,14 +12,8 @@ resize, delete) participate in the same undo system without reworking it.
 @module notebook.document
 --]]--
 
-local Persist = require("persist")
-local Stroke = require("stroke")
 local Template = require("template")
-local logger = require("logger")
 
--- Bump when the on-disk shape changes incompatibly.
-local FORMAT_VERSION = 1
-local CODEC = "bitser"
 local MAX_HISTORY = 200
 
 local Document = {}
@@ -41,10 +35,10 @@ end
 A shallow copy of a stroke list.
 
 One rule holds everywhere below: no table the history is holding is ever also a
-page's live stroke list. The batched area eraser splices the live list in place
-rather than rebuilding it, so a list shared between the two is a record of the
-page as it was that goes on changing with the page -- and undo then restores a
-state that never existed. Copying at every crossing is an array of pointers per
+page's live stroke list. Object erasing and later additions can mutate that
+list, so a list shared between the two is a record of the page as it was that
+goes on changing with the page -- and undo then restores a state that never
+existed. Copying at every crossing is an array of pointers per
 operation, which is nothing beside being right.
 --]]
 local function copyList(strokes)
@@ -138,9 +132,9 @@ function Document:commitBatch(x, y, w, h)
     --[[
     `after` is a copy, not the page's own list.
 
-    The batched area eraser splices the page's list in place rather than
-    rebuilding it, so recording the list itself left every operation of a
-    session pointing at the same table. Two sweeps of the rubber then shared an
+    Recording the live list itself allows subsequent object erases or
+    additions to rewrite an earlier operation's snapshot. The old area eraser
+    also spliced that list in place. Two sweeps of the rubber then shared an
     `after`: undoing both and redoing the first brought back the second sweep's
     erasing along with the first, because the table the first one was holding
     had been rewritten under it by the second.
@@ -379,7 +373,7 @@ function Document:eraseAreaAlongPath(path, r, shapes)
     -- box, so this costs nothing for the strokes it misses -- which, for one
     -- sample of a moving tip, is nearly all of them. Nothing is allocated and
     -- no list is rebuilt unless something is actually hit.
-    local hits, splits
+    local hits, splits, marker_context
     local dx0, dy0, dx1, dy1 = math.huge, math.huge, -math.huge, -math.huge
     local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
 
@@ -389,7 +383,8 @@ function Document:eraseAreaAlongPath(path, r, shapes)
         if shapes and stroke.shape_kind then
             if stroke:hitTestPath(path, r) then shapes[stroke] = true end
         else
-            fragments, ex, ey, ew, eh = stroke:splitAlongPath(path, r)
+            if stroke.tool == "highlighter" then marker_context = marker_context or {} end
+            fragments, ex, ey, ew, eh = stroke:splitAlongPath(path, r, marker_context)
         end
         if fragments then
             hits = hits or {}
@@ -413,18 +408,19 @@ function Document:eraseAreaAlongPath(path, r, shapes)
     if not hits then return nil end
 
     if self._batch then
-        -- The batch already holds the "before" snapshot it will undo to, so the
-        -- page list is spliced in place: the alternative is rebuilding an array
-        -- of every stroke on the page for each of the dozens of samples one
-        -- sweep of the hand produces.
-        for k = #hits, 1, -1 do
-            local index = hits[k]
-            table.remove(strokes, index)
-            local fragments = splits[k]
-            for f = #fragments, 1, -1 do
-                table.insert(strokes, index, fragments[f])
+        -- One stable rebuild instead of shifting the tail for each removal
+        -- and each inserted fragment (quadratic when a sweep hits many strokes).
+        -- The batch's before snapshot remains separate from this live list.
+        local after, k = {}, 1
+        for i = 1, #strokes do
+            if hits[k] == i then
+                for _, fragment in ipairs(splits[k]) do after[#after + 1] = fragment end
+                k = k + 1
+            else
+                after[#after + 1] = strokes[i]
             end
         end
+        page.strokes = after
         self._batch.changed = true
         self:_touchPage()
         self.dirty = true
@@ -724,144 +720,6 @@ function Document:hasPDFBackgrounds()
     return false
 end
 
--- Persistence ----------------------------------------------------------------
-
-function Document:save()
-    if not self.path then return false, "no path" end
-
-    local pages = {}
-    for i, page in ipairs(self.pages) do
-        local strokes = page._serialized
-        if not strokes then
-            strokes = {}
-            for j, stroke in ipairs(page.strokes) do
-                strokes[j] = stroke:serialize()
-            end
-            page._serialized = strokes
-        end
-        pages[i] = { strokes = strokes, template = page.template, background = page.background }
-    end
-
-    --[[
-    Written beside the notebook and moved into place, never over it.
-
-    Persist opens the destination for writing, which truncates it, and only then
-    starts putting bytes in. Everything between those two moments is a notebook
-    that is neither the old one nor the new one, and this runs every couple of
-    seconds while someone is writing -- so the window is small but it is open
-    most of the time a notebook is being used. Losing power in it, or being
-    killed for memory, took the whole notebook rather than the last few strokes.
-
-    A rename within a directory is atomic, so the file at the notebook's path is
-    always one complete save or the other.
-    --]]
-    local tmp = self.path .. ".saving"
-    local ok, err = Persist:new{ path = tmp, codec = CODEC }:save{
-        version = FORMAT_VERSION,
-        pages = pages,
-        current_page = self.current_page,
-        template = self.template,
-        content_origin = self.content_origin,
-        page_size = self.page_size,
-    }
-
-    if ok then
-        ok, err = os.rename(tmp, self.path)
-        if not ok then
-            -- The old notebook is still there and still whole; the half-written
-            -- one is what goes.
-            os.remove(tmp)
-        end
-    else
-        os.remove(tmp)
-    end
-
-    if ok then
-        self.dirty = false
-    else
-        logger.warn("Notebook: failed to save notebook:", err)
-    end
-    return ok, err
-end
-
-local function finiteNumber(value)
-    return type(value) == "number" and value == value and math.abs(value) < math.huge
-end
-
-local function array(value)
-    if type(value) ~= "table" then return false end
-    local size = #value
-    for key in pairs(value) do
-        if not finiteNumber(key) or key < 1 or key > size or key % 1 ~= 0 then return false end
-    end
-    for i = 1, size do
-        if value[i] == nil then return false end
-    end
-    return true
-end
-
-local function validStroke(stroke)
-    if type(stroke) ~= "table" or not finiteNumber(stroke.n)
-        or stroke.n < 0 or stroke.n % 1 ~= 0 or not array(stroke.pts)
-        or #stroke.pts ~= stroke.n * 3 then return false end
-    if stroke.tool ~= nil and type(stroke.tool) ~= "string" then return false end
-    if stroke.width ~= nil and (not finiteNumber(stroke.width) or stroke.width <= 0) then return false end
-    local color = stroke.color
-    -- RGB ink is persisted as 0x1RRGGBB; retain legacy grayscale values too.
-    if color ~= nil and (not finiteNumber(color)
-        or not ((color >= 0 and color <= 255)
-            or (color >= 0x1000000 and color <= 0x1FFFFFF and color % 1 == 0))) then return false end
-    local tint = stroke.tint
-    if tint ~= nil and (not finiteNumber(tint)
-        or not ((tint >= 0 and tint <= 255)
-            or (tint >= 0x1000000 and tint <= 0x1FFFFFF and tint % 1 == 0))) then return false end
-    for i = 1, #stroke.pts do
-        if not finiteNumber(stroke.pts[i]) then return false end
-    end
-    return true
-end
-
-function Document:load()
-    local data = Persist:new{ path = self.path, codec = CODEC }:load()
-    if type(data) ~= "table" then return false end
-    if data.version ~= FORMAT_VERSION then
-        logger.warn("Notebook: unsupported notebook format version", data.version)
-        return false
-    end
-
-    if data.pages ~= nil and not array(data.pages) then return false end
-    local pages = {}
-    for i, page in ipairs(data.pages or {}) do
-        if type(page) ~= "table" or (page.strokes ~= nil and not array(page.strokes)) then return false end
-        local strokes = {}
-        for j, s in ipairs(page.strokes or {}) do
-            if not validStroke(s) then return false end
-            strokes[j] = Stroke:deserialize(s)
-        end
-        -- A background this build does not know about is dropped rather than
-        -- carried around: a notebook written by a newer version stays readable,
-        -- and the page falls back to the notebook's.
-        local template = Template.isKnown(page.template) and page.template or nil
-        pages[i] = { strokes = strokes, template = template, background = page.background }
-    end
-    if #pages == 0 then pages = { newPage() } end
-
-    -- Replace the open state only after the whole notebook has been validated.
-    self.pages = pages
-    self.template = Template.isKnown(data.template) and data.template or Template.DEFAULT
-    self.page_size = data.page_size
-    -- Absent in notebooks written before the origin was recorded; see
-    -- Document:contentOrigin.
-    local origin = data.content_origin
-    local x = type(origin) == "table" and tonumber(origin.x)
-    local y = type(origin) == "table" and tonumber(origin.y)
-    self.content_origin = { x = finiteNumber(x) and x or 0, y = finiteNumber(y) and y or 0 }
-    local current = data.current_page
-    if not finiteNumber(current) or current % 1 ~= 0 then current = 1 end
-    self.current_page = math.max(1, math.min(current, #pages))
-    self.undo_stack, self.redo_stack = {}, {}
-    self.dirty = false
-    return true
-end
+require("documentstorage")(Document)
 
 return Document

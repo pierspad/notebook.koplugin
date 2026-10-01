@@ -6,11 +6,14 @@ local text=Stroke:new{tool='text',shape_kind='text',text='A < B & C',font_size=2
     font_family='mono',text_bold=true,text_italic=true,text_underline=true,text_background=true}
 text:addPoint(100,150); text:addPoint(500,210)
 local ink=Stroke:new{width=8}; ink:addPoint(100,300,.2); ink:addPoint(500,350,.8)
+local marker=Stroke:new{tool='highlighter',filled=true,width=30,tint=160,marker_parts={4,8}}
+marker:addPoint(10,20);marker:addPoint(50,20);marker:addPoint(50,40);marker:addPoint(10,40)
+marker:addPoint(80,80);marker:addPoint(100,80);marker:addPoint(100,100);marker:addPoint(80,100)
 local clone=Stroke:deserialize(text:serialize())
 assert(clone.text==text.text and clone.font_size==26 and clone.font_family=='mono'
     and clone.text_bold and clone.text_italic and clone.text_underline and clone.text_background,
     'text metadata did not round trip')
-local doc={pages={{strokes={text,ink}}},page_size={w=1000,h=1400},templateFor=function() return 'grid' end}
+local doc={pages={{strokes={text,ink,marker}}},page_size={w=1000,h=1400},templateFor=function() return 'grid' end}
 local path=os.tmpname()..'.xopp'
 assert(Xopp.toXOPP(doc,path))
 assert(os.execute('gzip -t '..path)==0,'XOPP is not valid gzip')
@@ -19,6 +22,10 @@ assert(xml:match('<xournal') and xml:match('<stroke') and xml:match('<text'),'XO
 assert(xml:match('font="Monospace"'),'XOPP text family missing')
 assert(xml:match('A &lt; B &amp; C'),'XOPP text is not escaped')
 assert(xml:match('style="graph"'),'page template not exported')
+assert(xml:find('tool="highlighter"',1,true) and xml:find('width="0.001" fill="255"',1,true),
+    'erased marker exported as a thick polygon outline')
+local _,filled_count=xml:gsub('fill="255"','')
+assert(filled_count==2,'XOPP joined marker contours or lost one of them')
 os.remove(path)
 local pdf=os.tmpname()
 local pdf_file=assert(io.open(pdf,'wb')); pdf_file:write('%PDF-test'); pdf_file:close()

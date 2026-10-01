@@ -165,7 +165,7 @@ function Shape.transform(original, handle, x, y, start_x, start_y)
         if handle:find("s", 1, true) then bottom = math.max(y, top + 8) end
     end
     local result = Stroke:new{tool=original.tool, width=original.width,
-        color=original.color, shape_kind=original.shape_kind,
+        color=original.color, tint=original.tint, shape_kind=original.shape_kind,
         pen_style=original.pen_style, filled=original.filled}
     local old_w = math.max(1, original.x_max - original.x_min)
     local old_h = math.max(1, original.y_max - original.y_min)

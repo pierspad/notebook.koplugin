@@ -8,9 +8,10 @@ return function(directory)
     for name in ("_meta actionmenu canvas document export gallery i18n lassomenu lasso launcherbar library " ..
         "newnotebook notebook pagepanel papersample pdfbackground pressure rect raster renderer safe settings shape share " ..
         "stroke textobject textpreview textcache textdialog textsizepicker polygonink penpressure penink liveink viewcanvas xopp svg " ..
-        "exportprogress " ..
+        "exportprogress documentstorage pageselection exportpagesdialog gallerycard galleryheader pluginicons " ..
+        "updatepolicy updateinstaller updatetransport updater " ..
         "canvasrender canvasrefresh canvaslifecycle notebooktoolbar notebooksettings galleryexport " ..
-        "erasercanvas geometryink highlightink notebooktext selectioncanvas shapecanvas " ..
+        "erasercanvas geometryink highlightink markerarea notebooktext selectioncanvas shapecanvas " ..
         "shapesnap snapcanvas stylusbridge stylusinput touchinput zoom zoomcache zoomcanvas zoomrefresh " ..
         "template templatepicker thumbnail tuning tuningdock widgets"):gmatch("%S+") do own[name] = true end
     local function privateRequire(name)

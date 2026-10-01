@@ -392,5 +392,28 @@ test("partial eraser invalidates adjoining segments and dropped singletons", fun
     assertTrue(y<=48 and y+h>=52,"dirty rectangle misses stroke width")
 end)
 
+test("marker area eraser cuts the nib edge without deleting its centre", function()
+    local marker=Stroke:new{tool="highlighter",width=40,tint=160}
+    marker:addPoint(30,80,1); marker:addPoint(150,80,1)
+    local doc=docWith(marker)
+    assertTrue(doc:eraseAreaAlongPath({90,65,90,65},6),"nib edge missed")
+    local bb=support.FakeBB.new(180,120)
+    require("renderer").drawPage(bb,doc:getPage())
+    assertEq(bb:get(90,65),255,"erased area survived")
+    assertEq(bb:get(90,80),160,"untouched centre removed")
+    assertEq(bb:get(40,65),160,"distant ink removed")
+    doc:undo(); assertEq(doc:getPage().strokes[1],marker,"undo lost original marker")
+    doc:redo()
+    local copy=Document:new("/tmp/marker-copy.scribe")
+    for _,fragment in ipairs(doc:getPage().strokes) do
+        copy:addStroke(Stroke:deserialize(fragment:serialize()))
+    end
+    local restored=support.FakeBB.new(180,120)
+    require("renderer").drawPage(restored,copy:getPage())
+    for y=0,119 do for x=0,179 do
+        assertEq(restored:get(x,y),bb:get(x,y),"serialized area changed")
+    end end
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

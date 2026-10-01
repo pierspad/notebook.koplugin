@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 02:24+0200\n"
+"POT-Creation-Date: 2026-10-01 13:14+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,19 +17,153 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Cut"
+msgid "Notebook name"
 msgstr ""
 
-msgid "Paste"
+msgid "New notebook"
 msgstr ""
 
-msgid "Copy"
+msgid "Cancel"
 msgstr ""
 
-msgid "XOPP"
+msgid "Create"
 msgstr ""
 
-msgid "PDF"
+msgid "Preparing…"
+msgstr ""
+
+msgid "Cancelling…"
+msgstr ""
+
+msgid "Exporting PDF…"
+msgstr ""
+
+msgid "Rendering"
+msgstr ""
+
+msgid "Preparing image"
+msgstr ""
+
+msgid "Compressing"
+msgstr ""
+
+msgid "Page %1 of %2 — %3"
+msgstr ""
+
+msgid "Open notebook"
+msgstr ""
+
+msgid "Notebook"
+msgstr ""
+
+msgid "Restart KOReader to use the updated Notebook plugin."
+msgstr ""
+
+msgid ""
+"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
+"error.log for details."
+msgstr ""
+
+msgid "Could not create the notebook folder."
+msgstr ""
+
+msgid "This notebook could not be opened; it may be from a newer version."
+msgstr ""
+
+msgid "Pages (%1)"
+msgstr ""
+
+msgid "New page"
+msgstr ""
+
+msgid "Notebook background"
+msgstr ""
+
+msgid "Done"
+msgstr ""
+
+msgid "Go to this page"
+msgstr ""
+
+msgid "Insert a page after this one"
+msgstr ""
+
+msgid "Duplicate"
+msgstr ""
+
+msgid "Background of this page"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+msgid "Delete page %1 and everything on it?"
+msgstr ""
+
+msgid "Page %1"
+msgstr ""
+
+msgid "Background of page %1"
+msgstr ""
+
+msgid "Follow the notebook again"
+msgstr ""
+
+msgid "Background for every page"
+msgstr ""
+
+msgid "Some pages have their own — change those too"
+msgstr ""
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine.\n"
+"\n"
+"Details were written to:\n"
+"%1"
+msgstr ""
+
+msgid ""
+"The notebook plugin hit a problem and has closed.\n"
+"\n"
+"KOReader itself is fine."
+msgstr ""
+
+msgid "Ink"
+msgstr ""
+
+msgid "Eraser"
+msgstr ""
+
+msgid "Lasso"
+msgstr ""
+
+msgid "Shapes"
+msgstr ""
+
+msgid "Input"
+msgstr ""
+
+msgid "Tuning written to the log"
+msgstr ""
+
+msgid "Test notebook - rename it if you are not tuning"
+msgstr ""
+
+msgid "Reset tab"
+msgstr ""
+
+msgid "Reset all"
+msgstr ""
+
+msgid "Write to log"
+msgstr ""
+
+msgid "Whole strokes"
+msgstr ""
+
+msgid "Part of a stroke"
 msgstr ""
 
 msgid "Nothing here yet — use New notebook to start one"
@@ -47,7 +181,7 @@ msgstr ""
 msgid "Name (Z to A)"
 msgstr ""
 
-msgid "New notebook"
+msgid "Updates"
 msgstr ""
 
 msgid "New folder"
@@ -77,6 +211,12 @@ msgstr ""
 msgid "Page %1 of %2"
 msgstr ""
 
+msgid "Restart KOReader after the update finishes before opening a notebook."
+msgstr ""
+
+msgid "Open this SVG file in a browser or vector editor."
+msgstr ""
+
 msgid "Open this XOPP file with Xournal++."
 msgstr ""
 
@@ -95,16 +235,28 @@ msgstr ""
 msgid "That name cannot be used."
 msgstr ""
 
-msgid "Cancel"
-msgstr ""
-
 msgid "Save"
 msgstr ""
 
-msgid "Export"
+msgid "PDF"
+msgstr ""
+
+msgid "SVG (ink only)"
 msgstr ""
 
 msgid "Xournal++"
+msgstr ""
+
+msgid "Choose pages…"
+msgstr ""
+
+msgid "Could not read notebook."
+msgstr ""
+
+msgid "Export selected pages"
+msgstr ""
+
+msgid "Export"
 msgstr ""
 
 msgid "Choose a PDF file."
@@ -134,12 +286,6 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-msgid "Duplicate"
-msgstr ""
-
-msgid "Delete"
-msgstr ""
-
 msgid ""
 "Delete '%1'?\n"
 "\n"
@@ -159,6 +305,189 @@ msgid "Rename folder"
 msgstr ""
 
 msgid "Rename notebook"
+msgstr ""
+
+msgid "Notebooks (top level)"
+msgstr ""
+
+msgid "Move to"
+msgstr ""
+
+msgid "Moved %1; %2 could not be moved there."
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Above text"
+msgstr ""
+
+msgid "Below text"
+msgstr ""
+
+msgid "Cut"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Paste"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+msgid "Edit text"
+msgstr ""
+
+msgid "Insert text"
+msgstr ""
+
+msgid "Sharing format"
+msgstr ""
+
+msgid "Finger"
+msgstr ""
+
+msgid "Turns pages"
+msgstr ""
+
+msgid "Draws"
+msgstr ""
+
+msgid "Pen side button"
+msgstr ""
+
+msgid "Highlighter"
+msgstr ""
+
+msgid "Text size"
+msgstr ""
+
+msgid "Could not save the notebook. It has been left open."
+msgstr ""
+
+msgid "Black"
+msgstr ""
+
+msgid "White"
+msgstr ""
+
+msgid "Red"
+msgstr ""
+
+msgid "Blue"
+msgstr ""
+
+msgid "Orange"
+msgstr ""
+
+msgid "Green"
+msgstr ""
+
+msgid "Yellow"
+msgstr ""
+
+msgid "Purple"
+msgstr ""
+
+msgid "Color"
+msgstr ""
+
+msgid "Fineliner"
+msgstr ""
+
+msgid "Fountain pen"
+msgstr ""
+
+msgid "Pencil"
+msgstr ""
+
+msgid "Line"
+msgstr ""
+
+msgid "Stroke style"
+msgstr ""
+
+msgid "Arrow"
+msgstr ""
+
+msgid "Pen type"
+msgstr ""
+
+msgid "Eraser type"
+msgstr ""
+
+msgid "Square"
+msgstr ""
+
+msgid "Rectangle"
+msgstr ""
+
+msgid "Circle"
+msgstr ""
+
+msgid "Triangle"
+msgstr ""
+
+msgid "Fill"
+msgstr ""
+
+msgid "Filled shape"
+msgstr ""
+
+msgid "Sans-serif"
+msgstr ""
+
+msgid "Serif"
+msgstr ""
+
+msgid "Monospace"
+msgstr ""
+
+msgid "Font family"
+msgstr ""
+
+msgid "Bold"
+msgstr ""
+
+msgid "Italic"
+msgstr ""
+
+msgid "Underline"
+msgstr ""
+
+msgid "Text style"
+msgstr ""
+
+msgid "Background"
+msgstr ""
+
+msgid "Transparent"
+msgstr ""
+
+msgid "Text options"
+msgstr ""
+
+msgid "Blank"
+msgstr ""
+
+msgid "Lined"
+msgstr ""
+
+msgid "Narrow lined"
+msgstr ""
+
+msgid "Grid"
+msgstr ""
+
+msgid "Dot grid"
+msgstr ""
+
+msgid "Checklist"
+msgstr ""
+
+msgid "XOPP"
 msgstr ""
 
 msgid "There is nowhere to prepare the files for sending."
@@ -202,329 +531,67 @@ msgstr ""
 msgid "Exported %1 of %2; %3 could not be read."
 msgstr ""
 
-msgid "Notebooks (top level)"
-msgstr ""
-
-msgid "Move to"
-msgstr ""
-
-msgid "Moved %1; %2 could not be moved there."
-msgstr ""
-
-msgid "Edit"
-msgstr ""
-
-msgid "Close"
-msgstr ""
-
-msgid "Open notebook"
-msgstr ""
-
-msgid "Notebook"
-msgstr ""
-
-msgid ""
-"Notebook encountered an error. Restart KOReader to reopen it; see notebook-"
-"error.log for details."
-msgstr ""
-
-msgid "Could not create the notebook folder."
-msgstr ""
-
-msgid "This notebook could not be opened; it may be from a newer version."
-msgstr ""
-
-msgid "Notebook name"
-msgstr ""
-
-msgid "Create"
-msgstr ""
-
-msgid "Fineliner"
-msgstr ""
-
-msgid "Fountain pen"
-msgstr ""
-
-msgid "Pencil"
-msgstr ""
-
-msgid "Black"
-msgstr ""
-
-msgid "Red"
-msgstr ""
-
-msgid "Orange"
-msgstr ""
-
-msgid "Yellow"
-msgstr ""
-
-msgid "Green"
-msgstr ""
-
-msgid "Blue"
-msgstr ""
-
-msgid "Purple"
-msgstr ""
-
-msgid "White"
-msgstr ""
-
-msgid "Color"
-msgstr ""
-
-msgid "Pen type"
-msgstr ""
-
-msgid "Whole strokes"
-msgstr ""
-
-msgid "Part of a stroke"
-msgstr ""
-
-msgid "Eraser type"
-msgstr ""
-
-msgid "Square"
-msgstr ""
-
-msgid "Rectangle"
-msgstr ""
-
-msgid "Circle"
-msgstr ""
-
-msgid "Shapes"
-msgstr ""
-
-
-
-
-msgid "Sans-serif"
-msgstr ""
-
-msgid "Serif"
-msgstr ""
-
-msgid "Monospace"
-msgstr ""
-
-msgid "Bold"
-msgstr ""
-
-msgid "Italic"
-msgstr ""
-
-msgid "Underline"
-msgstr ""
-
-msgid "Background"
-msgstr ""
-
-msgid "Transparent"
-msgstr ""
-
-msgid "Text options"
-msgstr ""
-
-msgid "Edit text"
-msgstr ""
-
-msgid "Insert text"
-msgstr ""
-
-msgid "Could not save the notebook. It has been left open."
-msgstr ""
-
-msgid "Pages (%1)"
-msgstr ""
-
-msgid "New page"
-msgstr ""
-
-msgid "Notebook background"
-msgstr ""
-
-msgid "Done"
-msgstr ""
-
-msgid "Go to this page"
-msgstr ""
-
-msgid "Insert a page after this one"
-msgstr ""
-
-msgid "Background of this page"
-msgstr ""
-
-msgid "Delete page %1 and everything on it?"
-msgstr ""
-
-msgid "Page %1"
-msgstr ""
-
-msgid "Background of page %1"
-msgstr ""
-
-msgid "Follow the notebook again"
-msgstr ""
-
-msgid "Background for every page"
-msgstr ""
-
-msgid "Some pages have their own — change those too"
-msgstr ""
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine.\n"
-"\n"
-"Details were written to:\n"
-"%1"
-msgstr ""
-
-msgid ""
-"The notebook plugin hit a problem and has closed.\n"
-"\n"
-"KOReader itself is fine."
-msgstr ""
-
-msgid "Sharing format"
-msgstr ""
-
-msgid "Finger"
-msgstr ""
-
-msgid "Turns pages"
-msgstr ""
-
-msgid "Draws"
-msgstr ""
-
-msgid "Blank"
-msgstr ""
-
-msgid "Lined"
-msgstr ""
-
-msgid "Narrow lined"
-msgstr ""
-
-msgid "Grid"
-msgstr ""
-
-msgid "Dot grid"
-msgstr ""
-
-msgid "Checklist"
-msgstr ""
-
-msgid "Ink"
-msgstr ""
-
-msgid "Eraser"
-msgstr ""
-
-msgid "Lasso"
-msgstr ""
-
-msgid "Input"
-msgstr ""
-
-msgid "Tuning written to the log"
-msgstr ""
-
-msgid "Test notebook - rename it if you are not tuning"
-msgstr ""
-
-msgid "Reset tab"
-msgstr ""
-
-msgid "Reset all"
-msgstr ""
-
-msgid "Write to log"
-msgstr ""
-
-msgid "Preparing…"
-msgstr ""
-
-msgid "Cancelling…"
-msgstr ""
-
-msgid "Exporting PDF…"
-msgstr ""
-
-msgid "Rendering"
-msgstr ""
-
-msgid "Preparing image"
-msgstr ""
-
-msgid "Compressing"
-msgstr ""
-
-msgid "Page %1 of %2 — %3"
-msgstr ""
-
-msgid "Triangle"
-msgstr ""
-
-msgid "Pen side button"
-msgstr ""
-
-msgid "Highlighter"
-msgstr ""
-
-
-
-
-
-msgid "Line"
-msgstr ""
-
-msgid "Arrow"
-msgstr ""
-
-msgid "Filled shape"
-msgstr ""
-
-msgid "Stroke style"
-msgstr ""
-
-msgid "Fill"
-msgstr ""
-
-msgid "Font family"
-msgstr ""
-
-msgid "Text style"
-msgstr ""
-
-msgid "Text size"
-msgstr ""
-
 msgid "SVG"
 msgstr ""
 
-msgid "SVG (ink only)"
+msgid "Updates can only be installed in a packaged Notebook plugin."
 msgstr ""
 
-msgid "Open this SVG file in a browser or vector editor."
+msgid ""
+"A previous update backup exists. Restart KOReader before updating again."
 msgstr ""
 
-msgid "Order"
+msgid "Downloading Notebook update…"
 msgstr ""
 
-msgid "Shape order"
+msgid ""
+"Update failed:\n"
+"%1"
 msgstr ""
 
-msgid "Above text"
+msgid "Notebook update installed. Restart KOReader to use the new version."
 msgstr ""
 
-msgid "Below text"
+msgid "Restart"
+msgstr ""
+
+msgid "Later"
+msgstr ""
+
+msgid "Notebook update available"
+msgstr ""
+
+msgid "Install"
+msgstr ""
+
+msgid "Checking for Notebook updates…"
+msgstr ""
+
+msgid ""
+"Could not check updates:\n"
+"%1"
+msgstr ""
+
+msgid "Notebook update available: %1"
+msgstr ""
+
+msgid "No newer stable Notebook release is available."
+msgstr ""
+
+msgid "Check updates weekly"
+msgstr ""
+
+msgid "Check update"
+msgstr ""
+
+msgid "Choose pages to export"
+msgstr ""
+
+msgid "Pages 1–%1; for example: 1, 3-5"
+msgstr ""
+
+msgid "Continue"
+msgstr ""
+
+msgid "Invalid page range. Use page numbers or ranges separated by commas."
 msgstr ""
