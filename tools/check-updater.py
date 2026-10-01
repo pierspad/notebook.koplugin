@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create hostile/valid ZIP fixtures and exercise the real KOReader archiver."""
 import argparse
+import re
 import subprocess
 import shlex
 import tarfile
@@ -41,7 +42,10 @@ def main():
     parser.add_argument("--port",type=int,default=22)
     parser.add_argument("--ui",action="store_true",help="Also check the native Updates/page selection layout")
     parser.add_argument("--network",action="store_true")
+    parser.add_argument("--from-version", default="1.4.0", help="Older official stable release used by the network replacement test")
     args=parser.parse_args()
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", args.from_version):
+        parser.error("--from-version must be a stable version such as 1.5.0")
     with tempfile.TemporaryDirectory(prefix="notebook-updater-test-") as directory:
         fixtures(Path(directory))
         if args.ssh:
@@ -57,7 +61,7 @@ def main():
                         for file in Path(directory).glob("*.zip"): tar.add(file,arcname=file.name)
                     payload.seek(0)
                     subprocess.run(ssh+["tar -xzf - -C "+shlex.quote(stage)],stdin=payload,check=True,timeout=60)
-                command="cd /mnt/us/koreader && ./luajit "+shlex.join([stage+"/check-updater.lua",stage+"/lua",stage]+(["--network"] if args.network else []))
+                command="cd /mnt/us/koreader && ./luajit "+shlex.join([stage+"/check-updater.lua",stage+"/lua",stage]+(["--network", "v"+args.from_version] if args.network else []))
                 subprocess.run(ssh+[command],check=True,timeout=180)
                 if args.ui:
                     ui="cd /mnt/us/koreader && ./luajit "+shlex.join([stage+"/check-updates-ui.lua",stage+"/lua",stage])
@@ -69,10 +73,13 @@ def main():
             finally: subprocess.run(ssh+["rm -rf -- "+shlex.quote(stage)],check=True,timeout=30)
             return
         command=[str(args.runtime.resolve()/"luajit"),str(ROOT/"tools/check-updater.lua"),str(ROOT/"lua"),directory]
-        if args.network: command.append("--network")
+        if args.network: command.extend(["--network", "v"+args.from_version])
         subprocess.run(command,cwd=args.runtime,check=True,timeout=180)
         if args.ui:
             subprocess.run([str(args.runtime.resolve()/"luajit"),str(ROOT/"tools/check-updates-ui.lua"),str(ROOT/"lua"),directory],cwd=args.runtime,check=True,timeout=60)
+            (ROOT/"build").mkdir(exist_ok=True)
+            for name in ("updates-gallery.png","updates-menu.png","export-pages.png"):
+                (ROOT/"build"/("desktop-"+name)).write_bytes((Path(directory)/name).read_bytes())
 
 
 if __name__=="__main__":main()

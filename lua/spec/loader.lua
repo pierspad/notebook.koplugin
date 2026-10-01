@@ -5,7 +5,7 @@ package.loaded._meta = stale
 package.loaded.canvas = stale
 package.loaded.document = stale
 for _,name in ipairs({'raster','textdialog','textsizepicker','notebooktoolbar','notebooksettings','galleryexport','canvasrefresh','liveink','geometryink','penpressure','polygonink','textcache','textpreview',
-    'documentstorage','gallerycard','galleryheader','pluginicons','pageselection','exportpagesdialog','updater','updatetransport','updatepolicy','updateinstaller',
+    'documentstorage','documenthistory','gallerycard','galleryheader','pluginicons','pageselection','exportpagesdialog','updater','updatetransport','updatepolicy','updateinstaller',
     'markerarea','highlightink','zoomcache','zoomcanvas','zoomrefresh','canvaslifecycle','shapecanvas','canvasrender','notebooktext'}) do
     package.loaded[name]=stale
 end
@@ -15,6 +15,7 @@ local canvas = load("canvas")
 assert(canvas ~= stale and canvas.onStylusEvent)
 assert(load("canvas") == canvas)
 assert(load("document") ~= stale)
+assert(load("documenthistory") ~= stale and package.loaded.documenthistory == stale)
 assert(load("documentstorage") ~= stale and load("galleryheader") ~= stale)
 assert(load("updater") ~= stale and load("updatepolicy") ~= stale)
 assert(package.loaded.canvas == stale and package.loaded.document == stale)

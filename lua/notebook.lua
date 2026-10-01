@@ -132,12 +132,13 @@ function Notebook:_finishInteraction()
 end
 
 function Notebook:_showPages()
+    if self.page_panel then return end
     self:_finishInteraction()
     if self.canvas.zoom > 1 then
         self.canvas:setZoom(1)
         self.zoom_button:setIcon("notebook.zoom-in", self.zoom_button.width)
     end
-    UIManager:show(PagePanel:new{
+    self.page_panel = PagePanel:new{
         document = self.document,
         on_goto = function(index)
             self.document:goToPage(index)
@@ -148,7 +149,24 @@ function Notebook:_showPages()
         on_change = function()
             self:_updatePageText()
         end,
-    }, "ui")
+        on_closed = function()
+            self.page_panel = nil
+            self.canvas.display_overlay = nil
+            if self.closed then return end
+            -- Closing the overlay repaints committed ink. Pending cleanup
+            -- belongs to the old framebuffer and must not refresh the panel.
+            UIManager:unschedule(self.canvas.reconcile_cb)
+            self.canvas.reconcile, self.canvas.reconcile_color, self.canvas.reconcile_full = nil, nil, nil
+            if self.document.dirty then
+                UIManager:unschedule(self.canvas.autosave_cb)
+                UIManager:scheduleIn(2.5,self.canvas.autosave_cb)
+            end
+            self.clock_text:setText(os.date("%H:%M"))
+            UIManager:setDirty(self,"ui")
+        end,
+    }
+    self.canvas.display_overlay = true
+    UIManager:show(self.page_panel, "ui")
 end
 
 function Notebook:_selectTool(index)
@@ -209,7 +227,7 @@ function Notebook:_refreshToolbar()
     self:_updatePageText()
     self.undo_state = self.document:canUndo()
     self.redo_state = self.document:canRedo()
-    if self.canvas:_isDisplayPaused() then return end
+    if self.canvas:_isDisplayPaused() or self.page_panel then return end
     self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
     UIManager:setDirty(nil,"ui",self.toolbar.dimen)
 end
@@ -419,13 +437,16 @@ end
 function Notebook:onShow()
     self.canvas:start()
     self.clock_tick = self.clock_tick or Safe.wrap("notebook:clock", function()
-        if self.closed or self.suspended or self.canvas:_isDisplayPaused() then return end
+        if self.closed or self.suspended then return end
+        if self.canvas:_isDisplayPaused() then self:_scheduleClock();return end
         -- Do not gate this on getTopmostVisibleWidget(): KOReader may report a
         -- canvas child or a transient overlay even while this screen is shown,
         -- which left the displayed time frozen at the opening minute.
         self.clock_text:setText(os.date("%H:%M"))
-        self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
-        UIManager:setDirty(nil,"ui",self.toolbar.dimen)
+        if not self.page_panel then
+            self.toolbar:paintTo(Screen.bb,self.toolbar.dimen.x,self.toolbar.dimen.y)
+            UIManager:setDirty(nil,"ui",self.toolbar.dimen)
+        end
         self:_scheduleClock()
     end)
     Safe.onShutdown("notebook:clock", function()
@@ -441,6 +462,7 @@ end
 
 function Notebook:onCloseWidget()
     self.closed = true
+    if self.page_panel then UIManager:close(self.page_panel) end
     Safe.clearShutdown("notebook:clock")
     if self.clock_tick then UIManager:unschedule(self.clock_tick) end
     if self.resume_cb then UIManager:unschedule(self.resume_cb) end

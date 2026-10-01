@@ -34,66 +34,7 @@ function Area.sweep(x0,y0,r0,x1,y1,r1)
     return hull(points)
 end
 
-local function bounds(points)
-    local x0,y0,x1,y1=math.huge,math.huge,-math.huge,-math.huge
-    for _,p in ipairs(points) do
-        x0,y0=math.min(x0,p[1]),math.min(y0,p[2])
-        x1,y1=math.max(x1,p[1]),math.max(y1,p[2])
-    end
-    return x0,y0,x1,y1
-end
-
-local function clip(points,a,b,inside)
-    local result={}
-    local prev=points[#points]
-    if not prev then return result end
-    local pd=cross(a,b,prev)
-    for _,p in ipairs(points) do
-        local d=cross(a,b,p)
-        local pin=inside and pd>=0 or (not inside and pd<=0)
-        local cin=inside and d>=0 or (not inside and d<=0)
-        if pin~=cin then
-            local t=pd/(pd-d)
-            result[#result+1]={prev[1]+(p[1]-prev[1])*t,prev[2]+(p[2]-prev[2])*t}
-        end
-        if cin then result[#result+1]=p end
-        prev,pd=p,d
-    end
-    return result
-end
-
-local function nonempty(points)
-    if #points<3 then return false end
-    local area=0
-    local prev=points[#points]
-    for _,p in ipairs(points) do
-        area=area+prev[1]*p[2]-p[1]*prev[2];prev=p
-    end
-    return math.abs(area)>1e-7
-end
-
-local function subtract(points,cutter)
-    local x0,y0,x1,y1=bounds(points)
-    local a0,b0,a1,b1=bounds(cutter)
-    if x1<a0 or x0>a1 or y1<b0 or y0>b1 then return {points},false end
-    -- Test actual intersection before splitting: a bounding-box overlap alone
-    -- must never fragment a missed stroke or create an undo record.
-    local intersection=points
-    local prev=cutter[#cutter]
-    for _,p in ipairs(cutter) do
-        intersection=clip(intersection,prev,p,true);prev=p
-        if not nonempty(intersection) then return {points},false end
-    end
-    local result,remaining={},points
-    prev=cutter[#cutter]
-    for _,p in ipairs(cutter) do
-        local outside=clip(remaining,prev,p,false)
-        if nonempty(outside) then result[#result+1]=outside end
-        remaining=clip(remaining,prev,p,true);prev=p
-        if not nonempty(remaining) then break end
-    end
-    return result,true
-end
+local subtract=require("markerclip").subtract
 
 local function capsule(x0,y0,x1,y1,r)
     local points={}
@@ -198,34 +139,48 @@ function Area.erase(stroke,path,r,context)
         end
     else
         local first=1
+        local chunks=stroke:chunkIndex()
+        local chunk_index=1
+        local pad=stroke.width/2+extra
         while first<=stroke.n do
-            local last=math.min(first+1,stroke.n)
-            local ax,ay,ap=stroke:getPoint(first)
-            local bx,by,bp=stroke:getPoint(last)
-            if not stroke.pen_style and ap==bp then
-                while last<stroke.n do
-                    local cx,cy,cp=stroke:getPoint(last+1)
-                    local dx,dy=bx-ax,by-ay
-                    if cp~=ap or math.abs(dx*(cy-ay)-dy*(cx-ax))>1e-8
-                        or dx*(cx-bx)+dy*(cy-by)<0 then break end
-                    last=last+1;bx,by,bp=cx,cy,cp
-                end
+            local chunk=chunks and chunks[chunk_index]
+            while chunk and first>=chunk[2] do
+                chunk_index=chunk_index+1;chunk=chunks[chunk_index]
             end
-            local ar=Renderer.radiusFor(stroke,ap,bx-ax,by-ay)
-            local br=Renderer.radiusFor(stroke,bp,bx-ax,by-ay)
-            -- Reject in scalar space before constructing a convex hull or
-            -- allocating polygon pieces for every missed centreline segment.
-            local radius=math.max(ar,br)
-            -- The circumscribed cutter extends slightly beyond r. Include it
-            -- here to preserve exactly the clipping geometry at nib edges.
-            if math.max(ax,bx)+radius<px0-extra or math.min(ax,bx)-radius>px1+extra
-                or math.max(ay,by)+radius<py0-extra or math.min(ay,by)-radius>py1+extra then
-                keep(first,last)
+            if chunk and first==chunk[1] and
+                (chunk[5]+pad<px0 or chunk[3]-pad>px1 or chunk[6]+pad<py0 or chunk[4]-pad>py1) then
+                -- Copy an untouched run once instead of evaluating every nib.
+                keep(first,chunk[2])
+                first=chunk[2]
             else
-                cut(Area.sweep(ax,ay,ar,bx,by,br),first,last)
+                local last=math.min(first+1,stroke.n)
+                local ax,ay,ap=stroke:getPoint(first)
+                local bx,by,bp=stroke:getPoint(last)
+                if not stroke.pen_style and ap==bp then
+                    while last<stroke.n do
+                        local cx,cy,cp=stroke:getPoint(last+1)
+                        local dx,dy=bx-ax,by-ay
+                        if cp~=ap or math.abs(dx*(cy-ay)-dy*(cx-ax))>1e-8
+                            or dx*(cx-bx)+dy*(cy-by)<0 then break end
+                        last=last+1;bx,by,bp=cx,cy,cp
+                    end
+                end
+                local ar=Renderer.radiusFor(stroke,ap,bx-ax,by-ay)
+                local br=Renderer.radiusFor(stroke,bp,bx-ax,by-ay)
+                -- Reject in scalar space before constructing a convex hull or
+                -- allocating polygon pieces for every missed centreline segment.
+                local radius=math.max(ar,br)
+                -- The circumscribed cutter extends slightly beyond r. Include it
+                -- here to preserve exactly the clipping geometry at nib edges.
+                if math.max(ax,bx)+radius<px0-extra or math.min(ax,bx)-radius>px1+extra
+                    or math.max(ay,by)+radius<py0-extra or math.min(ay,by)-radius>py1+extra then
+                    keep(first,last)
+                else
+                    cut(Area.sweep(ax,ay,ar,bx,by,br),first,last)
+                end
+                if last==stroke.n then break end
+                first=last
             end
-            if last==stroke.n then break end
-            first=last
         end
     end
     if not changed then return nil end

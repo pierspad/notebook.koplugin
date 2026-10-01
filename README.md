@@ -24,47 +24,6 @@ other stylus-capable e-ink devices. It does not patch KOReader.
 
 Notebooks are stored in `koreader/notebook/`.
 
-### Development build: fluidity and undo gestures
-
-The gallery header shows the installed plugin version at the top right.
-To undo, tap twice with **two fingers per tap**, in the same area, within half
-a second. The gesture is disabled while drawing with fingers, selecting objects,
-using the stylus or sleeping. Redo remains available from the toolbar.
-
-Page rendering retains at most two recent pages (12 MiB maximum); edits,
-undo/redo and background changes invalidate the derived pixels. Multi-stroke
-undo/redo uses one pass through the stroke list. Atomic saves reuse serialized
-stroke tables for unchanged pages, but still write a complete notebook.
-
-To test the current checkout on a configured Kindle:
-
-```sh
-make ci
-make deploy FLAGS=--restart
-```
-
-In the local multi-plugin workspace, `./install.sh` also verifies, packages,
-installs and restarts KOReader. The installable zip is in `build/`; extract its
-`notebook.koplugin` directory into `koreader/plugins/` and restart KOReader for
-manual installation. `tools/bench-notebook.lua` runs a four-page benchmark with
-KOReader's native renderer, without changing the display or existing notebooks.
-
-### Input debug log
-
-To capture a device-specific pen problem, create a new notebook named `_debug_`
-in the Notebook gallery (or create an empty file named `_debug_` inside `koreader/notebook/`).
-Then open the `_debug_` notebook, reproduce the problem, and send
-`koreader/notebook/notebook-debug.log` with your device model and firmware version.
-The log records raw and screen coordinates, selected tools, touch events, and
-rotation, plus the stylus button and physical tool flags; it does not contain
-notebook pages or handwriting content. The log
-rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too. Together
-the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_`
-marker file) and reopen Notebook to stop logging. You can then delete both log files.
-
-> [!TIP]
-> You can also place Notebook directly on KOReader's bottom navigation bar using [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) (Custom quick actions → Plugin → Notebook, icon `F405`).
-
 ## Features
 
 - **Versatile Pen Tools**:
@@ -123,11 +82,36 @@ make ci           # verification plus package checks
 make package      # build the installable zip in build/
 ```
 
-Tests run in separate LuaJIT processes across the available CPU cores. Set
-`TEST_JOBS=4 make test` to limit concurrency.
-
 For device deployment, copy `kindle.env.example` to `kindle.env`, configure the
 device, then run `make deploy`. See `tools/deploy.sh --help` for options.
+
+### Gestures and non-obvious hints
+To undo, tap twice with **two fingers per tap**, in the same area, within half
+a second. The gesture is disabled while drawing with fingers, selecting objects,
+using the stylus or sleeping. Redo remains available from the toolbar.
+
+### Input debug log
+
+To capture a device-specific pen problem, create a new notebook named `_debug_` in the Notebook gallery (or create an empty file named `_debug_` inside `koreader/notebook/`).
+Then open the `_debug_` notebook, reproduce the problem, and send `koreader/notebook/notebook-debug.log` with your device model and firmware version.
+The log records raw and screen coordinates, selected tools, touch events, and rotation, plus the stylus button and physical tool flags; it does not contain notebook pages or handwriting content. The log rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too.
+Together the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_` marker file) and reopen Notebook to stop logging.
+You can then delete both log files.
+
+> [!TIP]
+> You can also place Notebook directly on KOReader's bottom navigation bar using [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) (Custom quick actions → Plugin → Notebook, icon `F405`).
+
+---
+
+## Performance and maintenance checks
+
+Run `make verify` for correctness, lint, translations and benchmark comparison tests.
+Run `make benchmark BENCH_ARGS='--extended --jit both'` for native offscreen timings.
+The runner supports isolated Kindle SSH runs and CPU, wall-time and retained-heap
+regression limits; see the [current maintenance audit](docs/audits/2026-10-01-maintenance-current.md)
+for commands, coverage, raw results and measurement limits.
+The [1.6.0 release audit](docs/audits/2026-10-01-release-1.6.0.md) adds the mixed
+edit/page/zoom/save workflow and records the release verification.
 
 ## Contributing
 

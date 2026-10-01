@@ -33,6 +33,19 @@ end
 nb:onShow()
 assert(Device.input.stylus_callback==c.stylus_callback and timers[nb.clock_tick])
 nb.clock_tick();assert(toolbar_paints==1,'awake clock stopped')
+-- The page overview covers the toolbar, including between minute ticks.
+nb:_showPages()
+Screen.bb:paintRect(0,0,400,600,155)
+nb.clock_tick();nb:_refreshToolbar()
+local overview_refreshes=panel_updates
+for _,name in ipairs(c.lifecycle_callbacks) do c[name]() end
+assert(panel_updates==overview_refreshes,'stale canvas callback refreshed page overview')
+assert(not c:onStylusEvent({id=1,x=100,y=100,tool=1}),'hidden canvas consumed stylus')
+assert(toolbar_paints==1,'page overview was overwritten by toolbar timer')
+assert(timers[nb.clock_tick],'hidden clock lost its next tick')
+assert(nb.page_panel,'page panel ownership missing')
+nb.page_panel:onCloseWidget()
+assert(not nb.page_panel,'closed page panel retained ownership')
 -- A real screensaver has entered before the Suspend broadcast. A due clock
 -- or canvas callback must not draw, even in this interval.
 Device.screen_saver_mode=true

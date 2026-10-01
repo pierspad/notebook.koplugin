@@ -52,7 +52,11 @@ translations-check:
 	@command -v msgfmt >/dev/null 2>&1 || { echo "msgfmt is required to check translations" >&2; exit 1; }
 	@for catalogue in lua/locale/*.po; do msgfmt --check -o /dev/null "$$catalogue" || exit 1; done
 
-verify: lint test translations-check
+verify: lint test translations-check benchmark-tests
+
+.PHONY: benchmark-tests
+benchmark-tests:
+	@python3 tools/test_benchmark_report.py
 
 # The package is the plugin directory and nothing else: no tests, no tooling.
 # KOReader reads the .po catalogues at load, so those do ship.

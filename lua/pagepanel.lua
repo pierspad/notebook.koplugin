@@ -18,248 +18,30 @@ buffers to own, and nothing that has to happen before the panel can appear.
 --]]--
 
 local ActionMenu = require("actionmenu")
-local Blitbuffer = require("ffi/blitbuffer")
-local CenterContainer = require("ui/widget/container/centercontainer")
 local ConfirmBox = require("ui/widget/confirmbox")
-local Device = require("device")
 local Font = require("ui/font")
-local FrameContainer = require("ui/widget/container/framecontainer")
-local Geom = require("ui/geometry")
-local GestureRange = require("ui/gesturerange")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
-local InputContainer = require("ui/widget/container/inputcontainer")
-local Renderer = require("renderer")
 local Size = require("ui/size")
-local Template = require("template")
 local TemplatePicker = require("templatepicker")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
-local VerticalGroup = require("ui/widget/verticalgroup")
-local VerticalSpan = require("ui/widget/verticalspan")
 local Widgets = require("widgets")
-local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("i18n")
 local Safe = require("safe")
 local T = require("ffi/util").template
 
-local Screen = Device.screen
 
-local COLUMNS = 3
 
 -- One page ------------------------------------------------------------------------
 
-local PageTile = InputContainer:extend{
-    document = nil,
-    index = nil,
-    width = nil,
-    height = nil,
-    current = false,
-    on_open = nil,
-    on_hold = nil,
-}
-
-function PageTile:init()
-    local number = TextWidget:new{
-        text = tostring(self.index),
-        face = Font:getFace("cfont", 16),
-    }
-    self.label_h = number:getSize().h + Size.padding.small
-    self.paper_w = self.width - 2 * Size.border.thin
-    self.paper_h = self.height - self.label_h - 2 * Size.border.thin
-
-    self.frame = FrameContainer:new{
-        background = Blitbuffer.COLOR_WHITE,
-        color = Blitbuffer.COLOR_BLACK,
-        bordersize = Size.border.thin,
-        radius = Size.radius.button,
-        margin = 0,
-        padding = 0,
-        VerticalGroup:new{
-            align = "center",
-            VerticalSpan:new{ width = self.paper_h },
-            CenterContainer:new{
-                dimen = Geom:new{ w = self.paper_w, h = self.label_h },
-                number,
-            },
-        },
-    }
-
-    self[1] = self.frame
-    self.dimen = self.frame:getSize()
-    self.ges_events = {
-        Tap  = { GestureRange:new{ ges = "tap",  range = self.dimen } },
-        Hold = { GestureRange:new{ ges = "hold", range = self.dimen } },
-    }
-end
-
---- Paints the tile, then the page itself, shrunk to fit inside it.
-function PageTile:paintTo(bb, x, y)
-    InputContainer.paintTo(self, bb, x, y)
-
-    local page = self.document.pages[self.index]
-    if not page then return end
-
-    local inset = Size.border.thin
-    local px, py = x + inset, y + inset
-    -- Strokes are stored in the coordinate space of the panel, so that is what
-    -- has to be fitted into the tile.
-    local scale = math.min(self.paper_w / Screen:getWidth(),
-                           self.paper_h / Screen:getHeight())
-
-    local paper = { x = px, y = py, w = self.paper_w, h = self.paper_h }
-    --[[
-    The background starts at the origin the strokes are in, not at the corner
-    of the tile.
-
-    A stroke is stored in the coordinates the canvas received it in, so every
-    point carries the height of the toolbar above the drawing area in its y.
-    Ruling the tile from its own top left put the lines a scaled toolbar's
-    height above the writing that had been done on them, and every tile in the
-    overview showed handwriting floating between the lines it was sitting on
-    while it was written. The thumbnails on the gallery cards already do this;
-    see Document:contentOrigin and Thumbnail.get.
-    ]]
-    local origin_x, origin_y = self.document:contentOrigin()
-    local ruling = {
-        x = px + origin_x * scale,
-        y = py + origin_y * scale,
-        w = self.paper_w,
-        h = self.paper_h,
-    }
-    -- Clipped to the paper: a checklist's boxes hang above their line and would
-    -- otherwise be drawn over the tile's border and the tile beside it.
-    Template.draw(bb, self.document:templateFor(self.index), ruling, scale, paper)
-    if page.background then
-        local size=self.document.page_size or {w=self.paper_w/scale,h=self.paper_h/scale}
-        require("pdfbackground").draw(bb,page.background,
-            {x=ruling.x,y=ruling.y,w=size.w*scale,h=size.h*scale},paper)
-    end
-    Renderer.drawPage(bb, page, scale, px, py)
-
-    if self.current then
-        bb:paintBorder(x, y, self.dimen.w, self.dimen.h,
-            Size.border.thick, Blitbuffer.COLOR_BLACK, Size.radius.button)
-    end
-end
-
-function PageTile:onTap()
-    if self.on_open then self.on_open(self.index) end
-    return true
-end
-
-function PageTile:onHold()
-    if self.on_hold then self.on_hold(self.index) end
-    return true
-end
-
--- The panel -------------------------------------------------------------------------
-
-local PagePanel = InputContainer:extend{
+local PagePanel = require("pagegrid"):extend{
     document = nil,
     -- Called when the notebook has been changed and the page behind us with it.
     on_change = nil,
     -- Called with a page number when the reader wants to go there.
     on_goto = nil,
 }
-
-function PagePanel:init()
-    self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
-    self.covers_fullscreen = true
-    self.page = 1
-    -- Open on the page being read, not on the first one; see _layout.
-    self.reveal = self.document.current_page
-    self:_layout()
-
-    self.ges_events = {
-        PanelSwipe = { GestureRange:new{ ges = "swipe", range = self.dimen } },
-    }
-end
-
-function PagePanel:_layout()
-    if self.holder and self.holder[1] then self.holder[1]:free() end
-    self.holder = self.holder or WidgetContainer:new{}
-    self[1] = self.holder
-
-    local margin = Size.padding.large
-    local avail_w = self.dimen.w - 2 * margin
-    local tile_w = math.floor((avail_w - (COLUMNS - 1) * margin) / COLUMNS)
-    local tile_h = math.floor(tile_w * 1.25)
-
-    local header = self:_buildHeader()
-    local rows_h = self.dimen.h - header:getSize().h - 3 * margin
-    local rows = math.max(1, math.floor((rows_h + margin) / (tile_h + margin)))
-    self.per_page = rows * COLUMNS
-
-    local count = self.document:pageCount()
-    self.page_count = math.max(1, math.ceil(count / self.per_page))
-    if self.page > self.page_count then self.page = self.page_count end
-
-    --[[
-    Bring the page that was asked for into view, if one was.
-
-    Set when the panel opens, so it shows the page you are on rather than
-    always the first, and again whenever an action moves the notebook to a page
-    of its own making. Adding a page from the last tile of a full screen puts
-    the new one on the next screen, and without this the grid stayed where it
-    was: the button did nothing anyone could see, and the page it had just made
-    was somewhere off to the right.
-
-    Cleared once used, because turning the grid by hand goes through `_layout`
-    too -- and a grid that jumped back to the current page every time it was
-    swiped could not be paged through at all.
-    ]]
-    if self.reveal then
-        self.page = math.max(1, math.min(math.ceil(self.reveal / self.per_page),
-            self.page_count))
-        self.reveal = nil
-    end
-
-    local grid = VerticalGroup:new{ align = "left" }
-    local first = (self.page - 1) * self.per_page + 1
-
-    for r = 0, rows - 1 do
-        local row = HorizontalGroup:new{ align = "top" }
-        local any = false
-        for c = 0, COLUMNS - 1 do
-            local index = first + r * COLUMNS + c
-            if index <= count then
-                any = true
-                if c > 0 then
-                    table.insert(row, HorizontalSpan:new{ width = margin })
-                end
-                table.insert(row, PageTile:new{
-                    document = self.document,
-                    index = index,
-                    width = tile_w,
-                    height = tile_h,
-                    current = index == self.document.current_page,
-                    on_open = function(i) self:_goToPage(i) end,
-                    on_hold = function(i) self:_actions(i) end,
-                })
-            end
-        end
-        if any then
-            if r > 0 then table.insert(grid, VerticalSpan:new{ width = margin }) end
-            table.insert(grid, row)
-        end
-    end
-
-    self.holder[1] = FrameContainer:new{
-        background = Blitbuffer.COLOR_WHITE,
-        bordersize = 0,
-        margin = 0,
-        padding = margin,
-        width = self.dimen.w,
-        height = self.dimen.h,
-        VerticalGroup:new{
-            align = "left",
-            header,
-            VerticalSpan:new{ width = margin },
-            grid,
-        },
-    }
-end
 
 --[[--
 The sizes the header is tried at, largest first, then without the words.
@@ -433,34 +215,6 @@ function PagePanel:_pickNotebookTemplate()
 end
 
 -- Navigation --------------------------------------------------------------------------
-
-function PagePanel:_turnPage(delta)
-    local target = self.page + delta
-    if target < 1 or target > self.page_count then return end
-    self.page = target
-    self:_layout()
-    UIManager:setDirty("all", "ui")
-end
-
-function PagePanel:onPanelSwipe(_, ges)
-    if ges.direction == "west" then
-        self:_turnPage(1)
-    elseif ges.direction == "east" then
-        self:_turnPage(-1)
-    else
-        return false
-    end
-    return true
-end
-
-function PagePanel:onClose()
-    UIManager:close(self, "ui")
-    return true
-end
-
-function PagePanel:onCloseWidget()
-    if self.holder and self.holder[1] then self.holder[1]:free() end
-end
 
 -- Every way the event loop can enter this screen, behind a pcall and a
 -- watchdog; see safe.lua. A fault here closes the notebook plugin, not KOReader.

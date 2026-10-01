@@ -13,6 +13,9 @@ Icon.init=function(self)
 end
 local UI=require('ui/uimanager');local Event=require('ui/event')
 local Screen=Device.screen;local BB=require('ffi/blitbuffer')
+local original=Screen.bb
+local offscreen=BB.new(Screen:getWidth(),Screen:getHeight(),BB.TYPE_BB8)
+Screen.bb=offscreen
 for _,mode in ipairs({'Fast','UI','Full'}) do Screen['refresh'..mode]=function() end end
 local Document=load('document');local Notebook=load('notebook')
 local ScreenSaverWidget=require('ui/widget/screensaverwidget')
@@ -22,6 +25,16 @@ local nb=Notebook:new{document=Document:new(nil)}
 nb.document.save=function(self) self.dirty=false;return true end
 UI:show(nb);UI:forceRePaint()
 local c=nb.canvas
+-- Idle page overview: direct timer paints must preserve every panel pixel.
+nb:_showPages();UI:forceRePaint()
+local snapshot=BB.new(Screen:getWidth(),Screen:getHeight(),BB.TYPE_BB8)
+snapshot:blitFrom(Screen.bb,0,0,0,0,Screen:getWidth(),Screen:getHeight())
+nb.clock_tick();nb:_refreshToolbar()
+for y=0,Screen:getHeight()-1 do for x=0,Screen:getWidth()-1 do
+    assert(Screen.bb:getPixel(x,y):getColor8().a==snapshot:getPixel(x,y):getColor8().a,
+        'clock overwrote page overview')
+end end
+snapshot:free();UI:close(nb.page_panel);assert(not nb.page_panel)
 for _,zoom in ipairs({1,2}) do
     if c.zoom~=zoom then c:setZoom(zoom) end
     UI:forceRePaint()
@@ -57,4 +70,6 @@ for _,zoom in ipairs({1,2}) do
 end
 UI:close(nb)
 assert(not Device.input.stylus_callback,'closed native notebook retained its stylus callback')
-print('native suspend: real screensaver/widget events preserve every cover pixel and unfinished ink at 1x/2x')
+Screen.bb=original;offscreen:free()
+if Device.input and Device.input.teardown then Device.input:teardown() end
+print('native overlay/suspend: comparisons passed; page overview and screensaver preserve every pixel and unfinished ink at 1x/2x')

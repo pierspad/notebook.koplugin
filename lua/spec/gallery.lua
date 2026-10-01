@@ -112,7 +112,7 @@ local function newGallery(n, fields)
     for _, name in ipairs{ "gallery", "galleryexport", "exportprogress", "share", "xopp", "svg",
                            "library", "actionmenu", "export",
                            "document", "documentstorage", "gallerycard", "galleryheader", "updater", "updateinstaller",
-                           "updatetransport", "renderer", "stroke", "safe" } do
+                           "updatetransport", "renderer", "stroke", "safe", "pagegrid", "pagetile", "pagepanel", "exportpagesdialog", "markerhit" } do
         package.loaded[name] = nil
     end
     local fs = fixture(n or 12)
@@ -1128,6 +1128,8 @@ test("the overview keeps its way out on a narrower screen", function()
         Device.screen.getWidth = function() return width end
         Device.screen.getHeight = function() return math.floor(width * 1.33) end
         package.loaded["pagepanel"] = nil
+        package.loaded["pagegrid"] = nil
+        package.loaded["pagetile"] = nil
         local PagePanel = require("pagepanel")
         local Document = require("document")
 
@@ -1140,6 +1142,8 @@ test("the overview keeps its way out on a narrower screen", function()
     end
 
     package.loaded["pagepanel"] = nil
+        package.loaded["pagegrid"] = nil
+        package.loaded["pagetile"] = nil
 end)
 
 test("adding a page from the overview shows the page it added", function()

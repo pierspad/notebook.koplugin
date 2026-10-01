@@ -9,7 +9,7 @@ import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ("check-scaled-render.lua", "check-preview-cache.lua")
+SCRIPTS = ("check-scaled-render.lua", "check-preview-cache.lua", "check-marker-geometry.lua", "check-suspend.lua")
 
 
 def main():

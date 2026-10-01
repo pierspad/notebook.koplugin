@@ -5,6 +5,21 @@ local FakeBB=support.FakeBB
 local function paint(doc,scale)
  local bb=FakeBB.new(180,160);Renderer.drawPage(bb,doc:getPage(),scale);return bb
 end
+local thick=Stroke:new{tool='highlighter',width=100,tint=160}
+thick:addPoint(20,80,1);thick:addPoint(160,80,1)
+assert(thick:hitTest(100,120,3),'whole-stroke eraser misses thick nib edge')
+assert(thick:hitTest(0,120,0),'square nib corner missed')
+assert(not thick:hitTest(100,134,3),'eraser reaches outside nib')
+assert(thick:hitTestPath({-60,120,240,120},1),'sparse eraser misses thick nib')
+local whole=Document:new(nil);whole:addStroke(thick)
+assert(whole:eraseAlongPath({100,120,105,120},3),'document eraser misses marker edge')
+assert(#whole:getPage().strokes==0)
+whole:undo();assert(#whole:getPage().strokes==1)
+whole:redo();assert(#whole:getPage().strokes==0)
+
+local light=Stroke:new{tool='highlighter',width=100,tint=160}
+light:addPoint(20,80,0);light:addPoint(160,80,0)
+assert(not light:hitTest(100,120,1),'marker hit ignores pressure')
 math.randomseed(1952)
 for i=1,80 do
  local doc=Document:new('/tmp/marker-area.scribe')

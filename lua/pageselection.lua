@@ -1,14 +1,18 @@
 -- Export views share immutable pages; editing/history remain on the original document.
 local M={}
 function M.parse(text,count)
-    if type(text)~="string" or type(count)~="number" or count<1 then return nil,"Invalid page range" end
-    text=text:match("^%s*(.-)%s*$")
+    if type(text)~="string" or type(count)~="number" or count<1 or count%1~=0 or count==math.huge then return nil,"Invalid page range" end
+    text=text:match("^%s*(.-)%s*$"):gsub(";",",")
     if text=="all" then local all={};for i=1,count do all[i]=i end;return all end
     if text=="" or text:sub(-1)=="," then return nil,"Invalid page range" end
     local selected={}
     for token in (text..","):gmatch("(.-),") do
         token=token:match("^%s*(.-)%s*$")
-        local first,last=token:match("^(%d+)%s*%-%s*(%d+)$")
+        local first,last=token:match("^(%d*)%s*%-%s*(%d*)$")
+        if first and (first~="" or last~="") then
+            first=first~="" and first or "1"
+            last=last~="" and last or tostring(count)
+        elseif first then return nil,"Invalid page range" end
         if not first and token:match("^%d+$") then first,last=token,token end
         first,last=tonumber(first),tonumber(last)
         if not first or first<1 or last<first or last>count then return nil,"Invalid page range" end
@@ -17,6 +21,18 @@ function M.parse(text,count)
     local out={};for i=1,count do if selected[i] then out[#out+1]=i end end
     if #out==0 then return nil,"Invalid page range" end
     return out
+end
+-- Canonical compact ranges keep the editable bar in sync with checkboxes.
+function M.format(indices)
+    local ranges={}
+    local i=1
+    while i<=#indices do
+        local first,last=indices[i],indices[i]
+        while indices[i+1]==last+1 do i=i+1;last=indices[i] end
+        ranges[#ranges+1]=first==last and tostring(first) or first.."-"..last
+        i=i+1
+    end
+    return table.concat(ranges,",")
 end
 function M.view(doc,indices)
     if type(indices)~="table" or #indices==0 then return nil,"No selected pages" end

@@ -722,7 +722,7 @@ function Gallery:_exportMenu(notebooks, selected_pages)
         actions[#actions+1]={icon="notebook.page",text=_("Choose pages…"),callback=function()
             local doc=Document:new(notebooks[1].path)
             if not doc:load() then return self:_error(_("Could not read notebook.")) end
-            require("exportpagesdialog").show(doc:pageCount(),function(indices) self:_exportMenu(notebooks,indices) end)
+            require("exportpagesdialog").show(doc,function(indices) self:_exportMenu(notebooks,indices) end)
         end}
     end
     UIManager:show(ActionMenu:new{

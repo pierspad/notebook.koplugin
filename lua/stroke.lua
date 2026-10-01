@@ -287,19 +287,8 @@ function Stroke:hitTest(px, py, r)
         return false
     end
 
-    if self.tool == "highlighter" and self.filled then
-        for first,last in require("markerarea").parts(self) do
-            local inside=false
-            local ax,ay=self:getPoint(last)
-            for i=first,last do
-                local x,y=self:getPoint(i)
-                if (ay>py)~=(y>py) and px<(x-ax)*(py-ay)/(y-ay)+ax then inside=not inside end
-                if distToSegmentSq(px,py,ax,ay,x,y)<=r*r then return true end
-                ax,ay=x,y
-            end
-            if inside then return true end
-        end
-        return false
+    if self.tool == "highlighter" then
+        return require("markerhit").path(self,{px,py},r)
     end
     local r2 = r * r
     if self.n == 1 then
@@ -447,6 +436,7 @@ end
 --- True if this stroke comes within r of anywhere on the path.
 function Stroke:hitTestPath(path, r)
     if #path < 2 then return false end
+    if self.tool == "highlighter" then return require("markerhit").path(self,path,r) end
     if self.text then
         local x0,y0,x1,y1=pathBounds(path,r)
         return x1>=self.x_min and x0<=self.x_max and y1>=self.y_min and y0<=self.y_max

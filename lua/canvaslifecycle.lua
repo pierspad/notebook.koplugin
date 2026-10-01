@@ -10,7 +10,7 @@ local Lifecycle = {
 }
 
 function Lifecycle:_isDisplayPaused()
-    return self.suspended or Device.screen_saver_mode or Device.screen_saver_lock
+    return self.suspended or self.display_overlay or Device.screen_saver_mode or Device.screen_saver_lock
 end
 
 function Lifecycle:_unscheduleCanvasCallbacks()

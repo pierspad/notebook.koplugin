@@ -54,5 +54,22 @@ if arg[3]=="--network" then
     local official=assert(Policy.release(json.decode(read(path))))
     path=fetch(official.url,tmp.."/official.zip",Policy.MAX_ZIP)
     assert(Installer.prepare(path,tmp.."/official-stage",official))
-    print("Official GitHub stable ZIP fetched and verified: "..official.tag.." (not installed)")
+    -- Install an actual older official archive, then replace it with latest.
+    -- This directory is disposable and independent of the running plugin.
+    local from_tag=arg[4] or "v1.4.0"
+    assert(from_tag:match("^v%d+%.%d+%.%d+$"),"invalid source release tag")
+    local old_api=Policy.API:gsub("/latest$","/tags/"..from_tag)
+    local old=assert(Policy.release(json.decode(read(fetch(old_api,tmp.."/old-release.json",1024*1024)))))
+    assert(Policy.newer(official.tag,old.tag),"latest release is not newer")
+    local old_zip=fetch(old.url,tmp.."/old-official.zip",Policy.MAX_ZIP)
+    assert(Installer.prepare(old_zip,tmp.."/old-stage",old))
+    assert(lfs.mkdir(tmp.."/released"))
+    local installed=tmp.."/released/notebook.koplugin"
+    assert(os.rename(tmp.."/old-stage",installed))
+    write(installed.."/obsolete-test.lua","return true")
+    assert(Installer.install(installed,tmp.."/official-stage",tmp.."/released-backup"))
+    assert(assert(loadfile(installed.."/_meta.lua"))().version==official.tag)
+    assert(assert(loadfile(tmp.."/released-backup/_meta.lua"))().version==old.tag)
+    assert(not lfs.attributes(installed.."/obsolete-test.lua"))
+    print("Official stable update "..old.tag.." -> "..official.tag..": verified, installed and backup preserved in disposable storage")
 end

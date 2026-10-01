@@ -415,5 +415,65 @@ test("marker area eraser cuts the nib edge without deleting its centre", functio
     end end
 end)
 
+test("object sweep compacts once, keeps order and independent batch history", function()
+    local doc=Document:new(nil)
+    local original={}
+    for i=1,240 do
+        local stroke=Stroke:new{width=2}
+        stroke:addPoint(i%3==0 and 300 or 100,i*2,1)
+        stroke:addPoint(i%3==0 and 310 or 110,i*2,1)
+        stroke:addPoint(i%3==0 and 320 or 120,i*2,1)
+        doc:addStroke(stroke);original[i]=stroke
+    end
+    local list=doc:getPage().strokes
+    doc:beginBatch()
+    local remove,shifts=table.remove,0
+    table.remove=function(array,index)
+        if array==list then shifts=shifts+1 end
+        return remove(array,index)
+    end
+    local removed,x,y,w,h=doc:eraseAlongPath({110,0,110,500},3)
+    table.remove=remove
+    assertEq(shifts,0,"object sweep repeatedly shifted the live stroke list")
+    assertEq(#removed,160,"wrong hit count")
+    assertTrue(x<=99 and x+w>=121 and y<=1 and y+h>=479,"incomplete repaint bounds")
+    assertEq(doc:getPage().strokes,list,"compaction replaced live list")
+    for i=1,80 do assertEq(list[i],original[i*3],"survivor order changed") end
+    for i,entry in ipairs(removed) do
+        assertEq(entry.stroke,original[entry.index],"recorded index changed")
+        if i>1 then assertTrue(removed[i-1].index>entry.index,"history indices not descending") end
+    end
+    doc:commitBatch(x,y,w,h)
+    doc:undo()
+    for i,stroke in ipairs(original) do assertEq(doc:getPage().strokes[i],stroke,"undo order changed") end
+    doc:redo()
+    assertEq(#doc:getPage().strokes,80,"redo count changed")
+    doc:addStroke(original[1]);doc:undo();doc:undo();doc:redo()
+    assertEq(#doc:getPage().strokes,80,"later addition mutated batch history")
+end)
+
+test("object compaction retains selected shapes and no-op state", function()
+    local pen=lineStroke(50,0,100)
+    local shape=lineStroke(60,0,100);shape.shape_kind="rectangle"
+    local distant=lineStroke(70,200,300)
+    local doc=docWith(pen,shape,distant)
+    local selected={}
+    local removed=doc:eraseAlongPath({50,0,50,100},3,selected)
+    assertEq(#removed,1,"selected shape was erased")
+    assertTrue(selected[shape],"shape was not selected")
+    assertEq(doc:getPage().strokes[1],shape,"shape order changed")
+    assertEq(doc:getPage().strokes[2],distant,"distant order changed")
+    doc:undo();assertEq(doc:getPage().strokes[2],shape,"shape moved after undo")
+    doc:redo();doc.dirty=false
+    local revision=doc:getPage().revision
+    local history=#doc.undo_stack
+    doc:beginBatch()
+    assertEq(doc:eraseAlongPath({50,0,50,100},3,selected),nil,"shape-only sweep reported removal")
+    doc:commitBatch()
+    assertEq(#doc.undo_stack,history,"no-op created history")
+    assertEq(doc:getPage().revision,revision,"no-op changed revision")
+    assertEq(doc.dirty,false,"no-op marked dirty")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

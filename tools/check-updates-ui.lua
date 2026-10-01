@@ -22,7 +22,8 @@ assert(lfs.attributes(tmp.."/library","mode")=="directory" or lfs.mkdir(tmp.."/l
 load("library").root=function() return tmp.."/library" end
 local UI=require("ui/uimanager")
 local shown
-UI.show=function(_,widget) shown=widget end
+local shown_history={}
+UI.show=function(_,widget) shown=widget;shown_history[#shown_history+1]=widget end
 local Gallery=load("gallery")
 local gallery=Gallery:new{}
 assert(not load("safe").failed)
@@ -43,7 +44,27 @@ assert(shown.action_rows[1].row.icon_widget.text=="☑","checked option lacks ch
 shown.actions[1].callback();assert(not shown.actions[1].selected())
 shown:_refreshRows();assert(shown.action_rows[1].row.icon_widget.text=="☐")
 shown.actions[1].callback();assert(shown.actions[1].selected())
-load("exportpagesdialog").show(100,function() end)
+local document=load("document"):new(nil)
+for i=1,100 do
+    if i>1 then document:addPage() end
+    document.pages[i].template=i%2==0 and "ruled" or "blank"
+    local stroke=load("stroke"):new{width=4}
+    stroke:addPoint(100,400+i%7*35);stroke:addPoint(screen:getWidth()-100,800+i%5*50)
+    document:addStroke(stroke)
+end
+document:goToPage(1)
+local panel=load("exportpagesdialog").show(document,function() end)
+assert(panel:setRange("-3;5-"))
+assert(panel:isSelected(3) and not panel:isSelected(4) and panel:isSelected(100))
+panel:_goToPage(3);assert(not panel:isSelected(3))
+panel:_editRange()
+local dialog
+for _,widget in ipairs(shown_history) do if widget.getInputText then dialog=widget end end
+assert(dialog,"range bar did not open editable input")
+dialog:setInputText("-3;5-")
+dialog.buttons[1][2].callback()
+assert(panel:isSelected(3) and not panel:isSelected(4) and panel:isSelected(100))
+shown=panel
 shown:paintTo(bb,0,0)
 bb:writePNG(tmp.."/export-pages.png")
 gallery:_freeWidgets();bb:free()

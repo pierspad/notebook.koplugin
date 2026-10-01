@@ -13,6 +13,7 @@ resize, delete) participate in the same undo system without reworking it.
 --]]--
 
 local Template = require("template")
+local History = require("documenthistory")
 
 local MAX_HISTORY = 200
 
@@ -322,19 +323,33 @@ function Document:eraseAlongPath(path, r, shapes)
     local removed = {}
     local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
 
-    for i = #page.strokes, 1, -1 do
-        local stroke = page.strokes[i]
+    local strokes, write = page.strokes, 1
+    local count = #strokes
+    for i = 1, count do
+        local stroke = strokes[i]
+        local hit = stroke:hitTestPath(path, r)
         if shapes and stroke.shape_kind then
-            if stroke:hitTestPath(path, r) then shapes[stroke] = true end
-        elseif stroke:hitTestPath(path, r) then
+            if hit then shapes[stroke] = true end
+            strokes[write] = stroke
+            write = write + 1
+        elseif hit then
             local sx, sy, sw, sh = stroke:getBounds()
             if sx < bx0 then bx0 = sx end
             if sy < by0 then by0 = sy end
             if sx + sw > bx1 then bx1 = sx + sw end
             if sy + sh > by1 then by1 = sy + sh end
-            table.insert(removed, { index = i, stroke = stroke })
-            table.remove(page.strokes, i)
+            removed[#removed + 1] = { index = i, stroke = stroke }
+        else
+            strokes[write] = stroke
+            write = write + 1
         end
+    end
+    -- Stable compaction avoids moving the remaining tail once per hit. Keep
+    -- original indices in descending order for the existing history contract.
+    for i = write, count do strokes[i] = nil end
+    for i = 1, math.floor(#removed / 2) do
+        local j = #removed - i + 1
+        removed[i], removed[j] = removed[j], removed[i]
     end
 
     if #removed == 0 then return nil end
@@ -453,102 +468,6 @@ end
 
 -- Undo / redo ----------------------------------------------------------------
 
---- Applies the inverse of an operation.
-local function revert(doc, op)
-    local page = doc.pages[op.page]
-    if op.type == "pages" then page = nil end
-    if op.type == "add" then
-        for i = #page.strokes, 1, -1 do
-            if page.strokes[i] == op.stroke then
-                table.remove(page.strokes, i)
-                break
-            end
-        end
-    elseif op.type == "erase" then
-        -- `removed` is in descending index order, so walking it backwards
-        -- reinserts smallest index first: each stroke then lands where it was,
-        -- because the ones before it are already back in front of it.
-        local restored, read = {}, 1
-        for i = #op.removed, 1, -1 do
-            local entry = op.removed[i]
-            while #restored < entry.index - 1 and read <= #page.strokes do
-                restored[#restored + 1] = page.strokes[read]
-                read = read + 1
-            end
-            restored[#restored + 1] = entry.stroke
-        end
-        for i = read, #page.strokes do restored[#restored + 1] = page.strokes[i] end
-        page.strokes = restored
-    elseif op.type == "move" then
-        for _, stroke in ipairs(op.strokes) do stroke:translate(-op.dx, -op.dy) end
-    elseif op.type == "list" then
-        page.strokes = copyList(op.before)
-    elseif op.type == "pages" then
-        doc.pages = snapshot(op.before)
-    end
-end
-
---- Reapplies an operation.
-local function reapply(doc, op)
-    local page = doc.pages[op.page]
-    if op.type == "pages" then page = nil end
-    if op.type == "add" then
-        table.insert(page.strokes, op.stroke)
-    elseif op.type == "erase" then
-        local removed = {}
-        for _, entry in ipairs(op.removed) do removed[entry.stroke] = true end
-        local write = 1
-        for read = 1, #page.strokes do
-            local stroke = page.strokes[read]
-            if not removed[stroke] then
-                page.strokes[write] = stroke
-                write = write + 1
-            end
-        end
-        for i = #page.strokes, write, -1 do page.strokes[i] = nil end
-    elseif op.type == "move" then
-        for _, stroke in ipairs(op.strokes) do stroke:translate(op.dx, op.dy) end
-    elseif op.type == "list" then
-        page.strokes = copyList(op.after)
-    elseif op.type == "pages" then
-        doc.pages = snapshot(op.after)
-    end
-end
-
---- Returns the bounding box an operation affects, for a targeted repaint.
-local function opBounds(op)
-    -- An area erase records the rectangle it touched, since reconstructing it
-    -- from a whole-list snapshot would mean diffing the two lists.
-    if op.bounds then
-        return op.bounds.x, op.bounds.y, op.bounds.w, op.bounds.h
-    end
-
-    local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
-    local function add(stroke)
-        local x, y, w, h = stroke:getBounds()
-        if x < bx0 then bx0 = x end
-        if y < by0 then by0 = y end
-        if x + w > bx1 then bx1 = x + w end
-        if y + h > by1 then by1 = y + h end
-    end
-    if op.type == "add" then
-        add(op.stroke)
-    elseif op.type == "erase" then
-        for _, entry in ipairs(op.removed) do add(entry.stroke) end
-    elseif op.type == "move" then
-        -- Called after the strokes have been shifted, so where they are now is
-        -- only half of what has to be repainted; the other half is where they
-        -- were, which is that box offset by the move either way.
-        for _, stroke in ipairs(op.strokes) do add(stroke) end
-        if bx0 ~= math.huge then
-            local dx, dy = math.abs(op.dx), math.abs(op.dy)
-            bx0, by0, bx1, by1 = bx0 - dx, by0 - dy, bx1 + dx, by1 + dy
-        end
-    end
-    if bx0 == math.huge then return nil end
-    return bx0, by0, bx1 - bx0, by1 - by0
-end
-
 function Document:canUndo() return #self.undo_stack > 0 end
 function Document:canRedo() return #self.redo_stack > 0 end
 
@@ -556,24 +475,24 @@ function Document:canRedo() return #self.redo_stack > 0 end
 function Document:undo()
     local op = table.remove(self.undo_stack)
     if not op then return nil end
-    revert(self, op)
+    History.revert(self, op)
     self:_touchPage(op.page)
     table.insert(self.redo_stack, op)
     self.dirty = true
     self:_clampPage()
-    return op.page, opBounds(op)
+    return op.page, History.bounds(op)
 end
 
 --- Redoes the last undone operation. Returns the affected page and bounding box.
 function Document:redo()
     local op = table.remove(self.redo_stack)
     if not op then return nil end
-    reapply(self, op)
+    History.reapply(self, op)
     self:_touchPage(op.page)
     table.insert(self.undo_stack, op)
     self.dirty = true
     self:_clampPage()
-    return op.page, opBounds(op)
+    return op.page, History.bounds(op)
 end
 
 --- Keeps the current page inside the list after it has grown or shrunk.
