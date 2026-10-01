@@ -63,6 +63,8 @@ function StylusInput:onStylusEvent(slot)
         if not (top_widget and top_widget.dismissForDrawing
             and top_widget:dismissForDrawing(slot)) then
             if self.stroke or self.shape_gesture then self:_endStroke() end
+            if self.zoom_erasing then self:_endZoomContact()
+            elseif self.erasing then self:_endErase();self.erasing=false end
             return false
         end
     end
@@ -153,6 +155,7 @@ function StylusInput:onStylusEvent(slot)
     -- rather than leaving a segment that jumps the gap when you come back.
     if not self:_withinContent(x, y, self:widthFor(tool)) then
         if self.stroke or self.dragging_selection or self.shape_gesture then self:_endStroke() end
+        if self.erasing then self:_endErase();self.erasing=false end
         return false
     end
 

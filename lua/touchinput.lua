@@ -168,6 +168,7 @@ function TouchInput:onTouchPan(_, ges)
 
     if not self:_withinContent(x, y, self:widthFor(self.tool)) then
         if self.stroke or self.shape_gesture or self.text_at then self:_endStroke() end
+        if self.erase_path then self:_endErase() end
         return true
     end
 

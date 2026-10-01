@@ -166,6 +166,8 @@ regression limits; see the [current maintenance audit](docs/audits/2026-10-01-ma
 for commands, coverage, raw results and measurement limits.
 The [1.6.0 release audit](docs/audits/2026-10-01-release-1.6.0.md) adds the mixed
 edit/page/zoom/save workflow and records the release verification.
+The [1.6.3 eraser audit](docs/audits/2026-10-02-release-1.6.3.md) covers continuous
+rubbing of dense markers, discontinuous input and shared 1×/2× batching.
 
 ## Contributing
 

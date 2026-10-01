@@ -433,6 +433,32 @@ To prevent accidental destruction of complex diagrams:
 - Touched shapes are accumulated in `erase_shapes`.
 - Upon pen release, if shapes were intersected, the canvas displays a lasso selection menu around them. The user can explicitly confirm deletion via the **Delete** button or tap anywhere outside to preserve them.
 
+### 5.4 Input continuity and shared zoom batching
+
+Normal and 2× erasing share `erasercanvas.lua`'s path accumulator. Geometry is
+applied at the display interval, rather than on every raw zoom sample. Identical
+positions are ignored; exactly collinear continuations can extend the queued
+segment, while turns and reversals stay in the path. The first real move remains
+immediate, and release flushes the final queued samples into the same undo group.
+
+The outlier filter uses accepted input timestamps and screen-space distances.
+Recovery starts a separate contact island after flushing the old path. Canvas
+exit and modal interception also end erasing, preventing a straight bridge when
+the nib returns elsewhere. Active finger erasing blocks idle refresh and save,
+and a final flush cancels redundant repaint callbacks.
+
+### 5.5 Avoiding overlapping marker geometry
+
+For densely sampled wide markers, adjacent swept square nibs overlap almost
+completely. Converting every sweep into a complete clipped polygon multiplies
+the same surface during continuous rubbing. `markerarea.lua` removes the shared
+preceding footprint before clipping newly exposed ink. Both footprints undergo
+the same eraser subtraction, preserving their union outside the nib. Filled
+fragments retain their existing persisted representation and contour indexes.
+
+See the [1.6.3 continuous eraser audit](audits/2026-10-02-release-1.6.3.md) for
+regressions, native CPU measurements and independent pixel/distance checks.
+
 ---
 
 ## 6. Selection, Manipulation & Clipboard

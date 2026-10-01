@@ -4,7 +4,6 @@ local Device = require("device")
 local Rect = require("rect")
 local Renderer = require("renderer")
 local Stroke = require("stroke")
-local Tuning = require("tuning")
 local Zoom = require("zoom")
 local UIManager = require("ui/uimanager")
 local time = require("ui/time")
@@ -60,7 +59,7 @@ function ZoomCanvas:_endZoomContact()
     end
     if self.zoom_erasing then
         changed, changed_tool = true, "eraser"
-        self.document:commitBatch()
+        self:_endErase()
         self:_flushZoomErase()
         if self.zoom_cache then self.zoom_cache_revision=self.document:getPage().revision or 0 end
         if self.document.dirty then
@@ -136,29 +135,7 @@ function ZoomCanvas:_zoomStylus(slot, tool)
             self.document:beginBatch()
             self.zoom_erasing = true
         end
-        local lx, ly = self.zoom_last_x or px, self.zoom_last_y or py
-        local path = {lx, ly, px, py}
-        local hit, ex, ey, ew, eh
-        if self.eraser_mode == "area" then
-            hit, ex, ey, ew, eh = self.document:eraseAreaAlongPath(path, self.eraser_size)
-        else
-            hit, ex, ey, ew, eh = self.document:eraseAlongPath(path, self.eraser_size)
-        end
-        self.zoom_last_x, self.zoom_last_y = px, py
-        if hit then
-            self.zoom_erase_dirty = true
-            self.zoom_erase_region = Rect.grow(self.zoom_erase_region, ex, ey, ew, eh)
-            local now = time.now()
-            local elapsed=self.last_zoom_erase_refresh
-                and time.to_ms(now-self.last_zoom_erase_refresh) or Tuning.erase_repaint_ms
-            if elapsed >= Tuning.erase_repaint_ms then
-                self:_flushZoomErase()
-            elseif not self.zoom_erase_scheduled then
-                self.zoom_erase_scheduled=true
-                UIManager:scheduleIn((Tuning.erase_repaint_ms-elapsed)/1000,self.zoom_erase_cb)
-            end
-            if self.on_change then self:on_change() end
-        end
+        self:_eraseAlong(px,py)
         return true
     end
     if self.zoom_erasing then self:_endZoomContact(); self.pen_down = true end

@@ -207,13 +207,14 @@ local erdoc=Document:new('/tmp/zoom-trailing.scribe')
 local ercanvas=Canvas:new{document=erdoc,content={x=0,y=0,w=120,h=160}}
 ercanvas.eraser_mode='stroke';ercanvas.eraser_size=2
 local Stroke=require('stroke')
-for _,x in ipairs({10,30}) do local s=Stroke:new{};s:addPoint(x,30);erdoc:addStroke(s) end
+for _,x in ipairs({10,30,50}) do local s=Stroke:new{};s:addPoint(x,30);erdoc:addStroke(s) end
 ercanvas:setZoom(2)
 ercanvas:_zoomStylus({id=1,x=20,y=60},'eraser')
 clock=1;ercanvas:_zoomStylus({id=1,x=60,y=60},'eraser')
-assert(scheduled[ercanvas.zoom_erase_cb] and ercanvas.zoom_erase_region,'erase has no trailing refresh')
-clock=100;ercanvas.zoom_erase_cb()
-assert(not ercanvas.zoom_erase_region and not scheduled[ercanvas.zoom_erase_cb], 'trailing erase was not flushed')
+clock=2;ercanvas:_zoomStylus({id=1,x=100,y=60},'eraser')
+assert(scheduled[ercanvas.erase_flush_cb] and #ercanvas.erase_path>=4,'erase has no trailing model flush')
+clock=100;scheduled[ercanvas.erase_flush_cb]=nil;ercanvas.erase_flush_cb()
+assert(not ercanvas.zoom_erase_region and #ercanvas.erase_path==2 and #erdoc:getPage().strokes==0, 'trailing erase was not flushed')
 ercanvas:_zoomStylus({id=-1},'eraser')
 -- Zoom must read the physical sensor when virtual stylus events omit pressure.
 local c=Canvas:new{document=Document:new('/tmp/zoom-pressure.scribe'),content={x=0,y=0,w=120,h=160}}

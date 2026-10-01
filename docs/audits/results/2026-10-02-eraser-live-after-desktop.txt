@@ -1,0 +1,31 @@
+has monolibtic? no (libs/libkoreader-monolibtic.so: cannot open shared object file: No such file or directory)
+lib_search_path: libs/?
+lib_basic_format: lib%s.so
+lib_version_format: lib%s.so.%s
+ffi.load: rt.so.1 (RTLD_GLOBAL)
+ffi.findlib: utf8proc [3]
+ffi.load: libs/libutf8proc.so.3
+ffi.findlib: SDL3 [0]
+ffi.load: libSDL3.so.0
+ffi.findlib: blitbuffer
+ffi.load: libs/libblitbuffer.so
+Started SDL in /home/ribben/Desktop/pierspad/github/KOREADER/koreader-src/base/build/x86_64-pc-linux-gnu-debug/ using dummy video driver
+ffi.findlib: lodepng
+ffi.load: libs/liblodepng.so
+10/02/26-00:47:02 INFO  initializing for device Emulator 
+10/02/26-00:47:02 INFO  framebuffer resolution: {
+  h = 800,
+  w = 600
+} --[[table: 0x7f17296d4598]] 
+ffi.findlib: wrap-mupdf
+ffi.load: libs/libwrap-mupdf.so
+ffi.findlib: freetype [6]
+ffi.load: libs/libfreetype.so.6
+ffi.findlib: harfbuzz [0]
+ffi.load: libs/libharfbuzz.so.0
+ffi.findlib: zstd [1]
+ffi.load: libs/libzstd.so.1
+zoom=1 width=48 samples=121 model_calls=16 model=451.008ms peak=38.539ms total=481.023ms heap=13666.1KiB strokes=18 points=67079
+zoom=1 width=120 samples=121 model_calls=16 model=695.515ms peak=88.598ms total=745.909ms heap=21087.9KiB strokes=17 points=118684
+zoom=2 width=48 samples=121 model_calls=16 model=431.545ms peak=37.198ms total=483.847ms heap=6364.7KiB strokes=18 points=67079
+zoom=2 width=120 samples=121 model_calls=16 model=711.200ms peak=92.183ms total=784.476ms heap=19778.3KiB strokes=17 points=118684

@@ -112,13 +112,14 @@ function Area.erase(stroke,path,r,context)
     local function keep(first,last)
         if not untouched then
             area_fragment=nil
-            untouched=Stroke:new{tool=stroke.tool,width=stroke.width,color=stroke.color,tint=stroke.tint}
+            untouched=Stroke:new{tool=stroke.tool,width=stroke.width,color=stroke.color,tint=stroke.tint,
+                pen_style=stroke.pen_style}
             untouched:appendRange(stroke,first,first)
             fragments[#fragments+1]=untouched
         end
         if last>first then untouched:appendRange(stroke,first+1,last) end
     end
-    local function cut(points,first,last)
+    local function cut(points,first,last,force_area)
         local polygons={points}
         local hit=false
         for _,cutter in ipairs(cutters) do
@@ -130,7 +131,7 @@ function Area.erase(stroke,path,r,context)
             end
             polygons=next_polygons
         end
-        if not hit and not stroke.filled then
+        if not hit and not stroke.filled and not force_area then
             -- Preserve untouched runs as compact original centreline strokes.
             -- A small dab must not turn a thousand-point marker into a
             -- thousand independent polygon objects.
@@ -207,7 +208,21 @@ function Area.erase(stroke,path,r,context)
                     or math.max(ay,by)+radius<py0-extra or math.min(ay,by)-radius>py1+extra then
                     keep(first,last)
                 else
-                    cut(Area.sweep(ax,ay,ar,bx,by,br),first,last)
+                    local surface=Area.sweep(ax,ay,ar,bx,by,br)
+                    if first>1 then
+                        -- The preceding sweep already owns their shared nib.
+                        -- Clip only newly exposed ink, not hundreds of stacked
+                        -- copies of the same wide square on dense handwriting.
+                        -- Union-minus-cutter is unchanged because the previous
+                        -- sweep is cut by the very same eraser path.
+                        local cx,cy,cp=stroke:getPoint(first-1)
+                        local cr=Renderer.radiusFor(stroke,cp,ax-cx,ay-cy)
+                        local pr=Renderer.radiusFor(stroke,ap,ax-cx,ay-cy)
+                        local exposed=subtract(surface,Area.sweep(cx,cy,cr,ax,ay,pr))
+                        for _,part in ipairs(exposed) do cut(part,first,last,true) end
+                    else
+                        cut(surface,first,last)
+                    end
                 end
                 if last==stroke.n then break end
                 first=last

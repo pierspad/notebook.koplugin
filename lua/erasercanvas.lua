@@ -13,7 +13,11 @@ function EraserCanvas:_endErase()
     self.erase_flush_scheduled = false
     self:_flushEraseWork()
     self.erase_path = nil
+    self.erasing = false
     self.last_erase_apply = nil
+    self.last_erase_x, self.last_erase_y = nil, nil
+    self.last_sample_at = nil
+    self.outliers = 0
     local shapes = self.erase_shapes
     self.erase_shapes = nil
     local b = self.erase_bounds
@@ -54,12 +58,24 @@ function EraserCanvas:_eraseAlong(x, y)
     -- The hand's contact can be forwarded as the pen's, exactly as it can while
     -- writing (see _isOutlier) -- and here believing it would sweep the rubber
     -- across everything between the nib and the palm.
-    local drop, afresh = self:_isOutlier(x, y, px, py)
+    local scale=self.zoom or 1
+    local drop, afresh = self:_isOutlier(x*scale, y*scale,
+        px and px*scale, py and py*scale)
     if drop then return end
-    if afresh then px, py = nil, nil end
+    if afresh then
+        -- Finish the old connected path before starting a new contact island.
+        -- Merely clearing px left the queued path's old tail attached.
+        self:_applyErasePath()
+        self.erase_path = nil
+        px, py = nil, nil
+    end
 
+    self.erasing = true
+    UIManager:unschedule(self.reconcile_cb)
     self.last_erase_x, self.last_erase_y = x, y
     self.last_point_at = time.now()
+    self.last_sample_at = self.sample_time
+    if px==x and py==y then return end
 
     -- One sweep of the eraser is one undoable action, however far it travels.
     if not px then
@@ -72,7 +88,20 @@ function EraserCanvas:_eraseAlong(x, y)
         path = { px, py }
         self.erase_path = path
     end
-    path[#path + 1], path[#path + 2] = x, y
+    local n=#path
+    if n>=4 then
+        local ax,ay,bx,by=path[n-3],path[n-2],path[n-1],path[n]
+        local dx,dy=bx-ax,by-ay
+        if dx*(y-by)==dy*(x-bx) and dx*(x-bx)+dy*(y-by)>=0 then
+            -- Exact collinear continuation has the same swept capsule union.
+            -- Retain turns and reversals; never replace a curve by its chord.
+            path[n-1],path[n]=x,y
+        else
+            path[n+1],path[n+2]=x,y
+        end
+    else
+        path[n+1],path[n+2]=x,y
+    end
 
     local now = time.now()
     local elapsed = self.last_erase_apply and time.to_ms(now - self.last_erase_apply)
@@ -93,10 +122,11 @@ function EraserCanvas:_applyErasePath()
     local path = self.erase_path
     if not path or #path < 4 then return end
     self.erase_path = { path[#path - 1], path[#path] }
-    -- The first contact is a zero-length path. It may erase a dot under the
-    -- tip, but it must not consume the interval and delay the first real move.
-    local moved = path[1] ~= path[#path - 1] or path[2] ~= path[#path]
-    if moved then self.last_erase_apply = time.now() end
+    -- The first dab does not postpone the first actual move. Stationary
+    -- samples are rejected above; a reversing path still starts the interval.
+    if #path>4 or path[1]~=path[#path-1] or path[2]~=path[#path] then
+        self.last_erase_apply = time.now()
+    end
     self.erase_shapes = self.erase_shapes or {}
     local hit, rx, ry, rw, rh, ux, uy, uw, uh
     if self.eraser_mode == "area" then
@@ -120,10 +150,20 @@ end
 function EraserCanvas:_flushEraseWork()
     self:_applyErasePath()
     self:_flushEraseRepaint()
+    -- The application may schedule a repaint before the explicit flush above.
+    -- No pending pixels remain, so do not leave a redundant callback behind.
+    UIManager:unschedule(self.erase_flush_cb)
+    self.erase_flush_scheduled = false
 end
 
 --- Merges a region into the pending erase repaint, flushing on a timer.
 function EraserCanvas:_queueEraseRepaint(x, y, w, h)
+    if self.zoom > 1 then
+        self.zoom_erase_dirty = true
+        self.zoom_erase_region = Rect.grow(self.zoom_erase_region,x,y,w,h)
+        self:_flushZoomErase()
+        return
+    end
     self.erase_pending = Rect.grow(self.erase_pending, x, y, w, h)
 
     local now = time.now()

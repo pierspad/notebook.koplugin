@@ -140,3 +140,45 @@ multipart:translate(3,4)
 assert(area.contours(multipart)[1][3]==13,"translation left stale contour bounds")
 multipart:setPoint(1,2,3)
 assert(area.contours(multipart)[1][3]==2,"point edit left stale contour bounds")
+
+-- Continuous rubbing of a dense marker must not multiply overlapping nib
+-- footprints into millions of vertices. Keep distant pixels exactly intact.
+local dense_doc=Document:new(nil)
+local dense=Stroke:new{tool='highlighter',width=40,tint=160}
+for i=0,600 do dense:addPoint(10+i*.25,80+4*math.sin(i/30)) end
+dense_doc:addStroke(dense)
+local before_dense=paint(dense_doc)
+for i=1,24 do dense_doc:eraseAreaAlongPath({30+i*3,72,33+i*3,73},4) end
+local total=0;for _,s in ipairs(dense_doc:getPage().strokes) do total=total+s.n end
+assert(total<60000,'continuous marker cuts explode overlapping surface geometry: '..total)
+local after_dense=paint(dense_doc)
+for y=0,159 do for x=0,179 do
+ if y<65 or y>81 or x<26 or x>109 then
+  assert(before_dense:get(x,y)==after_dense:get(x,y),'dense marker cut changed distant ink')
+ end
+end end
+-- Pressure changes and reversing curves still paint the original surface
+-- outside the eraser. The overlap optimization must not join separate islands.
+for _,style in ipairs({'none','fineliner','pencil'}) do
+ local d=Document:new(nil)
+ local s=Stroke:new{tool='highlighter',width=35,tint=160,pen_style=style~='none' and style or nil}
+ for i=0,200 do
+  local angle=i*.055
+  s:addPoint(85+55*math.sin(angle),80+28*math.cos(angle),.5+.45*math.sin(i*.12)^2)
+ end
+ d:addStroke(s)
+ local original=paint(d)
+ local cuts={{60,60,100,90},{100,55,60,95},{65,70,95,70}}
+ for _,path in ipairs(cuts) do assert(d:eraseAreaAlongPath(path,4)) end
+ local actual=paint(d)
+ for y=0,159 do for x=0,179 do
+  local best=math.huge
+  for _,path in ipairs(cuts) do best=math.min(best,distance(x,y,path[1],path[2],path[3],path[4])) end
+  if best>4.6 then assert(actual:get(x,y)==original:get(x,y),'pressure/bend overlap lost distant ink '..style..' at '..x..','..y..' was '..original:get(x,y)..' now '..actual:get(x,y)) end
+  if best<3.4 and original:get(x,y)==160 then assert(actual:get(x,y)==255,'curve overlap restored erased nib') end
+ end end
+ d:undo();d:undo();d:undo()
+ local undone=paint(d)
+ for y=0,159 do for x=0,179 do assert(undone:get(x,y)==original:get(x,y),'curve overlap undo lost original') end end
+end
+print('continuous markers: bounded overlap growth, pressure/bends, independent distance oracle and undo passed')
