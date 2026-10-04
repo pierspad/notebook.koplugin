@@ -46,6 +46,11 @@ for _, case in ipairs{
     { name = "incomplete points", stroke = { n = 2, pts = { 1, 2, 1 }, width = 3 } },
     { name = "nonfinite coordinates", stroke = { n = 1, pts = { math.huge, 2, 1 }, width = 3 } },
     { name = "invalid width", stroke = { n = 1, pts = { 1, 2, 1 }, width = -1 } },
+    { name = "invalid text", stroke = { n = 2, pts = {1,2,1,3,4,1}, text = true } },
+    { name = "invalid font size", stroke = { n = 2, pts = {1,2,1,3,4,1}, text = 'label', font_size = math.huge } },
+    { name = "invalid page dimensions", data = {version=1,pages={},page_size={w=0,h=100}} },
+    { name = "invalid PDF background", data = {version=1,pages={{strokes={},background=true}}} },
+    { name = "invalid PDF dimensions", data = {version=1,pages={{strokes={},background={file='/source.pdf',page=1,size={w=0,h=100}}}}} },
 } do
     test("rejecting " .. case.name .. " preserves the open document", function()
         store["/broken"] = case.data or { version = 1, pages = { { strokes = { case.stroke } } } }

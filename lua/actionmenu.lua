@@ -259,6 +259,7 @@ function ActionMenu:init()
             selected = actionIsSelected(item),
             width = pair and math.floor(width / 2) or width,
             callback = function()
+                if self.close_on_select then UIManager:close(self);item.callback();return end
                 item.callback()
                 self:_refreshRows()
             end,

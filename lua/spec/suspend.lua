@@ -96,6 +96,14 @@ for _,zoom in ipairs({1,2}) do
     assert(not c.zoom_stroke and not c.stroke and not c.pen_down)
     assert(not timers[c.reconcile_cb] and not c.reconcile_full,'resume queued a redundant cleanup flash')
 end
+-- A notebook retained below Home must never paint its toolbar over Home.
+local old_top=UI.getTopmostVisibleWidget
+UI.getTopmostVisibleWidget=function() return {covers_fullscreen=true} end
+local paints=toolbar_paints
+nb.clock_tick();nb:_refreshToolbar()
+assert(toolbar_paints==paints,'hidden notebook painted toolbar over Home')
+assert(timers[nb.clock_tick],'hidden clock lost scheduling')
+UI.getTopmostVisibleWidget=old_top
 -- A queued unlock must never reattach input after closing the notebook.
 nb:onSuspend();nb:onOutOfScreenSaver();local unlock=nb.resume_cb
 nb:onCloseWidget();assert(not timers[unlock] and Device.input.stylus_callback==prior)

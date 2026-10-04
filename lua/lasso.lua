@@ -70,6 +70,12 @@ local function strokeSelected(stroke, poly_pts, bounds)
         return false
     end
 
+    if stroke.image_data then
+        for _,point in ipairs(poly_pts) do
+            if point.x>=stroke.x_min and point.x<=stroke.x_max
+                and point.y>=stroke.y_min and point.y<=stroke.y_max then return true end
+        end
+    end
     if stroke.tool == "highlighter" and stroke.filled then
         for _,point in ipairs(poly_pts) do
             if stroke:hitTest(point.x,point.y,0) then return true end

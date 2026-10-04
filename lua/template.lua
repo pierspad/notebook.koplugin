@@ -144,11 +144,14 @@ worth of ruling for each of those would make a sweep crawl.
 Redrawing is idempotent -- the same pixels land in the same places -- so a caller
 that draws a little more than it strictly needs is correct, only slower.
 --]]
-function Template.draw(bb, id, area, scale, clip)
+function Template.draw(bb, id, area, scale, clip, options)
     if not id or id == "blank" or not BY_ID[id] then return end
     scale = scale or 1
 
-    local step = SPACING[id] * MM * scale
+    options = require("paperoptions").normalize(options)
+    local line_ink = options and options.gray and Blitbuffer.Color8(options.gray) or LINE_INK
+    local dot_ink = options and options.gray and Blitbuffer.Color8(options.gray) or DOT_INK
+    local step = (options and options.spacing or SPACING[id]) * MM * scale
     if step < 3 then
         -- Below this the ruling closes up into a solid tone that reads as a
         -- grubby page rather than as lines. A very small thumbnail is better
@@ -179,7 +182,7 @@ function Template.draw(bb, id, area, scale, clip)
                 local x = x0
                 while x <= x0 + w do
                     paint(bb, math.floor(x - r / 2), math.floor(y - r / 2),
-                        r, r, nil, DOT_INK)
+                        r, r, nil, dot_ink)
                     x = x + step
                 end
                 y = y + step
@@ -204,7 +207,7 @@ function Template.draw(bb, id, area, scale, clip)
                     local px = math.floor(x - r / 2)
                     if px >= right then break end
                     if px + r > left then
-                        paint(bb, px, py, r, r, clip, DOT_INK)
+                        paint(bb, px, py, r, r, clip, dot_ink)
                     end
                     x = x + step
                 end
@@ -218,7 +221,7 @@ function Template.draw(bb, id, area, scale, clip)
     -- they put on each line.
     local y = y0
     while y <= y0 + h do
-        paint(bb, x0, math.floor(y), w, thickness, clip, LINE_INK)
+        paint(bb, x0, math.floor(y), w, thickness, clip, line_ink)
         if id == "checklist" then
             -- A box sitting on the line, at its left end: the thing that turns
             -- ruled paper into a list you tick off.
@@ -228,7 +231,7 @@ function Template.draw(bb, id, area, scale, clip)
                 -- it looked stuck to the border of whatever was drawing it, and
                 -- on paper a checkbox has a margin in front of it too.
                 paintBox(bb, x0 + math.floor(box * 0.4),
-                    math.floor(y - box - thickness), box, thickness, clip, LINE_INK)
+                    math.floor(y - box - thickness), box, thickness, clip, line_ink)
             end
         end
         y = y + step
@@ -237,7 +240,7 @@ function Template.draw(bb, id, area, scale, clip)
     if id == "grid" then
         local x = x0
         while x <= x0 + w do
-            paint(bb, math.floor(x), y0, thickness, h, clip, LINE_INK)
+            paint(bb, math.floor(x), y0, thickness, h, clip, line_ink)
             x = x + step
         end
     end

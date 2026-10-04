@@ -19,33 +19,46 @@ function PDF.count(path)
     return count
 end
 
--- Opens a PDF once and returns both its page count and the dimensions of every
--- page in PDF points. Import used to open it once for the count and XOPP had
--- to guess every page was shaped like the Scribe panel.
-function PDF.inspect(path)
-    local doc = require("ffi/mupdf").openDocument(path)
-    if doc:needsPassword() then doc:close(); error("Password-protected PDF") end
-    local count=doc:getPages()
-    local sizes={}
-    local dc=require("ffi/drawcontext").new()
-    for i=1,count do
-        local page=doc:openPage(i)
-        local w,h=page:getSize(dc)
-        sizes[i]={w=w,h=h}
-        page:close()
-    end
-    doc:close()
-    return count,sizes
+-- Always release metadata handles, including native exceptions from malformed PDFs.
+local function withDocument(path,read)
+    local doc=require("ffi/mupdf").openDocument(path)
+    local ok,a,b=pcall(function()
+        if doc:needsPassword() then error("Password-protected PDF") end
+        return read(doc)
+    end)
+    local closed,close_err=pcall(doc.close,doc)
+    if not ok then error(a,0) end
+    if not closed then error(close_err,0) end
+    return a,b
+end
+local function pageSize(doc,number)
+    local page=doc:openPage(number)
+    local ok,w,h=pcall(function()
+        local width,height=page:getSize(require("ffi/drawcontext").new())
+        assert(type(width)=="number" and type(height)=="number"
+            and width>0 and height>0 and width<math.huge and height<math.huge,"Invalid PDF page dimensions")
+        return width,height
+    end)
+    local closed,close_err=pcall(page.close,page)
+    if not ok then error(w,0) end
+    if not closed then error(close_err,0) end
+    return w,h
 end
 
+-- Opens the PDF once for its count and all native page dimensions.
+function PDF.inspect(path)
+    return withDocument(path,function(doc)
+        local count=doc:getPages()
+        local sizes={}
+        for i=1,count do
+            local w,h=pageSize(doc,i)
+            sizes[i]={w=w,h=h}
+        end
+        return count,sizes
+    end)
+end
 function PDF.size(path,page_number)
-    local doc = require("ffi/mupdf").openDocument(path)
-    if doc:needsPassword() then doc:close(); error("Password-protected PDF") end
-    local page=doc:openPage(page_number)
-    local dc=require("ffi/drawcontext").new()
-    local w,h=page:getSize(dc)
-    page:close(); doc:close()
-    return w,h
+    return withDocument(path,function(doc) return pageSize(doc,page_number) end)
 end
 
 function PDF.draw(bb, background, area, clip)

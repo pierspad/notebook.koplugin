@@ -617,3 +617,62 @@ msgstr "Неправильний діапазон сторінок. Укажіт
 
 #~ msgid "White background"
 #~ msgstr "Білий фон"
+
+msgid "No other recent notebooks."
+msgstr "Інших нещодавніх блокнотів немає."
+
+msgid "Recent notebooks"
+msgstr "Нещодавні блокноти"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "Журнал введення увімкнено. Відтворіть проблему на тестовій сторінці, зупиніть журнал і додайте:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Журнал введення зупинено. Наявні файли збережено."
+
+msgid "Spacing"
+msgstr "Інтервал"
+
+msgid "Light"
+msgstr "Світлий"
+
+msgid "Medium"
+msgstr "Середній"
+
+msgid "Dark"
+msgstr "Темний"
+
+msgid "Ruling tone"
+msgstr "Відтінок ліній"
+
+msgid "Default paper settings"
+msgstr "Типові налаштування паперу"
+
+msgid "Paper spacing and tone"
+msgstr "Інтервал і відтінок паперу"
+
+msgid "Open PDF"
+msgstr "Відкрити PDF"
+
+msgid "Open another notebook"
+msgstr "Відкрити інший блокнот"
+
+msgid "Insert image"
+msgstr "Вставити зображення"
+
+msgid "Tool settings"
+msgstr "Налаштування інструментів"
+
+msgid "Stop input log"
+msgstr "Зупинити журнал введення"
+
+msgid "Start input log"
+msgstr "Увімкнути журнал введення"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Виберіть зображення PNG або JPEG розміром до 4 МБ і 8 мегапікселів."
+
+msgid "Could not open this image."
+msgstr "Не вдалося відкрити це зображення."

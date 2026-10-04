@@ -97,13 +97,25 @@ also run `make package` to build their own installable ZIP in `build/`.
   - Insert editable on-page text with **Sans-serif**, **Serif**, or **Monospace** font families.
   - Typography styles: **Bold**, **Italic**, **Underline**, and **White** or **Transparent** background.
   - 10–96 pt font size selector with −/+ stepper buttons and live sample preview.
-- **Hardware Stylus Integration**: Direct digitizer event processing, palm rejection, and configurable stylus barrel button (toggle highlighter or eraser).
+- **Hardware Stylus Integration**: Direct digitizer event processing, palm rejection, and configurable stylus barrel button (toggle highlighter, eraser or lasso).
 - **Multi-page Notebooks & Paper Templates**:
   - Multi-page management with visual thumbnail gallery and reordering.
   - Built-in paper templates: Blank, Lined, Narrow lined, Grid, Dot grid, Checklist, and custom PDF page backgrounds.
 - **Export & Sync**: PDF export using the page renderer, vector SVG ink, and editable Xournal++ (`.xopp`) export, with optional wireless file transfer via LocalSend.
 
 Hold or double-tap any tool button to open its options popover. After cutting or copying, use the Paste button in the top bar.
+
+### Daily notebook actions
+
+Open the settings button to create a notebook, import a PDF, open the library or
+switch to one of the eight most recent notebooks. The current notebook is saved
+automatically before switching; a failed save leaves it open.
+
+The same menu offers paper spacing and ruling tone, and **Insert image** for
+PNG/JPEG files. Images are embedded in the notebook: the original file is no
+longer needed. Use the lasso to move, resize, duplicate or delete an image; the
+eraser affects ink. Images are included in PDF, SVG and XOPP exports. Imports
+are limited to 4 MiB and 8 megapixels per image.
 
 ### Custom icons
 
@@ -146,11 +158,24 @@ using the stylus or sleeping. Redo remains available from the toolbar.
 
 ### Input debug log
 
-To capture a device-specific pen problem, create a new notebook named `_debug_` in the Notebook gallery (or create an empty file named `_debug_` inside `koreader/notebook/`).
+To capture a device-specific pen problem, open the notebook settings menu and
+select **Start input log**. Reproduce the problem on a test page, then select
+**Stop input log** and attach `koreader/notebook/notebook-debug.log`.
+
+Alternatively, create a new notebook named `_debug_` in the Notebook gallery (or create an empty file named `_debug_` inside `koreader/notebook/`).
 Then open the `_debug_` notebook, reproduce the problem, and send `koreader/notebook/notebook-debug.log` with your device model and firmware version.
-The log records raw and screen coordinates, selected tools, touch events, and rotation, plus the stylus button and physical tool flags; it does not contain notebook pages or handwriting content. The log rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too.
+The log records raw and screen coordinates, selected tools, touch events, and rotation, plus the stylus button and physical tool flags. It does not embed notebook files or page images, but coordinates can describe your pen movements: reproduce the problem on a non-sensitive test page. The log rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too.
 Together the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_` marker file) and reopen Notebook to stop logging.
 You can then delete both log files.
+
+If the problem only occurs in an existing notebook, use the empty `_debug_` marker file and reopen that notebook before reproducing it.
+For a plugin error/shutdown, also attach `koreader/notebook/.logs/notebook-error.log` if present. For a KOReader crash, include `koreader/crash.log` if available. Logs can be attached as a ZIP.
+
+### Reporting a bug
+
+Use the **Bug report** form when opening an issue. Include your device model, firmware/OS, jailbreak and hotfix versions (or "not applicable"), exact KOReader and Notebook versions, installation source, stylus model, and other enabled plugins/launcher.
+Describe the steps, expected/actual behavior, and frequency. For drawing problems, include orientation, zoom, tool, and whether the issue starts during hover, contact, or lift. For suspend/resume problems, include sleep duration and how you locked/unlocked the device.
+If a version is unknown, say so; logs are helpful but not required to report a bug.
 
 > [!TIP]
 > You can also place Notebook directly on KOReader's bottom navigation bar using [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) (Custom quick actions → Plugin → Notebook, icon `F405`).
@@ -160,6 +185,8 @@ You can then delete both log files.
 ## Performance and maintenance checks
 
 Run `make verify` for correctness, lint, translations and benchmark comparison tests.
+Run `make test-native-features` with a built sibling KOReader runtime to check
+menus, icons, embedded images and exports at three screen sizes.
 Run `make benchmark BENCH_ARGS='--extended --jit both'` for native offscreen timings.
 The runner supports isolated Kindle SSH runs and CPU, wall-time and retained-heap
 regression limits; see the [current maintenance audit](docs/audits/2026-10-01-maintenance-current.md)

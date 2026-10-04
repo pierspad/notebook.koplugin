@@ -616,3 +616,62 @@ msgstr "पृष्ठ सीमा अमान्य है। अल्प�
 
 #~ msgid "White background"
 #~ msgstr "सफ़ेद पृष्ठभूमि"
+
+msgid "No other recent notebooks."
+msgstr "कोई अन्य हाल की नोटबुक नहीं है।"
+
+msgid "Recent notebooks"
+msgstr "हाल की नोटबुक"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "इनपुट लॉग चालू है। परीक्षण पृष्ठ पर समस्या दोहराएँ, फिर लॉग रोकें और यह फ़ाइल संलग्न करें:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "इनपुट लॉग रोक दिया गया है। मौजूदा लॉग फ़ाइलें सुरक्षित रखी गई हैं।"
+
+msgid "Spacing"
+msgstr "दूरी"
+
+msgid "Light"
+msgstr "हल्का"
+
+msgid "Medium"
+msgstr "मध्यम"
+
+msgid "Dark"
+msgstr "गहरा"
+
+msgid "Ruling tone"
+msgstr "रेखाओं का रंग"
+
+msgid "Default paper settings"
+msgstr "काग़ज़ की डिफ़ॉल्ट सेटिंग"
+
+msgid "Paper spacing and tone"
+msgstr "काग़ज़ की दूरी और रंग की गहराई"
+
+msgid "Open PDF"
+msgstr "PDF खोलें"
+
+msgid "Open another notebook"
+msgstr "दूसरी नोटबुक खोलें"
+
+msgid "Insert image"
+msgstr "चित्र जोड़ें"
+
+msgid "Tool settings"
+msgstr "औज़ारों की सेटिंग"
+
+msgid "Stop input log"
+msgstr "इनपुट लॉग रोकें"
+
+msgid "Start input log"
+msgstr "इनपुट लॉग शुरू करें"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "4 MB और 8 मेगापिक्सेल तक का PNG या JPEG चित्र चुनें।"
+
+msgid "Could not open this image."
+msgstr "यह चित्र नहीं खोला जा सका।"

@@ -595,3 +595,62 @@ msgstr ""
 
 msgid "Invalid page range. Use page numbers or ranges separated by commas."
 msgstr ""
+
+msgid "No other recent notebooks."
+msgstr ""
+
+msgid "Recent notebooks"
+msgstr ""
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr ""
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr ""
+
+msgid "Spacing"
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "Medium"
+msgstr ""
+
+msgid "Dark"
+msgstr ""
+
+msgid "Ruling tone"
+msgstr ""
+
+msgid "Default paper settings"
+msgstr ""
+
+msgid "Paper spacing and tone"
+msgstr ""
+
+msgid "Open PDF"
+msgstr ""
+
+msgid "Open another notebook"
+msgstr ""
+
+msgid "Insert image"
+msgstr ""
+
+msgid "Tool settings"
+msgstr ""
+
+msgid "Stop input log"
+msgstr ""
+
+msgid "Start input log"
+msgstr ""
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr ""
+
+msgid "Could not open this image."
+msgstr ""

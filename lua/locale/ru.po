@@ -617,3 +617,62 @@ msgstr "Неверный диапазон страниц. Укажите ном�
 
 #~ msgid "White background"
 #~ msgstr "Белый фон"
+
+msgid "No other recent notebooks."
+msgstr "Других недавних блокнотов нет."
+
+msgid "Recent notebooks"
+msgstr "Недавние блокноты"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "Журнал ввода включён. Воспроизведите проблему на тестовой странице, остановите журнал и приложите:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Журнал ввода остановлен. Существующие файлы сохранены."
+
+msgid "Spacing"
+msgstr "Интервал"
+
+msgid "Light"
+msgstr "Светлый"
+
+msgid "Medium"
+msgstr "Средний"
+
+msgid "Dark"
+msgstr "Тёмный"
+
+msgid "Ruling tone"
+msgstr "Оттенок линий"
+
+msgid "Default paper settings"
+msgstr "Настройки бумаги по умолчанию"
+
+msgid "Paper spacing and tone"
+msgstr "Интервал и оттенок бумаги"
+
+msgid "Open PDF"
+msgstr "Открыть PDF"
+
+msgid "Open another notebook"
+msgstr "Открыть другой блокнот"
+
+msgid "Insert image"
+msgstr "Вставить изображение"
+
+msgid "Tool settings"
+msgstr "Настройки инструментов"
+
+msgid "Stop input log"
+msgstr "Остановить журнал ввода"
+
+msgid "Start input log"
+msgstr "Включить журнал ввода"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Выберите изображение PNG или JPEG размером до 4 МБ и 8 мегапикселей."
+
+msgid "Could not open this image."
+msgstr "Не удалось открыть это изображение."

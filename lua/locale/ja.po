@@ -618,3 +618,62 @@ msgstr "ページ範囲が無効です。ページ番号または範囲をコン
 
 #~ msgid "White background"
 #~ msgstr "白い背景"
+
+msgid "No other recent notebooks."
+msgstr "他の最近使ったノートはありません。"
+
+msgid "Recent notebooks"
+msgstr "最近使ったノート"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "入力ログを記録中です。テストページで問題を再現し、ログを停止して次のファイルを添付してください："
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "入力ログを停止しました。既存のログファイルは保持されています。"
+
+msgid "Spacing"
+msgstr "間隔"
+
+msgid "Light"
+msgstr "薄い"
+
+msgid "Medium"
+msgstr "中間"
+
+msgid "Dark"
+msgstr "濃い"
+
+msgid "Ruling tone"
+msgstr "罫線の濃さ"
+
+msgid "Default paper settings"
+msgstr "用紙設定を初期値に戻す"
+
+msgid "Paper spacing and tone"
+msgstr "用紙の間隔と濃さ"
+
+msgid "Open PDF"
+msgstr "PDFを開く"
+
+msgid "Open another notebook"
+msgstr "別のノートを開く"
+
+msgid "Insert image"
+msgstr "画像を挿入"
+
+msgid "Tool settings"
+msgstr "ツール設定"
+
+msgid "Stop input log"
+msgstr "入力ログを停止"
+
+msgid "Start input log"
+msgstr "入力ログを開始"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "4 MB、800万画素以下のPNGまたはJPEG画像を選んでください。"
+
+msgid "Could not open this image."
+msgstr "この画像を開けませんでした。"

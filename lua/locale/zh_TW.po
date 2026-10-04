@@ -616,3 +616,62 @@ msgstr "頁碼範圍無效。請用逗號分隔頁碼或範圍。"
 
 #~ msgid "White background"
 #~ msgstr "白色背景"
+
+msgid "No other recent notebooks."
+msgstr "沒有其他最近使用的筆記本。"
+
+msgid "Recent notebooks"
+msgstr "最近使用的筆記本"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "正在記錄輸入日誌。請在測試頁面重現問題，然後停止記錄並附上："
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "輸入日誌已停止。現有日誌檔案已保留。"
+
+msgid "Spacing"
+msgstr "間距"
+
+msgid "Light"
+msgstr "淺"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "Dark"
+msgstr "深"
+
+msgid "Ruling tone"
+msgstr "線條深淺"
+
+msgid "Default paper settings"
+msgstr "預設紙張設定"
+
+msgid "Paper spacing and tone"
+msgstr "紙張間距和深淺"
+
+msgid "Open PDF"
+msgstr "開啟 PDF"
+
+msgid "Open another notebook"
+msgstr "開啟其他筆記本"
+
+msgid "Insert image"
+msgstr "插入圖片"
+
+msgid "Tool settings"
+msgstr "工具設定"
+
+msgid "Stop input log"
+msgstr "停止記錄輸入日誌"
+
+msgid "Start input log"
+msgstr "開始記錄輸入日誌"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "請選擇不超過 4 MB 和 800 萬畫素的 PNG 或 JPEG 圖片。"
+
+msgid "Could not open this image."
+msgstr "無法開啟此圖片。"

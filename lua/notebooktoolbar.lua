@@ -93,6 +93,15 @@ function ToolButton:onDoubleTap()
     return true
 end
 
+function ToolButton:setIcon(name)
+    if self.icon==name then return end
+    self.icon=name
+    self.icon_normal:free();self.icon_inverted:free()
+    self.icon_normal=IconWidget:new{icon=name,width=self.icon_size,height=self.icon_size,invert=false}
+    self.icon_inverted=IconWidget:new{icon=name,width=self.icon_size,height=self.icon_size,invert=true}
+    self.holder[1]=self.selected and self.icon_inverted or self.icon_normal
+end
+
 function ToolButton:setSelected(selected)
     if self.selected == selected then return false end
     self.selected = selected

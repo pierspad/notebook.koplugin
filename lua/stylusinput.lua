@@ -181,7 +181,7 @@ function StylusInput:onStylusEvent(slot)
             self:_beginShape(x, y, shape)
             return true
         end
-        if shape and shape.text and self.selection_bbox then
+        if shape and (shape.text or shape.image_data) and self.selection_bbox then
             local b=self.selection_bbox
             if x>=b.x-25 and x<=b.x+b.w+25 and y>=b.y-25 and y<=b.y+b.h+25 then
                 self.dragging_selection=true

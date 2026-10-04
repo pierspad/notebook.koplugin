@@ -10,7 +10,14 @@ local Lifecycle = {
 }
 
 function Lifecycle:_isDisplayPaused()
-    return self.suspended or self.display_overlay or Device.screen_saver_mode or Device.screen_saver_lock
+    if self.suspended or self.display_overlay or Device.screen_saver_mode or Device.screen_saver_lock then
+        return true
+    end
+    -- Direct framebuffer painters must also respect screens covering us.
+    -- Ignore a nil top widget during construction and isolated rendering.
+    local top = UIManager:getTopmostVisibleWidget()
+    return self.owner and top and top ~= self.owner and top ~= self.lasso_menu
+        and top.covers_fullscreen or false
 end
 
 function Lifecycle:_unscheduleCanvasCallbacks()
@@ -43,6 +50,8 @@ function Lifecycle:resume()
 end
 
 function Lifecycle:_resolveDebugLogPath()
+    local diagnostics=require("diagnostics")
+    if diagnostics.enabled~=nil then return diagnostics.enabled and diagnostics.path() or nil end
     local debug_root = DataStorage:getDataDir() .. "/notebook"
     if self.document and self.document.path then
         local p = self.document.path:lower()
@@ -89,6 +98,7 @@ function Lifecycle:stop()
     self:_endStroke()
     self:_endShapeTransform()
     require("textcache").clear()
+    require("imageobject").clear()
     require("pdfbackground").clear()
     if self.background_cache then self.background_cache:free(); self.background_cache=nil end
     self.background_cache_key=nil

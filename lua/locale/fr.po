@@ -619,3 +619,62 @@ msgstr "Plage de pages incorrecte. Utilisez des numéros ou des plages séparés
 
 #~ msgid "White background"
 #~ msgstr "Arrière-plan blanc"
+
+msgid "No other recent notebooks."
+msgstr "Aucun autre carnet récent."
+
+msgid "Recent notebooks"
+msgstr "Carnets récents"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "Le journal de saisie est actif. Reproduisez le problème sur une page de test, puis arrêtez le journal et joignez :"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Journal de saisie arrêté. Les fichiers existants ont été conservés."
+
+msgid "Spacing"
+msgstr "Espacement"
+
+msgid "Light"
+msgstr "Clair"
+
+msgid "Medium"
+msgstr "Moyen"
+
+msgid "Dark"
+msgstr "Foncé"
+
+msgid "Ruling tone"
+msgstr "Teinte des lignes"
+
+msgid "Default paper settings"
+msgstr "Réglages du papier par défaut"
+
+msgid "Paper spacing and tone"
+msgstr "Espacement et teinte du papier"
+
+msgid "Open PDF"
+msgstr "Ouvrir un PDF"
+
+msgid "Open another notebook"
+msgstr "Ouvrir un autre carnet"
+
+msgid "Insert image"
+msgstr "Insérer une image"
+
+msgid "Tool settings"
+msgstr "Réglages des outils"
+
+msgid "Stop input log"
+msgstr "Arrêter le journal de saisie"
+
+msgid "Start input log"
+msgstr "Démarrer le journal de saisie"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Choisissez une image PNG ou JPEG de 4 Mo et 8 mégapixels maximum."
+
+msgid "Could not open this image."
+msgstr "Impossible d’ouvrir cette image."

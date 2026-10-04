@@ -58,7 +58,7 @@ function CanvasRender:paintTo(bb, x, y)
     if self.zoom > 1 then return self:_renderZoom(bb) end
     local page=self.document:getPage()
     local background=page.background
-    local cache_key=table.concat({tostring(page),self.document:templateFor() or "",
+    local cache_key=table.concat({tostring(page),self.document:templateFor() or "",require("paperoptions").key(self.document.paper_options),
         background and background.file or "",background and background.page or ""},"|")
     -- Two most recently rendered pages bound bitmap memory regardless of
     -- notebook length. Never cache temporary selection/preview pixels.
@@ -134,7 +134,7 @@ out a word written across a ruled line leaves the line untouched.
 function CanvasRender:_drawTemplate(bb, clip)
     local background=self.document:getPage().background
     if background then require("pdfbackground").draw(bb,background,self.content,clip)
-    else Template.draw(bb, self.document:templateFor(), self.content, 1, clip) end
+    else Template.draw(bb, self.document:templateFor(), self.content, 1, clip, self.document.paper_options) end
 end
 
 return CanvasRender

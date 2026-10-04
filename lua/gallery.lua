@@ -44,9 +44,6 @@ local Screen = Device.screen
 
 local COLUMNS = 3
 
--- Proportions of a notebook page, used for the thumbnail area of a card.
-local PAGE_W, PAGE_H = 1860, 2480
-
 local function isExport(item)
     return item.is_export or item.is_pdf or item.is_xopp
 end
@@ -272,90 +269,6 @@ end
 function Gallery:_freeWidgets()
     if self.holder[1] then self.holder[1]:free() end
     if self.footer then self.footer:free() end
-end
-
---[[--
-Draws the pictures this screen is missing, one per tick.
-
-Rendering a thumbnail means loading a whole notebook and rasterising a page of
-it. Doing that while laying out meant the gallery could not appear until every
-notebook on the screen had been read -- seconds of frozen panel on opening a
-folder, with nothing to show that anything was happening. So the cards go up
-immediately with a blank page on them and the pictures follow, one per tick, so
-that taps and swipes are still answered while it happens.
-
-The work is a queue on the gallery rather than a list captured by each run. It
-used to be captured, with a token cancelling the run whenever a new layout
-started -- and a layout starts for all sorts of reasons, including the one this
-very code performs when it finishes. Whatever was left in a cancelled run was
-dropped, which is why some cards kept their blank page while others filled in,
-most visibly right after moving notebooks between folders.
-
-Now a layout adds to the queue and the worker keeps going until it is empty.
-Only leaving the folder, or the gallery, throws the work away -- and then it
-ought to be thrown away.
-
-Each picture is scheduled through `Safe.later`, never `UIManager:nextTick`, and
-the difference is the difference between a slow screen and a dead device.
-`handleInput` runs its tasks and repaints in a loop that only ends once nothing
-more is due, and it reads input *after* that loop -- so a chain of tasks due
-immediately means input is never read at all, for as long as the chain lasts.
-With a folder of large notebooks on a device far slower than the one this was
-written on, that is not a pause: it is a Kindle that has stopped answering, with
-nothing to do but hold the power button. Scheduling a moment ahead instead lets
-the loop settle between pictures, and a tap lands while they are still coming in.
---]]
-function Gallery:_drawThumbnails(missing, w, h)
-    for _, source in ipairs(missing) do
-        if not self.thumb_queued[source] then
-            self.thumb_queued[source] = true
-            table.insert(self.thumb_queue, { source = source, w = w, h = h })
-        end
-    end
-
-    if self.thumb_working or #self.thumb_queue == 0 then return end
-    self.thumb_working = true
-
-    local folder = self.folder
-    local drew = false
-
-    local function step()
-        -- The folder changed, or the gallery is gone: these pictures belong to
-        -- a screen nobody is looking at.
-        if self.folder ~= folder or self.closed then
-            self.thumb_working = false
-            return
-        end
-
-        local job = table.remove(self.thumb_queue, 1)
-        if not job then
-            self.thumb_working = false
-            if drew then
-                self:_layout()
-                self:_repaint()
-            end
-            return
-        end
-
-        -- Off the waiting list as it comes off the queue, not when it was put
-        -- on: the flag is there to stop the same picture being queued twice
-        -- while it waits, not to stop it ever being queued again. Left set, a
-        -- notebook that failed once and was then written in never came back.
-        self.thumb_queued[job.source] = nil
-        self.thumb_tried[job.source] = Thumbnail.stamp(job.source) or true
-        if Thumbnail.get(job.source, job.w, job.h, PAGE_W, PAGE_H) then
-            drew = true
-        end
-        Safe.later("gallery:thumbnail", step)
-    end
-
-    Safe.later("gallery:thumbnail", step)
-end
-
---- Forgets the pictures still waiting to be drawn.
-function Gallery:_cancelThumbnails()
-    self.thumb_queue = {}
-    self.thumb_queued = {}
 end
 
 --[[--
@@ -765,7 +678,7 @@ function Gallery:_importPDF()
             if not ok or count<1 then return self:_error(_("Could not open this PDF.")) end
             G_reader_settings:saveSetting("notebook_pdf_folder",path:match("^(.*)/"))
             local name=Library.uniqueName(path:match("([^/]+)$"):sub(1,-5),self.folder)
-            Library.ensureDir(".pdfs")
+            if not Library.ensureDir(".pdfs") then return self:_error(_("Could not create the notebook folder.")) end
             local source=Library.abs(".pdfs/"..os.time().."-"..name..".pdf")
             local suffix=0
             while lfs.attributes(source) do
@@ -1060,6 +973,7 @@ end
 
 -- Every way the event loop can enter this screen, behind a pcall and a
 -- watchdog; see safe.lua. A fault here closes the notebook plugin, not KOReader.
+require("gallerythumbnails")(Gallery)
 require("galleryexport")(Gallery, isExport, notebooksOnly)
 
 return Safe.widget(Gallery, "gallery")

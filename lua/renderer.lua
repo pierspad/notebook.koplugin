@@ -242,6 +242,7 @@ length rasterised, and stamping is expensive enough that the difference is the
 difference between a rub that keeps up with the hand and one that does not.
 --]]
 function Renderer.drawStroke(bb, stroke, clip, color_enabled)
+    if stroke.image_data then return require("imageobject").draw(bb,stroke,1,0,0,clip) end
     if stroke.text then return require("textobject").draw(bb,stroke,1,0,0,clip) end
     local n = stroke:count()
     if n == 0 then return end
@@ -345,7 +346,9 @@ function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
         local pad = math.ceil(stroke.width * scale) + 2
         if stroke.x_max*scale+ox+pad >= 0 and stroke.y_max*scale+oy+pad >= 0
             and stroke.x_min*scale+ox-pad < clip.w and stroke.y_min*scale+oy-pad < clip.h then
-            if stroke.text then
+            if stroke.image_data then
+                require("imageobject").draw(bb,stroke,scale,ox,oy,clip)
+            elseif stroke.text then
                 require("textobject").draw(bb, stroke, scale, ox, oy, clip)
             else
                 local scaled = {

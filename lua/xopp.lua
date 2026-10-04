@@ -11,45 +11,6 @@ local function xml(value)
         :gsub(">","&gt;"):gsub('"',"&quot;"):gsub("'","&apos;")
 end
 
-local function u32(n)
-    return string.char(n%256,math.floor(n/256)%256,math.floor(n/65536)%256,math.floor(n/16777216)%256)
-end
-
-local crc_table
-local function crc32(data)
-    local bit=require("bit")
-    if not crc_table then
-        crc_table={}
-        for i=0,255 do
-            local value=i
-            for _=1,8 do
-                value=bit.bxor(bit.rshift(value,1),bit.band(value,1)~=0 and 0xedb88320 or 0)
-            end
-            crc_table[i+1]=value
-        end
-    end
-    local crc=0xffffffff
-    for i=1,#data do
-        local index=bit.band(bit.bxor(crc,data:byte(i)),255)+1
-        crc=bit.bxor(bit.rshift(crc,8),crc_table[index])
-    end
-    return bit.band(bit.bnot(crc),0xffffffff)
-end
-
-local function gzip(data)
-    local out={"\31\139\8\0\0\0\0\0\0\255"}
-    local at=1
-    while at<=#data do
-        local n=math.min(65535,#data-at+1)
-        out[#out+1]=string.char(at+n>#data and 1 or 0,n%256,math.floor(n/256),
-            (65535-n)%256,math.floor((65535-n)/256))
-        out[#out+1]=data:sub(at,at+n-1)
-        at=at+n
-    end
-    out[#out+1]=u32(crc32(data)); out[#out+1]=u32(#data)
-    return table.concat(out)
-end
-
 local function templateStyle(id)
     if id=="grid" then return "graph" end
     if id=="lined" or id=="narrow" or id=="checklist" then return "lined" end
@@ -82,22 +43,23 @@ local function pageLayout(doc,page,size)
     return native.w,native.h,1/zoom,-ox-left,-oy-top
 end
 
-function Xopp.toXOPP(doc,path)
+local function documentXML(doc,write)
     local size=doc.page_size or {w=1860,h=2480}
-    local lines={'<?xml version="1.0" standalone="no"?>',
-        '<xournal creator="Notebook for KOReader" fileversion="4">',
-        '<title>Xournal++ document - see https://github.com/xournalpp/xournalpp</title>'}
+    assert(require("documentformat").dimensions(size),"Invalid page dimensions")
+    write('<?xml version="1.0" standalone="no"?>\n')
+    write('<xournal creator="Notebook for KOReader" fileversion="4">\n')
+    write('<title>Xournal++ document - see https://github.com/xournalpp/xournalpp</title>\n')
     local pdf_source
     for index,page in ipairs(doc.pages or {}) do
         local page_w,page_h,scale,dx,dy=pageLayout(doc,page,size)
-        lines[#lines+1]=string.format('<page width="%.3f" height="%.3f">',page_w,page_h)
+        write(string.format('<page width="%.3f" height="%.3f">',page_w,page_h))
         if page.background then
             pdf_source=pdf_source or page.background.file
-            lines[#lines+1]=string.format('<background type="pdf" domain="attach" filename="bg.pdf" pageno="%d"/>',page.background.page or index)
+            write(string.format('<background type="pdf" domain="attach" filename="bg.pdf" pageno="%d"/>',page.background.page or index))
         else
-            lines[#lines+1]=string.format('<background type="solid" color="#ffffffff" style="%s"/>',templateStyle(doc:templateFor(index)))
+            write(string.format('<background type="solid" color="#ffffffff" style="%s"/>',templateStyle(doc:templateFor(index))))
         end
-        lines[#lines+1]='<layer>'
+        write('<layer>')
         local export_strokes={}
         for _,original in ipairs(page.strokes) do
             if original.marker_parts then
@@ -108,11 +70,16 @@ function Xopp.toXOPP(doc,path)
             else export_strokes[#export_strokes+1]=original end
         end
         for _,stroke in ipairs(export_strokes) do
-            if stroke.text then
+            if stroke.image_data then
+                write(string.format('<image left="%.3f" top="%.3f" right="%.3f" bottom="%.3f">',
+                    (stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,(stroke.x_max+dx)*scale,(stroke.y_max+dy)*scale))
+                require("imagecodec").base64(stroke.image_data,write)
+                write('</image>')
+            elseif stroke.text then
                 local family=stroke.font_family=="serif" and "Serif"
                     or (stroke.font_family=="mono" and "Monospace" or "Sans")
-                lines[#lines+1]=string.format('<text font="%s" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
-                    family,stroke.font_size*scale,(stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,xml(stroke.text))
+                write(string.format('<text font="%s" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
+                    family,(stroke.font_size or 24)*scale,(stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,xml(stroke.text)))
             elseif stroke.n>0 then
                 local points={}
                 local pressure=0
@@ -130,48 +97,30 @@ function Xopp.toXOPP(doc,path)
                     width=0.001
                     fill=' fill="255"'
                 end
-                lines[#lines+1]=string.format('<stroke tool="%s" color="%s" width="%.3f"%s>%s</stroke>',
-                    stroke.tool=="highlighter" and "highlighter" or "pen",gray,width,fill,table.concat(points," "))
+                write(string.format('<stroke tool="%s" color="%s" width="%.3f"%s>%s</stroke>',
+                    stroke.tool=="highlighter" and "highlighter" or "pen",gray,width,fill,table.concat(points," ")))
             end
         end
-        lines[#lines+1]='</layer></page>'
+        write('</layer></page>')
     end
-    lines[#lines+1]='</xournal>'
+    write('</xournal>')
+    return pdf_source
+end
+
+function Xopp.toXOPP(doc,path)
+    if type(doc)~="table" or type(doc.pages)~="table" or #doc.pages==0 then return false,"document has no pages" end
+    if type(path)~="string" or path=="" then return false,"no output path" end
     local temporary=path..".tmp"
     local file,err=io.open(temporary,"wb")
     if not file then return false,err end
-    local ok,write_err=file:write(gzip(table.concat(lines,"\n")))
+    local ok,pdf_source=pcall(function()
+        local stream=require("gzipwriter").new(function(data) assert(file:write(data)) end)
+        local source=documentXML(doc,function(data) stream:write(data) end)
+        stream:finish()
+        return source
+    end)
     local closed,close_err=file:close()
-    if not ok or not closed then os.remove(temporary); return false,write_err or close_err end
-    ok,write_err=os.rename(temporary,path)
-    if not ok then os.remove(temporary); return false,write_err end
-    if pdf_source then
-        local source=io.open(pdf_source,"rb")
-        local background=Xopp.backgroundPath(path)
-        local background_tmp=background..".tmp"
-        local target=source and io.open(background_tmp,"wb")
-        if not target then if source then source:close() end; os.remove(path); return false,"cannot copy PDF background" end
-        while true do
-            local chunk,read_err=source:read(65536)
-            if read_err then ok,write_err=false,read_err; break end
-            if not chunk then break end
-            ok,write_err=target:write(chunk)
-            if not ok then break end
-        end
-        local source_closed,source_err=source:close()
-        if not source_closed then ok,write_err=false,write_err or source_err end
-        closed,close_err=target:close()
-        if not ok or not closed then
-            os.remove(background_tmp); os.remove(path)
-            return false,write_err or close_err or "cannot copy PDF background"
-        end
-        ok,write_err=os.rename(background_tmp,background)
-        if not ok then
-            os.remove(background_tmp); os.remove(path)
-            return false,write_err or "cannot finish PDF background"
-        end
-    end
-    return true,pdf_source and Xopp.backgroundPath(path) or nil
+    if not ok or not closed then os.remove(temporary);return false,not ok and pdf_source or close_err end
+    return require("xoppfiles").commit(path,pdf_source)
 end
-
 return Xopp

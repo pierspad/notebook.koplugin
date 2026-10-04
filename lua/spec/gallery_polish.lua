@@ -34,3 +34,29 @@ g:_askName('New folder', '', function() end, {'Work','Personal'})
 local dialog = rec.shown[#rec.shown]
 assert(#dialog.buttons == 2, 'presets share the custom name dialog')
 print('gallery polish passed')
+-- Navigate before the old thumbnail tick fires: the new folder must get a worker.
+local Safe,Thumbnail=require('safe'),require('thumbnail')
+local old_later,old_get=Safe.later,Thumbnail.get
+local callbacks,rendered={},{}
+Safe.later=function(_,fn) callbacks[#callbacks+1]=fn end
+Thumbnail.get=function(source) rendered[#rendered+1]=source;return true end
+g.folder='old';g.thumb_working=false;g.thumb_queue={};g.thumb_queued={}
+g:_drawThumbnails({'old.scribe'},100,120)
+g._rebuild=function(self) self:_drawThumbnails({self.folder..'.scribe'},100,120) end
+g:_goTo('new')
+local limit=0
+while #callbacks>0 do
+    limit=limit+1;assert(limit<20,'thumbnail worker did not settle')
+    table.remove(callbacks,1)()
+end
+assert(#rendered==1 and rendered[1]=='new.scribe','folder switch stranded new thumbnails or rendered stale work')
+assert(not g.thumb_working and #g.thumb_queue==0,'thumbnail worker retained pending state')
+rendered={}
+g:_goTo('one');g:_goTo('two');g:_goTo('one')
+while #callbacks>0 do table.remove(callbacks,1)() end
+assert(#rendered==1 and rendered[1]=='one.scribe','returning to the original folder revived stale workers')
+g:_goTo('closed');g:onCloseWidget()
+while #callbacks>0 do table.remove(callbacks,1)() end
+assert(#rendered==1 and not g.thumb_working,'closing the gallery rendered pending thumbnails')
+Safe.later,Thumbnail.get=old_later,old_get
+print('gallery thumbnails: rapid folder switches, return navigation and close cancel stale work')

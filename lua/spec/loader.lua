@@ -6,6 +6,8 @@ package.loaded.canvas = stale
 package.loaded.document = stale
 for _,name in ipairs({'raster','textdialog','textsizepicker','notebooktoolbar','notebooksettings','galleryexport','canvasrefresh','liveink','geometryink','penpressure','polygonink','textcache','textpreview',
     'documentstorage','documenthistory','gallerycard','galleryheader','pluginicons','pageselection','exportpagesdialog','updater','updatetransport','updatepolicy','updateinstaller',
+    'documentformat','gzipwriter','xoppfiles','gallerythumbnails',
+    'imagecodec','imageobject','recents','diagnostics','notebookactions','paperoptions',
     'markerarea','highlightink','zoomcache','zoomcanvas','zoomrefresh','canvaslifecycle','shapecanvas','canvasrender','notebooktext'}) do
     package.loaded[name]=stale
 end
@@ -24,6 +26,9 @@ assert(load('raster')~=stale and package.loaded.raster==stale)
 assert(load('geometryink')~=stale and load('textpreview')~=stale)
 assert(package.loaded.geometryink==stale, 'private module overwrote another plugin')
 assert(load("device") == require("device"))
+assert(load('documentformat')~=stale and load('gzipwriter')~=stale and load('xoppfiles')~=stale)
+assert(load('imagecodec')~=stale and package.loaded.imagecodec==stale)
+assert(load('imageobject').base64('foo')=='Zm9v','private image codec unavailable')
 local marker=load('stroke'):new{tool='highlighter',width=24,tint=160}
 marker:addPoint(10,30);marker:addPoint(100,30)
 assert(marker:splitAlongPath({50,20,50,20},5),'private marker area module unavailable')

@@ -2,6 +2,15 @@ package.path='./?.lua;./spec/?.lua;'..package.path
 local support=require('support'); support.installStubs()
 local Stroke=require('stroke')
 local Xopp=require('xopp')
+local invalid_path=os.tmpname()
+local previous=assert(io.open(invalid_path,'wb'));previous:write('previous export');previous:close()
+local invalid={pages={{strokes={}}},page_size={w=math.huge,h=100},templateFor=function() return 'blank' end}
+assert(not Xopp.toXOPP(invalid,invalid_path),'nonfinite page dimensions exported')
+previous=assert(io.open(invalid_path,'rb'));assert(previous:read('*a')=='previous export');previous:close()
+os.remove(invalid_path)
+local function temporary()
+    local path=os.tmpname();os.remove(path);return path..'.xopp'
+end
 local text=Stroke:new{tool='text',shape_kind='text',text='A < B & C',font_size=26,
     font_family='mono',text_bold=true,text_italic=true,text_underline=true,text_background=true}
 text:addPoint(100,150); text:addPoint(500,210)
@@ -14,7 +23,7 @@ assert(clone.text==text.text and clone.font_size==26 and clone.font_family=='mon
     and clone.text_bold and clone.text_italic and clone.text_underline and clone.text_background,
     'text metadata did not round trip')
 local doc={pages={{strokes={text,ink,marker}}},page_size={w=1000,h=1400},templateFor=function() return 'grid' end}
-local path=os.tmpname()..'.xopp'
+local path=temporary()
 assert(Xopp.toXOPP(doc,path))
 assert(os.execute('gzip -t '..path)==0,'XOPP is not valid gzip')
 local pipe=assert(io.popen('gzip -dc '..path,'r')); local xml=pipe:read('*a'); pipe:close()
@@ -29,14 +38,15 @@ assert(filled_count==2,'XOPP joined marker contours or lost one of them')
 os.remove(path)
 local pdf=os.tmpname()
 local pdf_file=assert(io.open(pdf,'wb')); pdf_file:write('%PDF-test'); pdf_file:close()
-local attached_path=os.tmpname()..'.xopp'
+local attached_path=temporary()
 local overlay=Stroke:new{width=4}; overlay:addPoint(0,200); overlay:addPoint(1000,1200)
 local attached={pages={{strokes={overlay},background={file=pdf,page=1,size={w=600,h=800}}}},
     page_size={w=1000,h=1400},contentOrigin=function() return 0,100 end,
     templateFor=function() return 'blank' end}
 local ok,companion=Xopp.toXOPP(attached,attached_path)
 assert(ok and companion==attached_path..'.bg.pdf','attached PDF companion path is wrong')
-assert(io.open(companion,'rb'):read('*a')=='%PDF-test','attached PDF was not copied')
+local companion_file=assert(io.open(companion,'rb'));local companion_data=companion_file:read('*a');companion_file:close()
+assert(companion_data=='%PDF-test','attached PDF was not copied')
 local attached_pipe=assert(io.popen('gzip -dc '..attached_path,'r'))
 local attached_xml=attached_pipe:read('*a'); attached_pipe:close()
 assert(attached_xml:match('domain="attach" filename="bg.pdf"'),
@@ -52,7 +62,7 @@ local big=Stroke:new{tool='text',shape_kind='text',font_size=24,
     text=string.rep('Caffè < & > " ',12000)}
 big:addPoint(0,0); big:addPoint(500,100)
 local large={pages={{strokes={big}}},templateFor=function() return 'blank' end}
-local large_path=os.tmpname()..'.xopp'
+local large_path=temporary()
 local bit=require('bit')
 local shift, shifts=bit.rshift,0
 bit.rshift=function(...) shifts=shifts+1; return shift(...) end

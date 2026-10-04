@@ -615,3 +615,62 @@ msgstr "页码范围无效。请用逗号分隔页码或范围。"
 
 #~ msgid "White background"
 #~ msgstr "白色背景"
+
+msgid "No other recent notebooks."
+msgstr "没有其他最近使用的笔记本。"
+
+msgid "Recent notebooks"
+msgstr "最近使用的笔记本"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "正在记录输入日志。请在测试页面重现问题，然后停止记录并附上："
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "输入日志已停止。现有日志文件已保留。"
+
+msgid "Spacing"
+msgstr "间距"
+
+msgid "Light"
+msgstr "浅"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "Dark"
+msgstr "深"
+
+msgid "Ruling tone"
+msgstr "线条深浅"
+
+msgid "Default paper settings"
+msgstr "默认纸张设置"
+
+msgid "Paper spacing and tone"
+msgstr "纸张间距和深浅"
+
+msgid "Open PDF"
+msgstr "打开 PDF"
+
+msgid "Open another notebook"
+msgstr "打开其他笔记本"
+
+msgid "Insert image"
+msgstr "插入图片"
+
+msgid "Tool settings"
+msgstr "工具设置"
+
+msgid "Stop input log"
+msgstr "停止记录输入日志"
+
+msgid "Start input log"
+msgstr "开始记录输入日志"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "请选择不超过 4 MB 和 800 万像素的 PNG 或 JPEG 图片。"
+
+msgid "Could not open this image."
+msgstr "无法打开此图片。"

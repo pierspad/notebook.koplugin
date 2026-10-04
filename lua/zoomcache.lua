@@ -64,7 +64,7 @@ end
 function ZoomCache:_drawZoomPaper(bb, area)
     local background=self.document:getPage().background
     if background then require("pdfbackground").draw(bb,background,area)
-    else Template.draw(bb,self.document:templateFor(),area,self.zoom) end
+    else Template.draw(bb,self.document:templateFor(),area,self.zoom,nil,self.document.paper_options) end
 end
 
 -- Page-space dirty bounds from the eraser are repaired in the enlarged cache
@@ -108,7 +108,7 @@ function ZoomCache:_renderZoom(bb, direct)
     local view = bb:viewport(c.x, c.y, c.w, c.h)
     local page = self.document:getPage()
     local background = page.background
-    local key = table.concat({self.document:templateFor() or "", self.zoom,
+    local key = table.concat({self.document:templateFor() or "", require("paperoptions").key(self.document.paper_options), self.zoom,
         c.x,c.y,c.w,c.h, tostring(Screen.isColorEnabled and Screen:isColorEnabled()),
         background and background.file or "", background and background.page or ""}, "|")
     local editing=self.transform_gesture or self.shape_gesture or self.hidden_stroke

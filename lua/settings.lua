@@ -192,15 +192,20 @@ function SettingsDialog:init()
     local function switchRow(key, current, options)
         local row = HorizontalGroup:new{ align = "center" }
         row.choices = {}
-        local cell_w = math.floor((5 * CELL_W + 4 * Size.padding.small
-            - Size.padding.small) / 2)
+        local available=5*CELL_W+4*Size.padding.small-Size.padding.small*(#options-1)
+        local widths,total={},0
+        for i,opt in ipairs(options) do
+            local label=TextWidget:new{text=opt.text,face=Font:getFace("cfont",18)}
+            widths[i]=label:getSize().w+2*Size.padding.button+Screen:scaleBySize(12)
+            label:free();total=total+widths[i]
+        end
         for i, opt in ipairs(options) do
             if i > 1 then
                 table.insert(row, HorizontalSpan:new{ width = Size.padding.small })
             end
             local choice = TextChoice:new{
                 text = opt.text,
-                width = cell_w,
+                width = math.floor(total<=available and widths[i]+(available-total)/#options or available*widths[i]/total),
                 selected = opt.value == current,
                 callback = opt.callback,
             }
@@ -254,7 +259,9 @@ function SettingsDialog:init()
             text = _("Eraser"), value = "eraser",
             callback = function() self:_choose("barrel_button_tool", "eraser") end,
         },
+        {text=_("Lasso"),value="lasso",callback=function() self:_choose("barrel_button_tool","lasso") end},
     }))
+
 
     self.panel = FrameContainer:new{
         background = Blitbuffer.COLOR_WHITE,

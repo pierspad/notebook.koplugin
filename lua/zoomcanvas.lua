@@ -35,6 +35,15 @@ function ZoomCanvas:_endZoomContact()
         self.zoom_stroke = nil
         if stroke:count() > 0 then
             if stroke.tool == "highlighter" then stroke.tint = self.highlighter_color end
+            if stroke.tool=="lasso" then
+                self:_renderZoom(Screen.bb,true)
+                local points={}
+                for i=1,stroke:count() do local x,y=stroke:getPoint(i);points[#points+1]={x=x,y=y} end
+                local selected=require("lasso").findSelectedStrokes(self.document:getPage().strokes,points)
+                self.pen_down=false;self.zoom_point_at=nil
+                if #selected>0 then self:_showLassoMenu(selected) else self:_deselectLasso() end
+                return
+            end
             self.document:addStroke(stroke)
             self:_finishLiveInk(stroke)
             changed, changed_tool = true, stroke.tool
@@ -127,7 +136,7 @@ function ZoomCanvas:_zoomStylus(slot, tool)
         self:_deselectLasso()
     end
     if tool=="shape" then self:_beginShape(px,py); return true end
-    if tool ~= "pen" and tool ~= "highlighter" and tool ~= "eraser" then return false end
+    if tool ~= "pen" and tool ~= "highlighter" and tool ~= "eraser" and tool ~= "lasso" then return false end
     if tool == "eraser" then
         self.shape_snap:cancel()
         if self.zoom_stroke then self:_endZoomContact(); self.pen_down = true end

@@ -621,3 +621,62 @@ msgstr "Ungültiger Seitenbereich. Seitenzahlen oder Bereiche durch Kommas trenn
 
 #~ msgid "White background"
 #~ msgstr "Weißer Hintergrund"
+
+msgid "No other recent notebooks."
+msgstr "Keine weiteren zuletzt geöffneten Notizbücher."
+
+msgid "Recent notebooks"
+msgstr "Zuletzt geöffnete Notizbücher"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "Die Eingabeprotokollierung ist aktiv. Stellen Sie das Problem auf einer Testseite nach, stoppen Sie das Protokoll und hängen Sie diese Datei an:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Eingabeprotokollierung gestoppt. Vorhandene Protokolldateien wurden behalten."
+
+msgid "Spacing"
+msgstr "Abstand"
+
+msgid "Light"
+msgstr "Hell"
+
+msgid "Medium"
+msgstr "Mittel"
+
+msgid "Dark"
+msgstr "Dunkel"
+
+msgid "Ruling tone"
+msgstr "Linienfarbton"
+
+msgid "Default paper settings"
+msgstr "Standard-Papiereinstellungen"
+
+msgid "Paper spacing and tone"
+msgstr "Papierabstand und Farbton"
+
+msgid "Open PDF"
+msgstr "PDF öffnen"
+
+msgid "Open another notebook"
+msgstr "Anderes Notizbuch öffnen"
+
+msgid "Insert image"
+msgstr "Bild einfügen"
+
+msgid "Tool settings"
+msgstr "Werkzeugeinstellungen"
+
+msgid "Stop input log"
+msgstr "Eingabeprotokoll stoppen"
+
+msgid "Start input log"
+msgstr "Eingabeprotokoll starten"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Wählen Sie ein PNG- oder JPEG-Bild mit höchstens 4 MB und 8 Megapixeln."
+
+msgid "Could not open this image."
+msgstr "Dieses Bild konnte nicht geöffnet werden."

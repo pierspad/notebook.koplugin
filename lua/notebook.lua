@@ -53,6 +53,8 @@ local Notebook = InputContainer:extend{
     disable_double_tap = false,
 }
 
+for name, method in pairs(require("notebookactions")) do Notebook[name] = method end
+
 for name, method in pairs(Toolbar) do
     if type(method) == "function" then Notebook[name] = method end
 end

@@ -166,7 +166,8 @@ function Shape.transform(original, handle, x, y, start_x, start_y)
     end
     local result = Stroke:new{tool=original.tool, width=original.width,
         color=original.color, tint=original.tint, shape_kind=original.shape_kind,
-        pen_style=original.pen_style, filled=original.filled}
+        pen_style=original.pen_style, filled=original.filled,
+        image_data=original.image_data,image_mime=original.image_mime}
     local old_w = math.max(1, original.x_max - original.x_min)
     local old_h = math.max(1, original.y_max - original.y_min)
     local c, s = math.cos(angle), math.sin(angle)

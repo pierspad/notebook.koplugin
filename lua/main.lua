@@ -52,6 +52,7 @@ local installIcons = require("pluginicons")
 -- plugin is instantiated once per UI (file manager and reader each get one)
 -- while there is only ever one notebook list.
 local live_gallery = nil
+local live_notebook = nil
 
 local Scribe = require("ui/widget/container/widgetcontainer"):extend{
     name = "notebook",
@@ -111,6 +112,11 @@ function Scribe:openNotebook()
         return
     end
 
+    if live_notebook and not live_notebook.closed then
+        if not live_notebook:_saveForSwitch() then return end
+        UIManager:close(live_notebook,"full")
+    end
+
     -- Ask the Simple UI launcher to keep its bar visible under the gallery.
     -- Done here rather than at startup: its modules only appear in
     -- package.loaded once it has loaded, and plugin order is not ours to pick.
@@ -125,18 +131,23 @@ function Scribe:openNotebook()
     that anything was wrong until a tab that opens the file manager appeared to
     do nothing at all.
     --]]
+    local reopen_folder
     if live_gallery and not live_gallery.closed then
         if UIManager:isWidgetShown(live_gallery) then
-            -- Already the screen you are on. Asking for it again is not a
-            -- reason to have two of it, and showing a widget that is already
-            -- on the stack would put it there a second time.
-            UIManager:setDirty(live_gallery, "ui")
+            if UIManager:getTopmostVisibleWidget() == live_gallery then
+                UIManager:setDirty(live_gallery, "ui")
+                return
+            end
+            -- Shown means present in the stack, including below Home. Dirtying
+            -- a covered widget cannot reveal it. Close and rebuild so launcher
+            -- integration and thumbnail ownership also run their lifecycle.
+            reopen_folder = live_gallery.folder
+            UIManager:close(live_gallery)
+            live_gallery = nil
+        else
+            UIManager:show(live_gallery, "ui")
             return
         end
-        -- Built before but taken off the stack: put it back rather than
-        -- rebuilding it, so it opens on the folder it was left in.
-        UIManager:show(live_gallery, "ui")
-        return
     end
 
     --[[
@@ -155,6 +166,7 @@ function Scribe:openNotebook()
 
     local gallery
     gallery = Gallery:new{
+        folder = reopen_folder,
         on_open = function(name, folder, template)
             self:_openByName(name, folder, gallery, template)
         end,
@@ -175,8 +187,13 @@ function Scribe:openNotebook()
     UIManager:show(gallery, "ui")
 end
 
-function Scribe:_openByName(name, folder, gallery, template)
+function Scribe:_openByName(name, folder, gallery, template, current)
+    current = current or (live_notebook and not live_notebook.closed and live_notebook or nil)
     local path = Library.pathFor(name, folder)
+    -- Reopening the active path must retain its unsaved edits and undo history.
+    if current and current.document.path == path then
+        return current:_saveForSwitch()
+    end
     local doc = Document:new(path)
 
     if lfs.attributes(path, "mode") == "file" then
@@ -203,20 +220,60 @@ function Scribe:_openByName(name, folder, gallery, template)
     -- notebook is painted into the buffer and the screen keeps showing the
     -- gallery. Saying it here, at the one place a notebook is opened, does not
     -- depend on which widget ends up handling the Show event.
-    local notebook = Notebook:new{
+    local notebook
+    notebook = Notebook:new{
         document = doc,
         title = name,
+        on_request = function(_, kind, value)
+            if kind == "recent" then
+                local rel = value:gsub("%.scribe$", "")
+                local target_folder, target_name = rel:match("^(.*)/([^/]+)$")
+                self:_openByName(target_name or rel, target_folder or "", gallery, nil, notebook)
+            elseif kind == "library" then
+                if notebook:_saveForSwitch() then UIManager:close(notebook,"full");self:openNotebook() end
+            else
+                -- Reuse the gallery's creation/import validation without building
+                -- a hidden gallery or taking ownership of its input callbacks.
+                local context = Gallery:extend{
+                    folder=folder or "",
+                    _rebuild=function() end,
+                    _error=function(_,message) UIManager:show(InfoMessage:new{text=message}) end,
+                    on_open=function(next_name,next_folder,paper)
+                        self:_openByName(next_name,next_folder,gallery,paper,notebook)
+                    end,
+                }
+                if kind == "new" then context:_createNotebook()
+                elseif kind == "pdf" then context:_importPDF() end
+            end
+        end,
         -- Coming back should show the new modification time and, for a notebook
         -- that had never been saved before, the notebook itself.
         on_closed = function()
-            if gallery then gallery:_rebuild() end
+            if live_notebook==notebook then live_notebook=nil end
+            if gallery and not gallery.closed then gallery:_rebuild() end
         end,
         -- Flashing, deliberately: what you are about to write on should not
         -- start out carrying the ghosts of the grid that was there a moment
         -- ago, and this is the one moment where half a second buys a clean
         -- page for the whole time you spend on it.
     }
-    if not Safe.failed and not notebook.closed then UIManager:show(notebook, "full") end
+    if Safe.failed or notebook.closed then return false end
+    -- Save newly created notebooks even when their first page is blank.
+    if lfs.attributes(path,"mode") ~= "file" then
+        local saved,err=doc:save()
+        if not saved then
+            UIManager:show(InfoMessage:new{text=_("Could not save the notebook.").."\n"..tostring(err or "")})
+            return false
+        end
+    end
+    if current then
+        if not current:_saveForSwitch() then return false end
+        UIManager:close(current,"full")
+    end
+    live_notebook=notebook
+    UIManager:show(notebook, "full")
+    require("recents").remember(path)
+    return true
 end
 
 return Scribe

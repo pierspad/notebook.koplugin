@@ -1,0 +1,124 @@
+name: Bug report
+description: Report a crash, input problem, or unexpected Notebook behavior.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first. Include exact versions so we can reproduce your setup.
+        Unknown versions are OK: write "unknown"; for fields that do not apply, write "not applicable".
+        Do not attach private notebooks. For pen/palm problems, see the log instructions below.
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: Kindle Scribe 2 (2024), Kobo Elipsa, Linux emulator...
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Device firmware / operating system
+      placeholder: Kindle 5.19.6, Android version, Linux distribution...
+    validations:
+      required: true
+  - type: input
+    id: jailbreak
+    attributes:
+      label: Jailbreak and version
+      description: Include the jailbreak name/version and hotfix version if known. Write "not applicable" on devices that do not need one.
+      placeholder: Vera (version...), hotfix (version...)
+    validations:
+      required: true
+  - type: input
+    id: koreader
+    attributes:
+      label: KOReader version
+      description: Exact release or nightly build, including the build identifier if available.
+      placeholder: v2026.07.1
+    validations:
+      required: true
+  - type: input
+    id: notebook
+    attributes:
+      label: Notebook version and installation source
+      description: Include the version and whether you used a release ZIP, development/test ZIP, or source checkout. Include a commit hash for source builds if known.
+      placeholder: v1.6.3, release ZIP
+    validations:
+      required: true
+  - type: input
+    id: stylus
+    attributes:
+      label: Stylus model
+      description: Write "none" if using a finger or mouse.
+      placeholder: Amazon Premium Pen
+    validations:
+      required: true
+  - type: textarea
+    id: plugins
+    attributes:
+      label: Other plugins and launcher
+      description: List enabled plugins, especially SimpleUI/ZenOS, Pencil, Ink-Away, and Eraser; include versions if known. Say whether Notebook was opened from Tools or a launcher tab.
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - Only once so far
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include what you open, what you tap/draw, and when the problem starts. For wake issues, include sleep duration, cover/power-button use, and the screen visible before sleep.
+      placeholder: |
+        1. Open Notebook from...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include whether a toolbar/dialog appears, whether KOReader still responds, and whether reopening or restarting helps.
+    validations:
+      required: true
+  - type: textarea
+    id: input_context
+    attributes:
+      label: Drawing and document context
+      description: For input/rendering problems, include portrait/landscape, 1x/2x zoom, tool and pen style, finger drawing setting, barrel button/eraser use, and notebook/PDF type. For palm touches, does it happen during hover, while writing, or after lifting the pen?
+  - type: textarea
+    id: regression
+    attributes:
+      label: Previous working version and troubleshooting
+      description: If this is a regression, give the last working version. Describe any tests already performed, including whether the problem occurs in a new empty notebook or with other drawing plugins disabled.
+  - type: markdown
+    attributes:
+      value: |
+        **Logs for pen/palm problems:** create a notebook named `_debug_`, open it, and reproduce the problem briefly.
+        Attach `koreader/notebook/notebook-debug.log` and `notebook-debug.log.1` if it exists.
+        If the problem only happens in an existing notebook, create an empty file named `_debug_` inside `koreader/notebook/`, then reopen that notebook and reproduce it.
+        Delete the `_debug_` notebook/marker and reopen Notebook to stop logging.
+        These logs contain input coordinates and tool/device state. Coordinates can describe your movements; use a non-sensitive test page.
+        **Crashes/plugin shutdowns:** attach `koreader/notebook/.logs/notebook-error.log` if present; for KOReader crashes, also attach `koreader/crash.log` if available.
+        You can compress logs into a ZIP before attaching them.
+        [README: Input debug log](https://github.com/pierspad/notebook.koplugin/blob/dev/README.md#input-debug-log)
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Logs, screenshots, or short video
+      description: Drag files here. Logs are optional; if you cannot obtain them, describe what happened. Avoid sharing private notebook content.

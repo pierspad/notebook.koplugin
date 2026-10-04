@@ -61,3 +61,34 @@ PDF.clear();PDF.clear()
 for _,bb in ipairs(rasters) do assert(bb.freed,"cache clear leaked a raster") end
 assert(closed_docs==opens and closed_pages==opens,"MuPDF handles leaked")
 print("pdfcache: size alternation, neighboring pages, clipping, replacement, bounded eviction and cleanup passed")
+-- Metadata failures during import/export must release every native handle too.
+for _,method in ipairs({'inspect','size'}) do
+    for _,fault in ipairs({'password','page count','open page','page size','invalid dimensions','none'}) do
+        local documents,pages,doc_closes,page_closes=0,0,0,0
+        package.loaded['ffi/mupdf'].openDocument=function()
+            documents=documents+1
+            return {
+                needsPassword=function() return fault=='password' end,
+                getPages=function() if fault=='page count' then error('count failed') end;return 2 end,
+                openPage=function()
+                    if fault=='open page' then error('open failed') end
+                    pages=pages+1
+                    return {
+                        getSize=function()
+                            if fault=='page size' then error('size failed') end
+                            if fault=='invalid dimensions' then return 0,800 end
+                            return 600,800
+                        end,
+                        close=function() page_closes=page_closes+1 end,
+                    }
+                end,
+                close=function() doc_closes=doc_closes+1 end,
+            }
+        end
+        local ok=pcall(PDF[method],'/bad.pdf',1)
+        local expected=fault=='none' or method=='size' and fault=='page count'
+        assert(ok==expected,'metadata failure/success changed: '..method..'/'..fault)
+        assert(documents==doc_closes and pages==page_closes,'metadata leaked handles: '..method..'/'..fault)
+    end
+end
+print('pdf metadata: import/size failures and invalid dimensions release all native handles')

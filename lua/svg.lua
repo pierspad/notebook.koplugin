@@ -17,6 +17,13 @@ end
 
 local function strokeXML(s, write)
     local ink = s.tool == "highlighter" and color(s.tint, s.tool) or color(s.color, s.tool)
+    if s.image_data then
+        write(string.format('<image x="%g" y="%g" width="%g" height="%g" href="data:%s;base64,',
+            s.x_min,s.y_min,s.x_max-s.x_min,s.y_max-s.y_min,s.image_mime))
+        require("imagecodec").base64(s.image_data,write)
+        write('"/>')
+        return
+    end
     if s.text then
         local family = s.font_family == "serif" and "serif"
             or (s.font_family == "mono" and "monospace" or "sans-serif")

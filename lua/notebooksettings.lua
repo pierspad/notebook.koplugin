@@ -13,6 +13,7 @@ return function(Notebook, TOOLS, SETTING_PREFIX)
 --- Persists a canvas setting and applies it immediately.
 function Notebook:_setSetting(key, value)
     self.canvas[key] = value
+    if key=="pen_style" then self.tool_buttons[1]:setIcon("notebook."..value) end
     self.canvas:_debugEvent("setting:" .. key, nil, nil, nil, value)
     G_reader_settings:saveSetting(SETTING_PREFIX .. key, value)
 end
@@ -175,6 +176,10 @@ for name, method in pairs(require("notebooktext")) do
 end
 
 function Notebook:_showSettings()
+    self:_showNotebookMenu()
+end
+
+function Notebook:_showToolSettings()
     self:_finishInteraction()
     UIManager:show(SettingsDialog:new{
         canvas = self.canvas,
@@ -194,6 +199,7 @@ function Notebook:_loadSettings()
     local canvas = self.canvas
     local style = get("pen_style", "fineliner")
     canvas.pen_style = (style == "fountain" or style == "pencil") and style or "fineliner"
+    self.tool_buttons[1]:setIcon("notebook."..canvas.pen_style)
     canvas.line_style = get("line_style", "line") == "arrow" and "arrow" or "line"
     canvas.shape_kind        = get("shape_kind", "rectangle")
     canvas.shape_fill        = get("shape_fill", false) == true
@@ -208,7 +214,7 @@ function Notebook:_loadSettings()
     canvas.eraser_size       = get("eraser_size", canvas.eraser_size)
     canvas.eraser_mode       = get("eraser_mode", canvas.eraser_mode)
     local button_tool = get("barrel_button_tool", canvas.barrel_button_tool)
-    canvas.barrel_button_tool = button_tool == "eraser" and "eraser" or "highlighter"
+    canvas.barrel_button_tool = (button_tool == "eraser" or button_tool == "lasso") and button_tool or "highlighter"
     canvas.draw_with_finger  = get("draw_with_finger", canvas.draw_with_finger)
     canvas.text_size         = get("text_size", 26)
     canvas.text_font         = get("text_font", "sans")

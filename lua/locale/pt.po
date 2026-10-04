@@ -619,3 +619,62 @@ msgstr "Intervalo de páginas inválido. Use números ou intervalos separados po
 
 #~ msgid "White background"
 #~ msgstr "Fundo branco"
+
+msgid "No other recent notebooks."
+msgstr "Não existem outros cadernos recentes."
+
+msgid "Recent notebooks"
+msgstr "Cadernos recentes"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "O registo de entrada está ativo. Reproduza o problema numa página de teste, pare o registo e anexe:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Registo de entrada parado. Os ficheiros existentes foram mantidos."
+
+msgid "Spacing"
+msgstr "Espaçamento"
+
+msgid "Light"
+msgstr "Claro"
+
+msgid "Medium"
+msgstr "Médio"
+
+msgid "Dark"
+msgstr "Escuro"
+
+msgid "Ruling tone"
+msgstr "Tom das linhas"
+
+msgid "Default paper settings"
+msgstr "Definições de papel predefinidas"
+
+msgid "Paper spacing and tone"
+msgstr "Espaçamento e tom do papel"
+
+msgid "Open PDF"
+msgstr "Abrir PDF"
+
+msgid "Open another notebook"
+msgstr "Abrir outro caderno"
+
+msgid "Insert image"
+msgstr "Inserir imagem"
+
+msgid "Tool settings"
+msgstr "Definições das ferramentas"
+
+msgid "Stop input log"
+msgstr "Parar registo de entrada"
+
+msgid "Start input log"
+msgstr "Iniciar registo de entrada"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Escolha uma imagem PNG ou JPEG até 4 MB e 8 megapíxeis."
+
+msgid "Could not open this image."
+msgstr "Não foi possível abrir esta imagem."

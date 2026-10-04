@@ -52,6 +52,7 @@ function Stroke:new(opts)
         filled = opts.filled == true,
         marker_parts = opts.marker_parts,
         shape_kind = opts.shape_kind,
+        image_data = opts.image_data, image_mime = opts.image_mime,
         text = opts.text,
         font_size = opts.font_size,
         font_family = opts.font_family,
@@ -219,6 +220,7 @@ function Stroke:clone()
         pen_style = self.pen_style,
         filled = self.filled,
         shape_kind = self.shape_kind,
+        image_data = self.image_data, image_mime = self.image_mime,
         text = self.text, font_size = self.font_size,
         font_family = self.font_family, text_bold = self.text_bold,
         text_italic = self.text_italic, text_underline = self.text_underline,
@@ -291,6 +293,7 @@ function Stroke:hitTest(px, py, r)
         return false
     end
 
+    if self.image_data then return false end
     if self.tool == "highlighter" then
         return require("markerhit").path(self,{px,py},r)
     end
@@ -441,7 +444,7 @@ end
 function Stroke:hitTestPath(path, r)
     if #path < 2 then return false end
     if self.tool == "highlighter" then return require("markerhit").path(self,path,r) end
-    if self.text then
+    if self.text or self.image_data then
         local x0,y0,x1,y1=pathBounds(path,r)
         return x1>=self.x_min and x0<=self.x_max and y1>=self.y_min and y0<=self.y_max
     end
@@ -473,6 +476,8 @@ dotted line of bites.
 --
 -- @treturn table,number,number,number,number fragments and x, y, w, h
 function Stroke:splitAlongPath(path, r, marker_context)
+    -- Images are objects; the ink eraser leaves imported references intact.
+    if self.image_data then return nil end
     if self.tool == "highlighter" then return require("markerarea").erase(self,path,r,marker_context) end
     if #path < 2 then return nil end
 
@@ -582,6 +587,7 @@ function Stroke:serialize()
         color = self.color,
         tint = self.tint,
         shape_kind = self.shape_kind,
+        image_data = self.image_data, image_mime = self.image_mime,
         text = self.text, font_size = self.font_size,
         font_family = self.font_family, text_bold = self.text_bold,
         text_italic = self.text_italic, text_underline = self.text_underline,
@@ -598,7 +604,7 @@ function Stroke:deserialize(data)
         tint = data.tint, shape_kind = data.shape_kind, text=data.text, font_size=data.font_size,
         font_family=data.font_family, text_bold=data.text_bold,
         text_italic=data.text_italic, text_underline=data.text_underline,
-        text_background=data.text_background }
+        text_background=data.text_background, image_data=data.image_data,image_mime=data.image_mime }
     o.pts = data.pts
     o.n = data.n
     -- Recompute bounds rather than trusting the file.

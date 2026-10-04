@@ -126,7 +126,7 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
     -- up with the writing on it; see Document:contentOrigin.
     local origin_x, origin_y = doc:contentOrigin()
     Template.draw(bb, doc:templateFor(index),
-        { x = origin_x * scale, y = origin_y * scale, w = w, h = h }, scale)
+        { x = origin_x * scale, y = origin_y * scale, w = w, h = h }, scale, nil, doc.paper_options)
     if page.background then
         local size=doc.page_size or {w=page_w-origin_x,h=page_h-origin_y}
         require("pdfbackground").draw(bb,page.background,

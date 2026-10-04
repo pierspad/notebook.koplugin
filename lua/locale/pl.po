@@ -618,3 +618,62 @@ msgstr "Nieprawidłowy zakres stron. Wpisz numery lub zakresy oddzielone przecin
 
 #~ msgid "White background"
 #~ msgstr "Białe tło"
+
+msgid "No other recent notebooks."
+msgstr "Brak innych ostatnich notatników."
+
+msgid "Recent notebooks"
+msgstr "Ostatnie notatniki"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "Dziennik wejścia jest włączony. Odtwórz problem na stronie testowej, zatrzymaj dziennik i dołącz:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Dziennik wejścia zatrzymany. Istniejące pliki zachowano."
+
+msgid "Spacing"
+msgstr "Odstępy"
+
+msgid "Light"
+msgstr "Jasny"
+
+msgid "Medium"
+msgstr "Średni"
+
+msgid "Dark"
+msgstr "Ciemny"
+
+msgid "Ruling tone"
+msgstr "Odcień linii"
+
+msgid "Default paper settings"
+msgstr "Domyślne ustawienia papieru"
+
+msgid "Paper spacing and tone"
+msgstr "Odstępy i odcień papieru"
+
+msgid "Open PDF"
+msgstr "Otwórz PDF"
+
+msgid "Open another notebook"
+msgstr "Otwórz inny notatnik"
+
+msgid "Insert image"
+msgstr "Wstaw obraz"
+
+msgid "Tool settings"
+msgstr "Ustawienia narzędzi"
+
+msgid "Stop input log"
+msgstr "Wyłącz dziennik wejścia"
+
+msgid "Start input log"
+msgstr "Włącz dziennik wejścia"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Wybierz obraz PNG lub JPEG do 4 MB i 8 megapikseli."
+
+msgid "Could not open this image."
+msgstr "Nie udało się otworzyć tego obrazu."

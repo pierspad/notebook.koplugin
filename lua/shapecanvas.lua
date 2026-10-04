@@ -13,6 +13,9 @@ local ShapeCanvas = {}
 -- rasterizing a large fill on every movement. The stored shape stays intact.
 function ShapeCanvas:_drawShapePreview(shape)
     local preview=setmetatable({color=0,filled=false,tool="pen",pen_style="fineliner"}, {__index=shape})
+    if shape.image_data then
+        preview=require("shape").create("rectangle",shape.x_min,shape.y_min,shape.x_max,shape.y_max,2,0,false)
+    end
     self:_drawViewStroke(preview)
 end
 
@@ -146,12 +149,14 @@ local function shapeHandles(shape,scale)
     local l, t, r, b = shape.x_min, shape.y_min, shape.x_max, shape.y_max
     local mx, my = (l+r)/2, (t+b)/2
     local gap = Screen:scaleBySize(42)/(scale or 1)
-    return {
+    local handles = {
         {"nw",l,t}, {"n",mx,t}, {"ne",r,t},
         {"w",l,my}, {"e",r,my},
         {"sw",l,b}, {"s",mx,b}, {"se",r,b},
         {"rotate",r+gap,my},
     }
+    if shape.image_data then table.remove(handles) end
+    return handles
 end
 
 function ShapeCanvas:_shapeHandleAt(shape, x, y)

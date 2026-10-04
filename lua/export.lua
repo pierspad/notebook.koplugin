@@ -260,7 +260,7 @@ function Export.beginPDF(doc,out_path,opts)
                 local page=cfg.doc.pages and cfg.doc.pages[i]
                 if page then
                     if cfg.doc.templateFor then Template.draw(bb,cfg.doc:templateFor(i),
-                        {x=0,y=0,w=cfg.width,h=cfg.height},1) end
+                        {x=0,y=0,w=cfg.width,h=cfg.height},1,nil,cfg.doc.paper_options) end
                     if page.background then require("pdfbackground").draw(bb,page.background,
                         {x=0,y=0,w=cfg.width,h=cfg.height}) end
                     Renderer.drawPage(bb,page,1,-cfg.offset_x,-cfg.offset_y)

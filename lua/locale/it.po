@@ -621,3 +621,62 @@ msgstr "Intervallo di pagine non valido. Usa numeri o intervalli separati da vir
 
 #~ msgid "White background"
 #~ msgstr "Sfondo bianco"
+
+msgid "No other recent notebooks."
+msgstr "Nessun altro notebook recente."
+
+msgid "Recent notebooks"
+msgstr "Notebook recenti"
+
+msgid ""
+"Input logging is active. Reproduce the problem on a test page, then stop "
+"logging and attach:"
+msgstr "Il log di input è attivo. Riproduci il problema su una pagina di prova, poi ferma il log e allega:"
+
+msgid "Input logging stopped. Existing log files have been kept."
+msgstr "Log di input fermato. I file di log esistenti sono stati conservati."
+
+msgid "Spacing"
+msgstr "Spaziatura"
+
+msgid "Light"
+msgstr "Chiaro"
+
+msgid "Medium"
+msgstr "Medio"
+
+msgid "Dark"
+msgstr "Scuro"
+
+msgid "Ruling tone"
+msgstr "Tono delle righe"
+
+msgid "Default paper settings"
+msgstr "Impostazioni predefinite della carta"
+
+msgid "Paper spacing and tone"
+msgstr "Spaziatura e tono della carta"
+
+msgid "Open PDF"
+msgstr "Apri PDF"
+
+msgid "Open another notebook"
+msgstr "Apri un altro notebook"
+
+msgid "Insert image"
+msgstr "Inserisci immagine"
+
+msgid "Tool settings"
+msgstr "Impostazioni strumenti"
+
+msgid "Stop input log"
+msgstr "Ferma log di input"
+
+msgid "Start input log"
+msgstr "Avvia log di input"
+
+msgid "Choose a PNG or JPEG image up to 4 MB and 8 megapixels."
+msgstr "Scegli un’immagine PNG o JPEG fino a 4 MB e 8 megapixel."
+
+msgid "Could not open this image."
+msgstr "Impossibile aprire questa immagine."
