@@ -108,7 +108,7 @@ version:
 translations:
 	@files="$$(find lua -maxdepth 1 -name '*.lua' ! -name 'i18n.lua' ! -name '_meta.lua' -print)"; \
 	xgettext --language=Lua --keyword=_ --from-code=UTF-8 --no-location \
-		--package-name='Notebook for KOReader' --package-version='1.2' \
+		--package-name='Notebook for KOReader' --package-version='$(VERSION)' \
 		--copyright-holder='Notebook contributors' \
 		--output=lua/locale/notebook.pot $$files
 

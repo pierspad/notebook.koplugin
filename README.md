@@ -22,7 +22,8 @@ pronta per la verifica dei contenuti prima della traduzione finale in inglese.
 | **Testo** | **Modelli di carta** |
 | <img src="docs/images/text-options-2026-10-05.png" width="300" alt="Dimensione, anteprima e stili del testo" /> | <img src="docs/images/paper-templates-2026-10-05.png" width="300" alt="Selettore dei modelli di carta" /> |
 
-Schermate acquisite nell’emulatore il 5 ottobre 2026. La reattività della penna
+Schermate acquisite nell’emulatore il 5 ottobre 2026; alcune mostrano ancora
+la versione di sviluppo precedente alla release stabile 1.7.0. La reattività della penna
 e il refresh e-ink si verificano sul dispositivo reale.
 
 ## Installazione
@@ -92,11 +93,26 @@ ciascun tocco**, nella stessa zona entro mezzo secondo. Il gesto è disattivato
 durante il disegno con le dita, una selezione, l’uso dello stilo o la sospensione.
 Annulla e Ripeti sono disponibili anche nella barra.
 
+## Galleria e creazione
+
+La galleria mostra le anteprime dei quaderni e permette di creare cartelle,
+annotare PDF e ordinare gli elementi. La selezione rende disponibili apertura,
+rinomina, spostamento, invio, duplicazione, esportazione ed eliminazione.
+
+| Selezione nella galleria | Nuovo quaderno |
+| :---: | :---: |
+| <img src="docs/images/gallery-selection-2026-10-05.png" width="300" alt="Quaderno selezionato e barra delle azioni" /> | <img src="docs/images/new-notebook-2026-10-05.png" width="300" alt="Creazione con nome, sei modelli di carta e tastiera" /> |
+
+Il modello scelto alla creazione diventa lo sfondo predefinito. Ogni pagina può
+avere un modello diverso, modificabile dalla galleria delle pagine.
+Le modifiche vengono salvate automaticamente; il cambio di quaderno e la
+chiusura completano le interazioni e salvano il documento.
+
 ## Menu del quaderno
 
 <img src="docs/images/notebook-menu-2026-10-05.png" width="300" alt="Menu del quaderno suddiviso in sezioni" />
 
-L’ingranaggio apre le sezioni **Quaderni**, **Pagina** e **Impostazioni**.
+L’ingranaggio apre le sezioni **Blocchi note**, **Pagina** e **Impostazioni**.
 Le voci si affiancano quando le etichette entrano per intero. L’ingranaggio
 si evidenzia mentre il menu è aperto; alla chiusura torna selezionato lo
 strumento in uso, senza cambiare lo strumento di disegno.
@@ -126,8 +142,13 @@ PDF originale resta intatto.
 - **Xournal++ (`.xopp`)**: annotazioni modificabili. Per quaderni basati su PDF,
   conserva `.xopp` e il relativo `.xopp.bg.pdf` nella stessa cartella.
 
+<img src="docs/images/export-2026-10-05.png" width="300" alt="Menu Esporta con PDF, SVG, Xournal++ e scelta delle pagine" />
+
+Puoi esportare anche un intervallo di pagine con **Scegli pagine…**.
+
 [LocalSend](https://github.com/kaikozlov/localsend.koplugin) è opzionale e permette
-l’invio via rete locale. Installa anche l’app LocalSend sul destinatario.
+l’invio via rete locale in PDF o Xournal++. Per SVG, esporta prima il file
+e invialo dalla galleria. Installa anche l’app LocalSend sul destinatario.
 [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) è opzionale:
 puoi aggiungere Notebook alla barra inferiore con **Azioni rapide personalizzate
 → Plugin → Notebook**, usando il simbolo Nerd Font `F405`.
@@ -140,6 +161,10 @@ L’emulatore Linux viene usato per test automatici e controlli di layout con
 widget reali. Altri dispositivi non sono confermati da questi controlli:
 uno schermo con stilo, da solo, non garantisce la compatibilità.
 Per segnalare problemi includi modello, firmware e versione di KOReader.
+
+L’interfaccia usa l’inglese come lingua di origine e include 13 traduzioni:
+italiano, tedesco, spagnolo, francese, hindi, giapponese, polacco, portoghese,
+portoghese brasiliano, russo, ucraino, cinese semplificato e tradizionale.
 
 ## Icone personalizzate
 
@@ -190,6 +215,7 @@ il sorgente sul dispositivo. Architettura e test sono nel
 ```bash
 make verify                # lint, test, traduzioni e controlli benchmark
 make test-native-features  # widget ed esportazioni con un runtime KOReader compilato
+python3 tools/test-native-features.py --all-languages  # controlla tutte le lingue
 make package               # ZIP installabile in build/
 make ci                    # verifica e controllo del pacchetto
 ```
@@ -198,6 +224,8 @@ Per il deploy sul dispositivo, configura `kindle.env` a partire da
 `kindle.env.example` e usa `make deploy`; consulta `tools/deploy.sh --help`.
 Le annotazioni sovrapposte al lettore sono un progetto futuro descritto in
 [Reader Annotations Plan](docs/READER_ANNOTATIONS.md).
+
+I riepiloghi di verifica sono in [Audit delle release](docs/audits/README.md).
 
 ## Contributi e sostegno
 

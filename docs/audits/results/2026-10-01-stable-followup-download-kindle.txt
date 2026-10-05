@@ -1,13 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  4977  100  4977    0     0  10081      0 --:--:-- --:--:-- --:--:-- 10115100  4977  100  4977    0     0   9756      0 --:--:-- --:--:-- --:--:--  9777
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  285k  100  285k    0     0   293k      0 --:--:-- --:--:-- --:--:-- 1955k
-has monolibtic? no (libs/libkoreader-monolibtic.so: cannot open shared object file: No such file or directory)
-lib_search_path: libs/?
-lib_basic_format: lib%s.so
-lib_version_format: lib%s.so.%s
-Verified official stable release v1.5.0
-Downloaded: /var/tmp/notebook-download-check.3gFq5K/downloads/notebook.koplugin-v1.5.0.zip

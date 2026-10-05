@@ -28,3 +28,22 @@ or obtain ideas, but do not modify or repair them unless explicitly requested.
   or silently switch branches. Restore local work and verify the integration.
 - If synchronization fails, state that limitation and do not present analysis
   of the local checkout as analysis of the latest remote version.
+
+## Documentation, localization and review evidence
+
+- Keep `README.md` as the user guide, `docs/README.md` as the technical reference,
+  and `docs/READER_ANNOTATIONS.md` clearly labeled as a future integration plan.
+  Update `docs/CONTRIB.md` when the tested stable release or submission workflow changes.
+- Inspect replacement screenshots individually; keep installation tutorials
+  unless their actual flow changed. Captions must match the pictured screen and
+  state whether a visible prerelease version differs from the current release.
+- After changing interface messages, update the POT and every shipped PO;
+  preserve placeholders and technical filenames. Run `make verify`. For menu or
+  translated layout changes, run
+  `python3 tools/test-native-features.py --all-languages` with a compiled runtime.
+- Keep concise, reproducible release verification in `docs/audits/`; place raw
+  logs and temporary measurements outside the repository or in ignored
+  `docs/audits/results/`. Historical evidence remains recoverable through Git.
+- Never publish notebook samples, device backups or private device configuration
+  as documentation or release artifacts. Desktop rendering does not establish
+  physical stylus latency, palm rejection or e-ink refresh behavior.

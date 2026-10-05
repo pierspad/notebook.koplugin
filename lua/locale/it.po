@@ -4,7 +4,7 @@
 # translate the msgstr lines to add a language; nothing else needs changing.
 msgid ""
 msgstr ""
-"Project-Id-Version: Notebook for KOReader 1.2\n"
+"Project-Id-Version: Notebook for KOReader v1.7.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-01 13:14+0200\n"
 "PO-Revision-Date: 2026-10-05 00:00+0200\n"

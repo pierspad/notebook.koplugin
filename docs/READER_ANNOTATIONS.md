@@ -1,5 +1,7 @@
 # Reader annotations: integration plan
 
+Reviewed against Notebook v1.7.0 on 5 October 2026.
+
 This is a design plan, not an implemented reader feature. For the current
 plugin architecture and tests, see the [Technical Reference Manual](README.md);
 for installation and supported tools, see the [project README](../README.md).
@@ -26,6 +28,11 @@ reliable EPUB annotations.
   A reader controller must invalidate it on navigation/reflow and release
   native text caches on close. Current canvas responsiveness improvements do
   not themselves implement reader annotations.
+- Embedded images use `imagecodec.lua` and `imageobject.lua`; a reader sidecar
+  must retain the image data, MIME, bounds and layering without depending on
+  a source image path. Preserve `paper_options`, page geometry and content
+  origin when importing notebook pages; these are document properties, not
+  book text anchors.
 - Rendering and export can consume the same stroke model, with a versioned
   document format and a migration path from Pencil's `pencil_strokes.lua`.
 

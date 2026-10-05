@@ -1,6 +1,0 @@
-Native framebuffer comparison against 1.6.2:
-zoom1 width48: identical pixels
-zoom2 width48: identical pixels
-zoom1 width120: 19 old gray remnants removed, strictly inside radius-8 swept nib, maximum distance 7.313
-zoom2 width120: 39 old gray remnants removed, strictly inside radius-8 swept nib, maximum distance 7.711
-No changes outside the swept nib.

@@ -1,6 +1,8 @@
 # Notebook Plugin for KOReader: Technical Reference Manual
 
-A comprehensive engineering reference manual documenting the architecture, hardware constraints, input subsystems, rendering pipeline, safety mechanisms, calibration infrastructure, and interoperability contracts of `notebook.koplugin`.
+Reviewed against the stable v1.7.0 source on 5 October 2026.
+
+An engineering reference manual documenting the architecture, hardware constraints, input subsystems, rendering pipeline, safety mechanisms, calibration infrastructure, and interoperability contracts of `notebook.koplugin`.
 
 ---
 
@@ -87,7 +89,9 @@ Compatibility invariants across installations and migrations are codified and as
 
 KOReader exposes a top-level stylus API via `Input:registerStylusCallback` (defined in `frontend/device/input.lua`). On supported hardware (e.g., Kindle Scribe), the Linux kernel opens the digitizer input device during system startup. The plugin intercepts stylus events cooperatively, claims priority when the drawing canvas is active, and restores any previously registered callback upon deactivation or failure.
 
-Uninstallation is entirely self-contained: deleting the `koreader/plugins/notebook.koplugin` folder leaves the host KOReader environment, configuration, and reader databases in their original, untouched state.
+Removing `koreader/plugins/notebook.koplugin` uninstalls the plugin. Notebooks,
+plugin settings and synchronized user icon copies remain separate; uninstalling
+does not delete user documents or revert settings automatically.
 
 ### 1.3 Directory Structure & Module Decomposition
 
@@ -107,6 +111,14 @@ notebook.koplugin/
 │   ├── canvaslifecycle.lua  # Start/stop, callback ownership and sleep pause/resume
 │   ├── canvasrender.lua     # Page/background pixels and clipped repaint
 │   ├── canvasrefresh.lua    # Dirty rectangles, cadence and idle color cleanup
+│   ├── loader.lua           # Private module cache, isolated from other plugins
+│   ├── notebookactions.lua  # Notebook switching, recent previews and diagnostics
+│   ├── recents.lua          # Bounded recent document list
+│   ├── diagnostics.lua      # Session logging state and immediate start/stop
+│   ├── imagecodec.lua       # Bounded PNG/JPEG metadata and base64 encoding
+│   ├── imageobject.lua      # Embedded image geometry and native raster ownership
+│   ├── paperoptions.lua     # Ruling spacing and grayscale normalization
+│   ├── documentstorage.lua # Validation and atomic notebook persistence
 │   ├── notebooktoolbar.lua  # Toolbar widgets and layout
 │   ├── notebooksettings.lua # Tool menus and persistent settings
 │   ├── galleryexport.lua    # Export/share jobs and progress
@@ -179,6 +191,12 @@ KOReader dynamically scales UI metrics (padding, borders, icon sizes, and font d
 - Modal dialogs scaled proportionally exceeded screen bounds, trapping the user behind virtual keyboards without an accessible Cancel button.
 
 Run toolbar/layout checks at native metrics as well as smaller viewports: `EMULATE_READER_W=1860 EMULATE_READER_H=2480 EMULATE_READER_DPI=300`.
+The physical panel DPI differs from a user-configured KOReader UI DPI. The local
+Kindle-matching launcher profile uses 160 UI DPI with a fixed 1860×2480 logical
+framebuffer. `tools/emulator-display.lua` scales only the desktop SDL window;
+window resizing must not change saved page geometry or pointer coordinates.
+`tools/emulator-startup.lua` opens Notebook from FileManager for that local
+profile. These optional development patches are not installed with the plugin.
 
 ### 2.2 E-Ink Waveform Pipeline & Partial Refreshes
 
@@ -350,9 +368,11 @@ Palm rejection operates at two coordinated levels:
 
 ### 4.1 Hold-to-Straighten Recognition Pipeline
 
-Holding the pen or marker at a stroke endpoint straightens a line or adds an
-arrowhead, according to **Straight stroke**. **Hold to straighten** remains enabled
-by default. `shapesnap.lua` monitors the anchor using `hold_travel_sq` and
+Holding the pen at a stroke endpoint straightens a line or adds an arrowhead,
+according to **Stroke style → Line / Arrow** in the pen menu. The highlighter
+uses its own straight stroke behavior. Hold-to-straighten remains enabled by default; the current preferences
+panel does not expose a separate switch for it. `shapesnap.lua` monitors the
+anchor using `hold_travel_sq` and
 `hold_delay_ms`, then asks `Shape.recognize` for a replacement. Circles, squares,
 rectangles and triangles drawn freehand remain freehand; no geometric recognition
 runs. Explicit shape tools remain available independently.
@@ -607,6 +627,7 @@ Notebook files are stored with the `.scribe` extension in `koreader/notebook/`. 
     template = "grid",
     content_origin = { x = 0, y = 72 },
     page_size = { w = 1860, h = 2400 }, -- optional
+    paper_options = { spacing = 5.5, gray = 176 }, -- optional ruling settings
     pages = {
         {
             template = nil, -- inherits document template
@@ -619,6 +640,8 @@ Notebook files are stored with the `.scribe` extension in `koreader/notebook/`. 
                     n = 2, pts = {100,100,0.5, 120,130,0.8},
                     -- Text strokes also store text, font_size, font_family,
                     -- text_bold, text_italic, text_underline, text_background.
+                    -- Image strokes use tool/shape_kind="image", image_data,
+                    -- image_mime, and serialized placement geometry.
                 },
             },
         },
@@ -630,9 +653,16 @@ Notebook files are stored with the `.scribe` extension in `koreader/notebook/`. 
 
 Directly overwriting an active notebook file risks corruption if battery failure or process termination occurs mid-write:
 1. The document is serialized into a temporary sibling file: `filename.scribe.saving`.
-2. Explicit `file:write()` and `file:close()` return codes are asserted.
+2. KOReader’s `Persist` bitser codec writes that sibling file; `documentstorage.lua`
+   checks its save result before attempting the rename.
 3. An atomic filesystem rename (`os.rename`) replaces the original file with the temporary sibling.
-4. If saving fails, the canvas remains open, preserving ink in memory and presenting an explicit error dialog.
+4. Failed writes or renames remove the temporary sibling and preserve the old
+   notebook. A failed explicit close or document switch leaves the canvas open
+   and reports the error.
+
+Autosave runs after committed edits and is deferred while pen/finger or zoom
+interactions own the canvas. Notebook switching finishes the interaction and
+saves first; a clean existing file is not serialized again unnecessarily.
 
 ### 9.3 PDF Export Pipeline & FFI Direct Copy
 
@@ -650,15 +680,30 @@ Multi-page PDF export (`export.lua`) rasterizes each notebook page into an 8-bit
 Notebook supports optional, zero-configuration local network sharing via [localsend.koplugin](https://github.com/kaikozlov/localsend.koplugin):
 - **Loose Coupling**: `share.lua` performs NO static `require("localsend")`. A hard require would crash Notebook if LocalSend is not installed.
 - **Runtime Discovery**: Probes KOReader's active plugin registry for an active LocalSend instance.
-- **Staging Pipeline**: If present, long-pressing a notebook in the gallery presents **Send**: the notebook is rendered to PDF inside `koreader/cache/` and handed off to LocalSend's background daemon. If absent, the UI option remains hidden.
+- **Staging Pipeline**: Gallery selection exposes **Send** when LocalSend is
+  available. Its destination selector offers PDF or XOPP and remembers the
+  choice. Notebook conversion starts only after the recipient/format is chosen;
+  staged output and content-keyed exports live in `koreader/cache/`. Existing
+  exported files, including SVG, can be sent directly. XOPP PDF companions are
+  kept together. If LocalSend is absent, sharing is unavailable.
 
 ### 9.5 Rolling Debug Log Mechanism (`_debug_`)
 
-To diagnose device-specific digitizer bugs without capturing personal handwriting:
-- Create a notebook named `_debug_` (or an empty file `koreader/notebook/_debug_`).
-- Raw input events, Wacom slot transitions, capacitive touch coordinates, tool changes, and screen rotations are logged to `koreader/notebook/notebook-debug.log`.
-- **Privacy Assurance**: Vector point histories and document text are never written to the debug log.
-- **Rolling Cap**: The log rotates at 1 MB to `notebook-debug.log.1`, bounding total diagnostic disk usage strictly to ~2 MB. Delete the `_debug_` notebook or marker and reopen Notebook to disable logging for the next session.
+The settings menu offers **Start input log / Stop input log**. Starting creates
+or opens `koreader/notebook/notebook-debug.log` and immediately attaches it to
+the active canvas; switching notebooks retains the session choice. Stopping
+clears the canvas logging path and preserves existing files.
+
+A notebook named `_debug_` or an empty `koreader/notebook/_debug_` marker enables
+logging when Notebook opens. An explicit menu stop overrides that marker until
+KOReader restarts. Removing the marker and reopening disables the marker method.
+Both activation methods write the same log and do not recover earlier events.
+
+The log includes raw coordinates, contact timing, tools, rotation and stylus
+state. It does not embed notebook pages, text or images, but the coordinates can
+reveal pen movements; reproduce issues on a page without sensitive content.
+The file rotates at about 1 MB to `notebook-debug.log.1`, keeping roughly 2 MB.
+Plugin errors separately go to `notebook/.logs/notebook-error.log`.
 
 ---
 
@@ -701,7 +746,10 @@ The test suite in `lua/spec/` executes directly under standard `luajit` without 
 make test
 ```
 
-The test runner currently exercises 34 named suites (the authoritative list is `SUITES` in `Makefile`). Core coverage includes:
+The test runner currently exercises 55 named suites (the authoritative list is
+`SUITES` in `Makefile`). `make verify` also runs lint, all 13 gettext catalog
+checks and 16 Python benchmark-tool tests. `make ci` additionally validates the
+installable ZIP. Core coverage includes:
 - `run`: Vector geometry, undo/redo stacks, refresh bounding calculations, highlighter blending, PDF export.
 - `pages`: Multi-page lifecycle, template backgrounds, persistence round-trips.
 - `eraser`: Segment capsule sweeping, dirty bounds, undo batching, shape preservation.
@@ -728,18 +776,22 @@ Unit tests rely on `lua/spec/uistubs.lua`. These stubs model selected KOReader w
 
 To catch visual layout overflows that pass logic unit tests, headless SDL tools render real KOReader widgets into PNG files using `SDL_VIDEODRIVER=dummy`:
 
-```bash
-export SDL_VIDEODRIVER=dummy
-export EMULATE_READER_W=1860 EMULATE_READER_H=2480 EMULATE_READER_DPI=300
+From the plugin checkout, with a compiled KOReader emulator runtime:
 
-./luajit spec/render.lua  /tmp/notebook.png   # Verifies canvas layout at native 1860px
-./luajit spec/screens.lua /tmp                # Renders all dialogs; checks keyboard overlap
-./luajit spec/loop.lua                        # Audits KOReader event loop turns per action
-./luajit spec/exercise.lua                    # Executes full synthetic user drawing session
+```bash
+make test-native-features
+python3 tools/test-native-features.py --all-languages --output /tmp/notebook-native
+# If the runtime is elsewhere:
+python3 tools/test-native-features.py --runtime /path/to/koreader --all-languages
 ```
 
-- **`screens.lua` with `LANGUAGE=it`**: Validates localization string lengths. Longer Italian or German labels frequently push buttons beyond 1860px boundaries.
-- **`loop.lua`**: Asserts that opening screens yields the event loop within 1 turn, preventing touch input starvation.
+The runner stages a disposable runtime, uses the plugin's private loader, and
+keeps user notebooks/settings untouched. It checks real widgets at 600×800,
+800×600 and 1860×2480, embedded PNG/JPEG persistence, reopened PDF and parsed
+SVG/XOPP exports, shape ordering/undo, and fixed framebuffer/pointer scaling at
+window scales 0.4 and 0.65. `--all-languages` adds compact 600×800 menu checks for
+each shipped catalog. These verify rendering and layout, not physical input or
+e-ink latency. See [release evidence](audits/README.md).
 
 ### 11.4 Kindle Native Smoke Tests & Deployment Scripts
 
@@ -885,8 +937,7 @@ callback cancellation, prior stylus restoration and retained unfinished ink.
 ### PDF zoom regression
 
 Imported PDF pages use the same 2× writing, finger pan and idle cleanup as normal
-notebooks. The removed availability warning is removed from every language catalog;
-existing translated zoom and straight-stroke controls are reused.
+notebooks, sharing the same toolbar zoom control and page coordinate transforms.
 
 `tools/check-pdf-zoom.lua` runs with real MuPDF and blitbuffers. From a disposable
 KOReader SDL runtime, pass the plugin Lua directory and a readable, unencrypted PDF:
@@ -898,7 +949,29 @@ SDL_VIDEODRIVER=dummy ./luajit /path/notebook.koplugin/tools/check-pdf-zoom.lua 
 
 Checks cover grayscale/RGB, all four rotations, fractional and edge viewport
 positions, annotations, eraser restoration and reuse of a single PDF raster during
-pan/erase. Local verification passed 96 viewport comparisons across `simple.pdf`
-and the first two pages of KOReader's `Paper.pdf`, plus all eraser repairs.
-`make ci` passed all 34 suites, lint, 13 translation catalogs and ZIP checks.
-Physical e-ink refresh timing still requires testing on the device.
+pan/erase. Use readable PDF fixtures to exercise this native path in addition
+to the configured regression suites. Release test results are indexed in
+[audits](audits/README.md). Physical e-ink refresh timing requires device testing.
+
+### Notebook menus, recent previews and page geometry
+
+`notebookactions.lua` groups settings actions into Notebooks, Page and Settings.
+`actionmenu.lua` pairs eligible rows only when both labels fit and preserves
+section boundaries. Opening the menu highlights the cog and clears the drawing
+button highlight without changing the canvas tool; dismissal restores the tool
+highlight. Lasso ordering buttons use equal widths, a gap and inverted selected
+icons, consistent with the toolbar.
+
+`recents.lua` retains up to eight valid notebooks. The recent menu shows cached
+thumbnails immediately, then generates missing previews one per deferred event
+loop step. Closing the menu stops that queue before further disk reads.
+`thumbnail.lua` renders using saved `page_size` and `content_origin`, falling
+back to supplied dimensions for older documents. Versioned `.v2.png` cache names
+avoid reusing thumbnails cropped by the previous geometry calculation.
+
+Embedded images are validated by `imagecodec.lua` (4 MiB and 8×1024×1024 pixels)
+and stored in the `.scribe` file with their MIME/placement. `imageobject.lua`
+owns decoded raster caches and frees buffers outside its admission limits.
+Lasso transforms image bounds; erasing removes ink, not embedded image objects.
+PDF, SVG and XOPP exports include images. Paper ruling options are document
+properties shared by page painting, zoom and thumbnail rendering.
