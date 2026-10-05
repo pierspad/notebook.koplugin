@@ -31,8 +31,12 @@ or obtain ideas, but do not modify or repair them unless explicitly requested.
 
 ## Documentation, localization and review evidence
 
-- Keep `README.md` as the user guide, `docs/README.md` as the technical reference,
+- Keep `README.md` minimal and in English (overview, installation, compatibility
+  and development links), `docs/USER_GUIDE.md` as the detailed English user guide,
+  `docs/README.md` as the technical reference,
   and `docs/READER_ANNOTATIONS.md` clearly labeled as a future integration plan.
+  Personal-site Italian copy belongs in the explicitly requested site content,
+  not in the plugin README.
   Update `docs/CONTRIB.md` when the tested stable release or submission workflow changes.
 - Inspect replacement screenshots individually; keep installation tutorials
   unless their actual flow changed. Captions must match the pictured screen and
