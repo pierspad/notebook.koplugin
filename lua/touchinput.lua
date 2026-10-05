@@ -190,13 +190,15 @@ end
 
 -- Holding before dragging switches KOReader from pan to hold_pan.
 function TouchInput:onZoomHoldPan(_, ges)
-    if self.zoom <= 1 then return false end
+    if self.zoom <= 1 and not (self.draw_with_finger or self.transform_gesture
+        or self.dragging_selection) then return false end
     return self:onTouchPan(_, ges)
 end
 
 -- A stationary touch ends as tap/hold_release rather than pan_release.
 function TouchInput:onZoomTouchEnd(_, ges)
-    if self.zoom <= 1 then return false end
+    if self.zoom <= 1 and not (self.draw_with_finger and self.touch_start_x)
+        and not self.transform_gesture and not self.dragging_selection then return false end
     return self:onTouchRelease(_, ges)
 end
 
@@ -263,10 +265,13 @@ function TouchInput:onPageSwipe(_, ges)
         if self.zoom_pan_needs_settle then self:_scheduleZoomPanSettle() end
         return true
     end
+    -- A fast mouse/finger drag ends as swipe, without pan_release. Finish
+    -- its owned drawing before considering page navigation.
+    if self.draw_with_finger and self.touch_start_x then
+        return self:onTouchRelease(_, ges)
+    end
     if self.selected_strokes or self.dragging_selection then return true end
     if self:_touchIsPalm() then return true end
-    -- A swipe while drawing with a finger is part of the drawing, not a gesture.
-    if self.draw_with_finger and self.stroke then return true end
     if not self.on_page_swipe then return false end
 
     local dir = ges.direction

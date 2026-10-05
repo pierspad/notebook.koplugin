@@ -14,12 +14,14 @@ local paintRow = function(bb, py, left, right, color, tint, preview)
         -- Per-channel darken preserves colored ink as well as black ink.
         -- Unlike luminance replacement it never brightens any channel and
         -- repeated passes with the same marker are idempotent.
+        -- This is the composited framebuffer, not a transparent overlay.
+        -- FFI defaults an omitted alpha to zero, which SDL displays as black.
         local r,g,b = color:getR(),color:getG(),color:getB()
         for px = left, right do
             local pixel = bb:getPixel(px, py)
             local pr,pg,pb = pixel:getR(),pixel:getG(),pixel:getB()
             if pr > r or pg > g or pb > b then
-                bb:setPixel(px, py, BB.ColorRGB32(math.min(pr,r),math.min(pg,g),math.min(pb,b)))
+                bb:setPixel(px, py, BB.ColorRGB32(math.min(pr,r),math.min(pg,g),math.min(pb,b),0xFF))
             end
         end
     else

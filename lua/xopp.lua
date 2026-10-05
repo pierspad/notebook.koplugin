@@ -11,6 +11,14 @@ local function xml(value)
         :gsub(">","&gt;"):gsub('"',"&quot;"):gsub("'","&apos;")
 end
 
+local function markerColor(tint)
+    if tint == nil then return "#99999980" end
+    if tint >= 0x1000000 and tint <= 0x1FFFFFF then
+        return string.format("#%06x80", tint - 0x1000000)
+    end
+    return string.format("#%02x%02x%02x80", tint, tint, tint)
+end
+
 local function templateStyle(id)
     if id=="grid" then return "graph" end
     if id=="lined" or id=="narrow" or id=="checklist" then return "lined" end
@@ -87,7 +95,7 @@ local function documentXML(doc,write)
                     local x,y,p=stroke:getPoint(i); pressure=pressure+(p or 1)
                     points[#points+1]=string.format("%.3f %.3f",(x+dx)*scale,(y+dy)*scale)
                 end
-                local gray=stroke.tool=="highlighter" and "#99999980" or "#000000ff"
+                local gray=stroke.tool=="highlighter" and markerColor(stroke.tint) or "#000000ff"
                 local width=stroke.width*(.35+.65*pressure/stroke.n)*scale
                 local fill=""
                 if stroke.tool=="highlighter" and stroke.filled then

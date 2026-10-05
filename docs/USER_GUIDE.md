@@ -116,3 +116,15 @@ Include device, firmware/OS, KOReader and Notebook versions, installation source
 stylus model, other active plugins, reproduction steps, expected and actual
 results, and frequency. For drawing issues, include orientation, zoom and tool;
 for suspension, include duration and lock/unlock behavior.
+
+## Testing with a mouse in the emulator
+
+Enable **Finger → Draws** in Notebook settings and use the full-page (1×) view
+for mouse drawing. In 2× view, finger/mouse drags pan the page; writing at zoom
+uses stylus events. The moving highlighter uses a black hatched preview; releasing
+the mouse commits the stroke and restores its selected color. Taps, quick swipes,
+long-press drags and releases outside the page all finish the owned drawing.
+
+For native regression checks, run `make test-native-features` with a compiled
+KOReader runtime. These include real gesture dispatch and check that colored
+mouse strokes survive a page repaint.

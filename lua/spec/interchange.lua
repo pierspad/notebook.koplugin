@@ -36,6 +36,20 @@ assert(xml:find('tool="highlighter"',1,true) and xml:find('width="0.001" fill="2
 local _,filled_count=xml:gsub('fill="255"','')
 assert(filled_count==2,'XOPP joined marker contours or lost one of them')
 os.remove(path)
+-- Selected marker colors must survive editable export.
+for _,case in ipairs({
+    {0x1E53935, '#e5393580'}, {0x11E88E5, '#1e88e580'},
+    {0x1FDD835, '#fdd83580'}, {160, '#a0a0a080'},
+    {0, '#00000080'}, {255, '#ffffff80'},
+}) do
+    local colored=Stroke:new{tool='highlighter',width=20,tint=case[1]}
+    colored:addPoint(10,10);colored:addPoint(80,10)
+    local color_path=temporary()
+    assert(Xopp.toXOPP({pages={{strokes={colored}}},templateFor=function() return 'blank' end},color_path))
+    local stream=assert(io.popen('gzip -dc '..color_path,'r'))
+    local output=stream:read('*a');stream:close();os.remove(color_path)
+    assert(output:find('color="'..case[2]..'"',1,true), 'XOPP discarded selected highlighter color')
+end
 local pdf=os.tmpname()
 local pdf_file=assert(io.open(pdf,'wb')); pdf_file:write('%PDF-test'); pdf_file:close()
 local attached_path=temporary()

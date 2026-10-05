@@ -23,7 +23,7 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # Every suite in the bench. Named rather than globbed: spec/ also holds the
 # helpers the suites share and the two tools that render to a real file, and a
 # glob would run those as though they were tests.
-SUITES := svg run pages eraser eraserinteraction palm safe i18n gallery shape shapesnap highlightink markerarea geometryink lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange zoom zoomrefresh zoompan suspend bridge_lifecycle launcher notebookactions paperoptions images imagecodec diagnostics regressions interaction liveink refreshpolicy bulkdelete textlayout raster templateclip performance zoomhistory storage persistence sharecache xoppstorage gzipwriter updater renderfast pageselection pdfcache
+SUITES := mousedrawing svg run pages eraser eraserinteraction palm safe i18n gallery shape shapesnap highlightink markerarea geometryink lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange zoom zoomrefresh zoompan suspend bridge_lifecycle launcher notebookactions paperoptions images imagecodec diagnostics regressions interaction liveink refreshpolicy bulkdelete textlayout raster templateclip performance zoomhistory storage persistence sharecache xoppstorage gzipwriter updater renderfast pageselection pdfcache
 
 .PHONY: all test lint verify translations-check package check-package ci clean install-hooks deploy version translations
 

@@ -10,6 +10,28 @@ local ui,fast=0,0
 Screen.refreshUI=function() ui=ui+1 end
 Screen.refreshFast=function() fast=fast+1 end
 Screen.refreshFull=function() error('unexpected full refresh') end
+-- Independent palette oracle: comparing live and full rendering alone could
+-- let both paths paint the same wrong (black) color.
+for _,rgb in ipairs({false,true}) do
+ for _,tint in ipairs({0x1E53935,0x11E88E5,0x1FDD835,0x143A047,0x18E24AA}) do
+  for _,count in ipairs({1,2}) do
+    local bb=BB.new(64,64,rgb and BB.TYPE_BBRGB32 or BB.TYPE_BB8)
+    bb:paintRect(0,0,64,64,BB.COLOR_WHITE)
+    local stroke=Stroke:new{tool='highlighter',width=12,color=0,tint=tint}
+    stroke:addPoint(20,30,1)
+    if count==2 then stroke:addPoint(44,30,1) end
+    load('renderer').drawStroke(bb,stroke,nil,rgb)
+    local pixel=bb:getPixel(20,30)
+    local r=math.floor(tint/65536)%256
+    local g=math.floor(tint/256)%256
+    local b=tint%256
+    if not rgb then r=math.floor((4898*r+9618*g+1869*b)/16384+0.5);g=r;b=r end
+    assert(pixel:getR()==r and pixel:getG()==g and pixel:getB()==b,'marker palette lost selected color')
+    if rgb then assert(pixel:getAlpha()==255,'marker framebuffer pixel became transparent') end
+    bb:free()
+  end
+ end
+end
 local original=Screen.bb
 local w,h=Screen:getWidth(),Screen:getHeight()
 for _,rgb in ipairs({false,true}) do

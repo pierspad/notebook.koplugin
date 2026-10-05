@@ -220,7 +220,10 @@ function Canvas:init()
         -- display. Once owned, a contact must end regardless of its position.
         local owned_zoom_contact = { contains = function() return true end }
         local function zoom_contact_range()
-            return self.zoom > 1 and self.zoom_touch_active and owned_zoom_contact or self.content
+            local owned = self.zoom > 1 and self.zoom_touch_active
+                or self.draw_with_finger and self.touch_start_x ~= nil
+                or self.transform_gesture or self.dragging_selection
+            return owned and owned_zoom_contact or self.content
         end
         self.ges_events = {
             TouchStart        = { GestureRange:new{ ges = "touch",            range = self.content } },
