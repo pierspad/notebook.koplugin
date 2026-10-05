@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--runtime', type=Path, default=ROOT.parent / 'koreader-src/koreader-emulator-x86_64-pc-linux-gnu-debug/koreader')
 parser.add_argument('--output', type=Path, help='Keep screenshots and exports in this directory')
+parser.add_argument('--all-languages', action='store_true', help='Check compact menus in every shipped language')
 args = parser.parse_args()
 runtime = args.runtime.resolve()
 if not (runtime / 'luajit').exists():
@@ -24,7 +25,10 @@ with tempfile.TemporaryDirectory(prefix='notebook-native-') as directory:
             source.suffix == '.lua' and not source.name.startswith(('settings.', 'defaults.custom'))
         ):
             (stage / source.name).symlink_to(source.resolve(), target_is_directory=source.is_dir())
-    for width, height, dpi, language in [(600, 800, 96, 'en'), (800, 600, 96, 'it'), (1860, 2480, 300, 'it')]:
+    profiles = [(600, 800, 96, 'en'), (800, 600, 96, 'it'), (1860, 2480, 300, 'it')]
+    if args.all_languages:
+        profiles.extend((600, 800, 96, catalog.stem) for catalog in sorted((ROOT / 'lua/locale').glob('*.po')))
+    for width, height, dpi, language in profiles:
         output = (args.output.resolve() if args.output else stage / 'artifacts') / f'{width}x{height}-{language}'
         output.mkdir(parents=True, exist_ok=True)
         subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/smoke-features.lua'), str(ROOT / 'lua'), str(output)],
@@ -32,6 +36,12 @@ with tempfile.TemporaryDirectory(prefix='notebook-native-') as directory:
                        env={**os.environ, 'SDL_VIDEODRIVER': 'dummy', 'KO_HOME': str(output),
                             'EMULATE_READER_W': str(width), 'EMULATE_READER_H': str(height),
                             'EMULATE_READER_DPI': str(dpi), 'LANGUAGE': language})
+
+        subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/check-shape-order.lua'),
+                        str(ROOT / 'lua'), str(output)], cwd=stage, check=True, timeout=30,
+                       env={**os.environ, 'SDL_VIDEODRIVER': 'dummy', 'KO_HOME': str(output),
+                            'EMULATE_READER_W': str(width), 'EMULATE_READER_H': str(height),
+                            'EMULATE_READER_DPI': str(dpi)})
 
         svg = ET.parse(output / 'image.svg')
         images = svg.findall('.//{http://www.w3.org/2000/svg}image')
@@ -44,3 +54,12 @@ with tempfile.TemporaryDirectory(prefix='notebook-native-') as directory:
             xopp = ET.fromstring(stream.read())
         embedded = xopp.findall('.//image')
         assert len(embedded) == 2 and all(base64.b64decode(image.text, validate=True) for image in embedded)
+
+    for scale in ("0.4", "0.65"):
+        output = (args.output.resolve() if args.output else stage / 'artifacts') / f'emulator-scale-{scale}'
+        output.mkdir(parents=True, exist_ok=True)
+        subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/check-emulator-display.lua'),
+                        str(ROOT / 'lua'), str(output)], cwd=stage, check=True, timeout=30,
+                       env={**os.environ, 'SDL_VIDEODRIVER': 'dummy', 'KO_HOME': str(output),
+                            'EMULATE_READER_W': '1860', 'EMULATE_READER_H': '2480',
+                            'EMULATE_READER_DPI': '160', 'NOTEBOOK_EMULATOR_WINDOW_SCALE': scale})

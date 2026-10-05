@@ -7,13 +7,14 @@ local Recents=require("recents")
 local UIManager=require("ui/uimanager")
 local _=require("i18n")
 local Actions={}
-local function showActions(title, actions)
+local function showActions(title, actions, on_dismiss, preferred_row_height)
     local menu
     local screen=require("device").screen
-    local row_height=math.min(screen:scaleBySize(52),math.floor(screen:getHeight()/(#actions+4)))
+    local row_height=preferred_row_height or math.min(screen:scaleBySize(52),math.floor(screen:getHeight()/(#actions+4)))
     menu=ActionMenu:new{title=title,actions=actions,row_height=row_height,close_on_select=true,
-        width=math.floor(screen:getWidth()*0.86)}
+        width=math.floor(screen:getWidth()*0.86),on_dismiss=on_dismiss}
     UIManager:show(menu)
+    return menu
 end
 function Actions:_saveForSwitch()
     self:_finishInteraction()
@@ -35,17 +36,40 @@ function Actions:_requestNotebook(kind, value)
 end
 function Actions:_showRecentNotebooks()
     local actions={}
+    local Thumbnail=require("thumbnail")
     for _,rel in ipairs(Recents.list(Library.relOf(self.document.path))) do
-        actions[#actions+1]={icon="notebook.open",text=rel:gsub("%.scribe$",""),
+        actions[#actions+1]={icon="notebook.open",preview_source=Library.abs(rel),
+            preview=Thumbnail.cached(Library.abs(rel)),text=rel:gsub("%.scribe$",""),
             callback=function() self:_requestNotebook("recent",rel) end}
     end
     if #actions==0 then
         UIManager:show(InfoMessage:new{text=_("No other recent notebooks.")});return
     end
-    showActions(_("Recent notebooks"),actions)
+    local screen=require("device").screen
+    local row_height=math.min(screen:scaleBySize(88),
+        math.floor((screen:getHeight()-screen:scaleBySize(100))/#actions))
+    local menu=showActions(_("Recent notebooks"),actions,nil,row_height)
+    local index=0
+    local function step()
+        if menu._menu_freed then return end
+        index=index+1
+        local action=actions[index]
+        if not action then return end
+        local row=menu.action_rows[index].row
+        if not action.preview then
+            local path=Thumbnail.get(action.preview_source,row.preview_size,row.preview_size,1860,2480)
+            if path then
+                action.preview=path
+                row:setPreview(path)
+                UIManager:setDirty(menu,"ui",menu.panel.dimen)
+            end
+        end
+        require("safe").later("recent:thumbnail",step)
+    end
+    require("safe").later("recent:thumbnail",step)
 end
 function Actions:_toggleDiagnostics()
-    local ok,err=Diagnostics.set(self.canvas,not Diagnostics.enabled)
+    local ok,err=Diagnostics.set(self.canvas,not self.canvas.debug_log_path)
     if not ok then UIManager:show(InfoMessage:new{text=tostring(err)});return end
     UIManager:show(InfoMessage:new{text=Diagnostics.enabled
         and (_("Input logging is active. Reproduce the problem on a test page, then stop logging and attach:").."\n\n"..Diagnostics.path())
@@ -83,17 +107,26 @@ function Actions:_showPaperOptions()
 end
 function Actions:_showNotebookMenu()
     self:_finishInteraction()
+    self.settings_button:setSelected(true)
+    for _,button in ipairs(self.tool_buttons) do button:setSelected(false) end
+    self:_refreshToolbar()
     showActions(self.title or _("Notebook"),{
-        {icon="notebook.page",text=_("New notebook"),callback=function() self:_requestNotebook("new") end},
+        {icon="notebook.page",section=_("Notebooks"),pair=true,text=_("New notebook"),callback=function() self:_requestNotebook("new") end},
         {icon="notebook.export",text=_("Open PDF"),callback=function() self:_requestNotebook("pdf") end},
-        {icon="notebook.open",text=_("Open another notebook"),callback=function() self:_requestNotebook("library") end},
+        {icon="notebook.open",pair=true,text=_("Open another notebook"),callback=function() self:_requestNotebook("library") end},
         {icon="notebook.open",text=_("Recent notebooks"),callback=function() self:_showRecentNotebooks() end},
-        {icon="notebook.page",text=_("Paper spacing and tone"),callback=function() self:_showPaperOptions() end},
+        {icon="notebook.page",section=_("Page"),pair=true,text=_("Paper spacing and tone"),callback=function() self:_showPaperOptions() end},
         {icon="notebook.image",text=_("Insert image"),callback=function() self:_insertImage() end},
-        {icon="appbar.settings",text=_("Tool settings"),callback=function() self:_showToolSettings() end},
-        {icon="notebook.refresh",text=Diagnostics.enabled and _("Stop input log") or _("Start input log"),
+        {icon="appbar.settings",section=_("Settings"),text=_("Tool settings"),callback=function() self:_showToolSettings() end},
+        {icon="notebook.refresh",text=self.canvas.debug_log_path and _("Stop input log") or _("Start input log"),
             callback=function() self:_toggleDiagnostics() end},
-    })
+    },function()
+        self.settings_button:setSelected(false)
+        for i,button in ipairs(self.tool_buttons) do
+            button:setSelected(self.canvas.tool==require("notebooktoolbar").tools[i].tool)
+        end
+        if not self.closed then self:_refreshToolbar() end
+    end)
 end
 function Actions:_insertImage()
     self:_finishInteraction()

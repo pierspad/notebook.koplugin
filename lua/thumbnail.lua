@@ -36,7 +36,7 @@ function Thumbnail.pathFor(path)
     local root = Library.root()
     local key = path:sub(1, #root) == root and path:sub(#root + 2) or path
     key = key:gsub("%%", "%%25"):gsub("/", "%%2F"):gsub("\\", "%%5C")
-    return Library.abs(CACHE_DIR) .. "/" .. key .. ".png"
+    return Library.abs(CACHE_DIR) .. "/" .. key .. ".v2.png"
 end
 
 --- When a notebook was last written, or nil if it is not there.
@@ -116,6 +116,13 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
         return nil
     end
 
+    -- Page geometry differs between devices and the desktop emulator.
+    -- Include the toolbar origin because stroke coordinates are absolute.
+    local origin_x, origin_y = doc:contentOrigin()
+    if doc.page_size then
+        page_w = doc.page_size.w + origin_x
+        page_h = doc.page_size.h + origin_y
+    end
     -- Fit the page into the card, keeping its proportions.
     local scale = math.min(w / page_w, h / page_h)
 
@@ -124,7 +131,6 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
     -- The background too, so a card looks like the page it stands for -- and at
     -- the origin the strokes are in, or the ruling on the card would not line
     -- up with the writing on it; see Document:contentOrigin.
-    local origin_x, origin_y = doc:contentOrigin()
     Template.draw(bb, doc:templateFor(index),
         { x = origin_x * scale, y = origin_y * scale, w = w, h = h }, scale, nil, doc.paper_options)
     if page.background then

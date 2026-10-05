@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-01 13:14+0200\n"
-"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"PO-Revision-Date: 2026-10-05 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Hindi\n"
 "Language: hi\n"
@@ -17,7 +17,7 @@ msgid "Notebook name"
 msgstr "नोटबुक का नाम"
 
 msgid "New notebook"
-msgstr "नया नोटबुक"
+msgstr "नई नोटबुक"
 
 msgid "Cancel"
 msgstr "रद्द करें"
@@ -644,13 +644,13 @@ msgid "Dark"
 msgstr "गहरा"
 
 msgid "Ruling tone"
-msgstr "रेखाओं का रंग"
+msgstr "रेखाओं की गहराई"
 
 msgid "Default paper settings"
 msgstr "काग़ज़ की डिफ़ॉल्ट सेटिंग"
 
 msgid "Paper spacing and tone"
-msgstr "काग़ज़ की दूरी और रंग की गहराई"
+msgstr "रेखाओं की दूरी और गहराई"
 
 msgid "Open PDF"
 msgstr "PDF खोलें"
@@ -675,3 +675,9 @@ msgstr "4 MB और 8 मेगापिक्सेल तक का PNG या
 
 msgid "Could not open this image."
 msgstr "यह चित्र नहीं खोला जा सका।"
+
+msgid "Page"
+msgstr "पृष्ठ"
+
+msgid "Settings"
+msgstr "सेटिंग्स"

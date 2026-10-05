@@ -257,6 +257,11 @@ function Toolbar:_buildToolbar()
         callback = function() self:_toggleZoom() end,
     }
 
+    self.settings_button = ToolButton:new{
+        icon = "appbar.settings", icon_size = icon_size, size = unit,
+        callback = function() self:_showSettings() end,
+    }
+
     local spacers = {}
     local function betweenGroups()
         local spacer = HorizontalSpan:new{ width = gap }
@@ -295,10 +300,7 @@ function Toolbar:_buildToolbar()
         self.paste_button,
         self.zoom_button,
         betweenGroups(),
-        self:_actionButton{
-            icon = "appbar.settings", icon_size = icon_size, width = unit,
-            callback = function() self:_showSettings() end,
-        },
+        self.settings_button,
     }
 
     local remaining = math.max(0, avail - self.toolbar_content:getSize().w)

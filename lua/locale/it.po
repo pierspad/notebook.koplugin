@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-01 13:14+0200\n"
-"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"PO-Revision-Date: 2026-10-05 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Italian\n"
 "Language: it\n"
@@ -160,7 +160,7 @@ msgid "Tuning written to the log"
 msgstr "Regolazioni scritte nel registro"
 
 msgid "Test notebook - rename it if you are not tuning"
-msgstr "Quaderno di prova: rinominalo se non stai eseguendo regolazioni"
+msgstr "Blocco note di prova: rinominalo se non stai eseguendo regolazioni"
 
 msgid "Reset tab"
 msgstr "Ripristina scheda"
@@ -223,7 +223,7 @@ msgid "Page %1 of %2"
 msgstr "Pagina %1 di %2"
 
 msgid "Restart KOReader after the update finishes before opening a notebook."
-msgstr "Al termine dell’aggiornamento riavvia KOReader prima di aprire un quaderno."
+msgstr "Al termine dell’aggiornamento riavvia KOReader prima di aprire un blocco note."
 
 msgid "Open this SVG file in a browser or vector editor."
 msgstr "Apri questo file SVG in un browser o editor vettoriale."
@@ -262,7 +262,7 @@ msgid "Choose pages…"
 msgstr "Scegli pagine…"
 
 msgid "Could not read notebook."
-msgstr "Impossibile leggere il quaderno."
+msgstr "Impossibile leggere il blocco note."
 
 msgid "Export selected pages"
 msgstr "Esporta pagine selezionate"
@@ -277,7 +277,7 @@ msgid "Could not open this PDF."
 msgstr "Impossibile aprire questo PDF."
 
 msgid "Could not save the notebook."
-msgstr "Impossibile salvare il quaderno."
+msgstr "Impossibile salvare il blocco note."
 
 msgid "Work"
 msgstr "Lavoro"
@@ -383,7 +383,7 @@ msgid "Text size"
 msgstr "Dimensione del testo"
 
 msgid "Could not save the notebook. It has been left open."
-msgstr "Impossibile salvare il quaderno. È stato lasciato aperto."
+msgstr "Impossibile salvare il blocco note. È stato lasciato aperto."
 
 msgid "Black"
 msgstr "Nero"
@@ -488,7 +488,7 @@ msgid "Text options"
 msgstr "Opzioni testo"
 
 msgid "Blank"
-msgstr "Bianco"
+msgstr "Pagina bianca"
 
 msgid "Lined"
 msgstr "Righe"
@@ -503,7 +503,7 @@ msgid "Dot grid"
 msgstr "Puntini"
 
 msgid "Checklist"
-msgstr "Elenco"
+msgstr "Lista di controllo"
 
 msgid "XOPP"
 msgstr "XOPP"
@@ -623,10 +623,10 @@ msgstr "Intervallo di pagine non valido. Usa numeri o intervalli separati da vir
 #~ msgstr "Sfondo bianco"
 
 msgid "No other recent notebooks."
-msgstr "Nessun altro notebook recente."
+msgstr "Nessun altro blocco note recente."
 
 msgid "Recent notebooks"
-msgstr "Notebook recenti"
+msgstr "Blocchi note recenti"
 
 msgid ""
 "Input logging is active. Reproduce the problem on a test page, then stop "
@@ -655,13 +655,13 @@ msgid "Default paper settings"
 msgstr "Impostazioni predefinite della carta"
 
 msgid "Paper spacing and tone"
-msgstr "Spaziatura e tono della carta"
+msgstr "Spaziatura e tono delle righe"
 
 msgid "Open PDF"
 msgstr "Apri PDF"
 
 msgid "Open another notebook"
-msgstr "Apri un altro notebook"
+msgstr "Apri un altro blocco note"
 
 msgid "Insert image"
 msgstr "Inserisci immagine"
@@ -680,3 +680,9 @@ msgstr "Scegli un’immagine PNG o JPEG fino a 4 MB e 8 megapixel."
 
 msgid "Could not open this image."
 msgstr "Impossibile aprire questa immagine."
+
+msgid "Page"
+msgstr "Pagina"
+
+msgid "Settings"
+msgstr "Impostazioni"

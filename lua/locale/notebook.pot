@@ -654,3 +654,9 @@ msgstr ""
 
 msgid "Could not open this image."
 msgstr ""
+
+msgid "Page"
+msgstr ""
+
+msgid "Settings"
+msgstr ""

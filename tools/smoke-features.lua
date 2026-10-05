@@ -29,7 +29,19 @@ local function paint(name,widget)
     assert(d.x>=0 and d.y>=0 and d.x+d.w<=w and d.y+d.h<=h,"offscreen panel: "..name)
     bb:writePNG(tmp.."/"..name..".png");bb:free()
 end
-nb:_showNotebookMenu();paint("notebook-menu",captured)
+nb:paintTo(screen.bb,0,0)
+nb:_showNotebookMenu()
+assert(nb.settings_button.selected and not nb.tool_buttons[1].selected)
+paint("notebook-menu",captured)
+nb:paintTo(screen.bb,0,0);captured:paintTo(screen.bb,0,0)
+screen.bb:writePNG(tmp.."/notebook-settings.png")
+captured:onCloseWidget()
+assert(not nb.settings_button.selected and nb.tool_buttons[1].selected)
+nb:_selectTool(6);nb:_showNotebookMenu()
+assert(nb.settings_button.selected and not nb.tool_buttons[6].selected)
+captured:onCloseWidget()
+assert(not nb.settings_button.selected and nb.tool_buttons[6].selected)
+nb:_selectTool(1)
 nb:_showPaperOptions();paint("paper-options",captured)
 nb:_showToolSettings();paint("tool-settings",captured)
 nb:_setSetting("pen_style","pencil");assert(nb.tool_buttons[1].icon=="notebook.pencil")
@@ -56,5 +68,30 @@ Image.draw(clipped,placed,1,0,0,{x=40,y=45,w=12,h=12})
 assert(clipped:getPixel(39,45):getColor8().a==155)
 assert(clipped:getPixel(40,45):getColor8().a<155,"image not decoded/composited")
 clipped:free()
+-- A desktop notebook must fill its card using its recorded page geometry.
+local thumbdoc=Document:new(load("library").pathFor("thumbnail-size"))
+thumbdoc:setTemplate("grid")
+thumbdoc.page_size={w=w,h=h-50};thumbdoc:setContentOrigin(0,50)
+local line=load("stroke"):new{tool="pen",width=12}
+line:addPoint(w*0.75,h*0.75);line:addPoint(w*0.85,h*0.75)
+thumbdoc:addStroke(line);assert(thumbdoc:save())
+local thumb=assert(load("thumbnail").get(thumbdoc.path,140,180,1860,2480))
+local decoded=BB.new(140,180,BB.TYPE_BB8)
+local image_widget=require("ui/widget/imagewidget"):new{file=thumb,width=140,height=180}
+image_widget:paintTo(decoded,0,0)
+local scale=math.min(140/w,180/h)
+assert(decoded:getPixel(math.floor(w*0.8*scale),math.floor(h*0.75*scale)):getColor8().a<128,
+    "thumbnail ignored the recorded page dimensions")
+image_widget:free();decoded:free()
+local Safe=load("safe");local later=Safe.later;local pending={}
+Safe.later=function(_,fn) pending[#pending+1]=fn end
+load("recents").remember(thumbdoc.path)
+nb:_showRecentNotebooks();local recent=captured
+while #pending>0 do table.remove(pending,1)() end
+assert(recent.actions[1].preview and recent.action_rows[1].row.preview,
+    "recent notebook thumbnail was not displayed")
+paint("recent-notebooks",recent)
+recent:onCloseWidget();Safe.later=later
+
 nb.canvas:stop();Image.clear();UI.show=show
 print("native features: menus fit, pen icons switch, PNG/JPEG decode/clip, images persist and PDF/SVG/XOPP export")

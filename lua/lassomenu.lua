@@ -42,7 +42,7 @@ function FloatingButton:init()
     if self.icon then
         table.insert(children, CenterContainer:new{
             dimen = Geom:new{ w = ICON_SZ, h = BTN_H },
-            IconWidget:new{ icon = self.icon, width = ICON_SZ, height = ICON_SZ },
+            IconWidget:new{ icon = self.icon, width = ICON_SZ, height = ICON_SZ, invert=self.active==true },
         })
         table.insert(children, HorizontalSpan:new{ width = Size.padding.small })
     end
@@ -65,7 +65,7 @@ function FloatingButton:init()
     end
 
     self.frame = FrameContainer:new{
-        background = Blitbuffer.COLOR_WHITE,
+        background = self.active and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE,
         color = Blitbuffer.COLOR_BLACK,
         bordersize = Size.border.thin,
         radius = Size.radius.button,
@@ -79,15 +79,6 @@ function FloatingButton:init()
         Tap = { GestureRange:new{ ges = "tap", range = self.dimen } },
         Hold = { GestureRange:new{ ges = "hold", range = self.dimen } },
     }
-end
-
-function FloatingButton:paintTo(bb, x, y)
-    InputContainer.paintTo(self, bb, x, y)
-    if self.active then
-        local inset = Size.padding.button + Size.border.thin
-        bb:paintRect(x + inset, y + self.dimen.h - inset - 2,
-            self.dimen.w - 2 * inset, 2, Blitbuffer.COLOR_BLACK)
-    end
 end
 
 function FloatingButton:onHold()
@@ -131,6 +122,7 @@ function LassoMenu:init()
     if self.on_order then
         local switch = HorizontalGroup:new{ align = "center" }
         for direction = 1, 2 do
+            if direction > 1 then table.insert(switch, HorizontalSpan:new{width=pad}) end
             local front = direction == 1
             table.insert(switch, FloatingButton:new{
                 active = self.order_front == front,

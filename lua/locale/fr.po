@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-01 13:14+0200\n"
-"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"PO-Revision-Date: 2026-10-05 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -653,7 +653,7 @@ msgid "Default paper settings"
 msgstr "Réglages du papier par défaut"
 
 msgid "Paper spacing and tone"
-msgstr "Espacement et teinte du papier"
+msgstr "Espacement et teinte des lignes"
 
 msgid "Open PDF"
 msgstr "Ouvrir un PDF"
@@ -678,3 +678,9 @@ msgstr "Choisissez une image PNG ou JPEG de 4 Mo et 8 mégapixels maximum."
 
 msgid "Could not open this image."
 msgstr "Impossible d’ouvrir cette image."
+
+msgid "Page"
+msgstr "Page"
+
+msgid "Settings"
+msgstr "Réglages"

@@ -19,6 +19,7 @@ local GestureRange = require("ui/gesturerange")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
 local IconWidget = require("ui/widget/iconwidget")
+local ImageWidget = require("ui/widget/imagewidget")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local LeftContainer = require("ui/widget/container/leftcontainer")
 local LineWidget = require("ui/widget/linewidget")
@@ -103,9 +104,10 @@ local Row = InputContainer:extend{
 function Row:init()
     local row_h = self.row_height or ROW_H
     local pad = Size.padding.large
+    self.preview_size = self.preview_source and math.floor(row_h * 0.8) or ICON_SZ
     self:_buildIcon()
     self.icon_holder = CenterContainer:new{
-        dimen = Geom:new{ w = ICON_SZ, h = row_h },
+        dimen = Geom:new{ w = self.preview_size, h = row_h },
         self.icon_widget,
     }
     self.label = TextWidget:new{
@@ -113,7 +115,7 @@ function Row:init()
         bold = self.selected,
         fgcolor = self.selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK,
         face = Font:getFace("cfont", 19),
-        max_width = self.width - ICON_SZ - 3 * pad,
+        max_width = self.width - self.preview_size - 3 * pad,
     }
 
     self.frame = FrameContainer:new{
@@ -129,7 +131,7 @@ function Row:init()
             LeftContainer:new{
                 -- Left-aligned: a column of centred labels of different lengths
                 -- reads as ragged, and the eye has no edge to run down.
-                dimen = Geom:new{ w = self.width - ICON_SZ - 3 * pad, h = row_h },
+                dimen = Geom:new{ w = self.width - self.preview_size - 3 * pad, h = row_h },
                 self.label,
             },
             HorizontalSpan:new{ width = pad },
@@ -143,7 +145,13 @@ function Row:init()
 end
 
 function Row:_buildIcon()
-    if self.checkbox then
+    if self.preview then
+        self.icon_widget = FrameContainer:new{
+            bordersize=Size.border.thin,margin=0,padding=0,
+            ImageWidget:new{file=self.preview,
+                width=self.preview_size-2*Size.border.thin,height=self.preview_size-2*Size.border.thin},
+        }
+    elseif self.checkbox then
         self.icon_widget = TextWidget:new{
             text = self.selected and "☑" or "☐",
             face = Font:getFace("cfont", 21),
@@ -184,6 +192,13 @@ function Row:setSelected(selected)
         self:_buildIcon()
         self.icon_holder[1] = self.icon_widget
     end
+end
+
+function Row:setPreview(path)
+    self.preview = path
+    if self.icon_widget and self.icon_widget.free then self.icon_widget:free() end
+    self:_buildIcon()
+    self.icon_holder[1] = self.icon_widget
 end
 
 function Row:onTap()
@@ -243,10 +258,22 @@ function ActionMenu:init()
                 background = Blitbuffer.COLOR_LIGHT_GRAY,
             })
         end
-        local pair = action.swatch and self.actions[i + 1] and self.actions[i + 1].swatch
+        local next_action = self.actions[i + 1]
+        local pair = next_action and not next_action.section
+            and ((action.swatch and next_action.swatch) or action.pair)
+        if pair and action.pair then
+            local available = math.floor(width / 2) - ICON_SZ - 3 * Size.padding.large
+            for _,item in ipairs({action,next_action}) do
+                local label = TextWidget:new{text=item.text,face=Font:getFace("cfont",19)}
+                if label:getSize().w > available then pair=false end
+                label:free()
+            end
+        end
         local function makeRow(item)
         local row = Row:new{
             row_height = row_h,
+            preview = item.preview,
+            preview_source = item.preview_source,
             checkbox = item.checkbox,
             icon = item.icon,
             icon_selected = item.icon_selected,
@@ -401,7 +428,11 @@ function ActionMenu:onShow()
 end
 
 function ActionMenu:onCloseWidget()
-    if not self._menu_freed then self._menu_freed=true; self:free() end
+    if not self._menu_freed then
+        self._menu_freed=true
+        if self.on_dismiss then self.on_dismiss() end
+        self:free()
+    end
     -- What was underneath may have been painted outside UIManager's accounting,
     -- so ask for the area back rather than assuming it will be restored.
     UIManager:setDirty(nil, "ui")

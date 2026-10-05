@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: Notebook for KOReader 1.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-01 13:14+0200\n"
-"PO-Revision-Date: 2026-09-23 00:00+0200\n"
+"PO-Revision-Date: 2026-10-05 00:00+0200\n"
 "Last-Translator: Notebook contributors\n"
 "Language-Team: Traditional Chinese\n"
 "Language: zh_TW\n"
@@ -650,7 +650,7 @@ msgid "Default paper settings"
 msgstr "預設紙張設定"
 
 msgid "Paper spacing and tone"
-msgstr "紙張間距和深淺"
+msgstr "線條間距和深淺"
 
 msgid "Open PDF"
 msgstr "開啟 PDF"
@@ -675,3 +675,9 @@ msgstr "請選擇不超過 4 MB 和 800 萬畫素的 PNG 或 JPEG 圖片。"
 
 msgid "Could not open this image."
 msgstr "無法開啟此圖片。"
+
+msgid "Page"
+msgstr "頁面"
+
+msgid "Settings"
+msgstr "設定"

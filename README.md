@@ -1,226 +1,216 @@
-# Notebook for KOReader
+# Notebook per KOReader
 
 [![Release](https://img.shields.io/github/v/release/pierspad/notebook.koplugin?color=blue&label=release)](https://github.com/pierspad/notebook.koplugin/releases/latest) [![CI](https://github.com/pierspad/notebook.koplugin/actions/workflows/ci.yaml/badge.svg)](https://github.com/pierspad/notebook.koplugin/actions/workflows/ci.yaml) [![KOReader](https://img.shields.io/badge/KOReader-Plugin-238636.svg)](https://github.com/koreader/koreader)
 
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=github&style=flat)](https://github.com/sponsors/pierspad) [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-yellow?logo=buymeacoffee)](https://buymeacoffee.com/pierspad) [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=ko-fi)](https://ko-fi.com/pierspad)
 
-A handwriting notebook plugin for KOReader, designed for the Kindle Scribe and
-other stylus-capable e-ink devices. It does not patch KOReader.
+Un plugin open source per scrivere e disegnare in KOReader, sviluppato sul
+Kindle Scribe e utilizzabile senza applicare patch a KOReader.
 
-| Gallery & Organization | Drawing & Tools |
+Documentazione aggiornata il **5 ottobre 2026**. Questa revisione italiana è
+pronta per la verifica dei contenuti prima della traduzione finale in inglese.
+
+| Galleria | Scrittura, testo e forme |
 | :---: | :---: |
-| <img src="docs/images/gallery.png" width="300" alt="Notebooks Gallery" /> | <img src="docs/images/drawing.png" width="300" alt="Drawing and Stylus Tools" /> |
-| **Pen Options & Color Palette** | **Paper Templates** |
-| <img src="docs/images/colored_pen.png" width="300" alt="Pen Options and Color Palette" /> | <img src="docs/images/templates.png" width="300" alt="Paper Templates" /> |
-| **PDF, SVG & XOPP Export** | **Quick Action (SimpleUI)** |
-| <img src="docs/images/export.png" width="300" alt="Export Formats" /> | <img src="docs/images/home.png" width="300" alt="Quick Action in SimpleUI" /> |
+| <img src="docs/images/gallery-2026-10-05.png" width="300" alt="Galleria aggiornata dei quaderni" /> | <img src="docs/images/drawing-2026-10-05.png" width="300" alt="Esempio completo con scrittura, testo e forme" /> |
 
-## Install
+| Penna e colori | Evidenziatore |
+| :---: | :---: |
+| <img src="docs/images/pen-options-2026-10-05.png" width="300" alt="Tipi di penna, stili, colori e spessori" /> | <img src="docs/images/highlighter-options-2026-10-05.png" width="300" alt="Colori e spessori dell’evidenziatore" /> |
+| **Gomma** | **Forme** |
+| <img src="docs/images/eraser-options-2026-10-05.png" width="300" alt="Modalità e dimensioni della gomma" /> | <img src="docs/images/shape-options-2026-10-05.png" width="300" alt="Forme, riempimento e colori" /> |
+| **Testo** | **Modelli di carta** |
+| <img src="docs/images/text-options-2026-10-05.png" width="300" alt="Dimensione, anteprima e stili del testo" /> | <img src="docs/images/paper-templates-2026-10-05.png" width="300" alt="Selettore dei modelli di carta" /> |
 
-### From the release ZIP
+Schermate acquisite nell’emulatore il 5 ottobre 2026. La reattività della penna
+e il refresh e-ink si verificano sul dispositivo reale.
 
-1. Download `notebook.koplugin-<version>.zip` from
+## Installazione
+
+### Dallo ZIP della release
+
+1. Scarica `notebook.koplugin-<versione>.zip` da
    [Releases](https://github.com/pierspad/notebook.koplugin/releases/latest).
-   Use the attached plugin ZIP, rather than GitHub's **Source code (zip)** archive.
-2. Exit KOReader. Extract the ZIP and copy its `notebook.koplugin` folder into
-   your device's `koreader/plugins/` directory. On Kobo, this is usually
-   `.adds/koreader/plugins/`; on Kindle, `koreader/plugins/` on the exposed storage.
-3. Check that `plugins/notebook.koplugin/main.lua` exists directly inside the
-   plugin folder; there should be no extra nested `notebook.koplugin` directory.
-4. Restart KOReader, then open **Tools → More tools → Notebook**.
+   Usa lo ZIP allegato alla release, non **Source code (zip)**.
+2. Chiudi KOReader. Estrai la cartella `notebook.koplugin` in `koreader/plugins/`.
+   Su Kobo il percorso è generalmente `.adds/koreader/plugins/`; su Kindle,
+   `koreader/plugins/` nella memoria esposta via USB.
+3. Verifica che `plugins/notebook.koplugin/main.lua` e `_meta.lua` siano
+   direttamente nella cartella del plugin, senza livelli aggiuntivi.
+4. Riavvia KOReader e apri **Strumenti → Altri strumenti → Notebook**.
 
-### From source, without a ZIP
+### Dal sorgente
 
-No compilation is needed to install the Lua plugin directly.
-
-1. Clone the stable branch, or download and extract GitHub's source archive:
-
-   ```bash
-   git clone --branch main --depth 1 https://github.com/pierspad/notebook.koplugin.git
-   cd notebook.koplugin
-   ```
-
-   If you already have a checkout from `contrib`, use its `notebook.koplugin`
-   directory instead. A detached HEAD at a release tag is normal for a submodule.
-2. Exit KOReader. Create a folder named `notebook.koplugin` inside the device's
-   `koreader/plugins/` directory. Copy the **contents of `lua/`** into that folder,
-   including `icons/` and `locale/`. The `spec/` test directory can be omitted.
-   Copy `main.lua`, `_meta.lua` and all other runtime files directly into the
-   plugin folder: do not copy the outer repository or nest `lua/` inside it.
-3. Check for `plugins/notebook.koplugin/main.lua`, then restart KOReader and open
-   **Tools → More tools → Notebook**.
-
-For either method, when replacing an existing installation, first move the old
-plugin folder outside `plugins/` as a backup, then copy the complete new folder.
-Notebooks are stored separately in `koreader/notebook/`; keep that directory.
-All icons and translations are included in both methods. Git is only needed for
-cloning, and developer tools (`make`, LuaJIT, luacheck, gettext) are only needed
-for verification or packaging, not for copying the source plugin to a device.
-
-After installation, **Updates → Check update** offers newer stable releases.
-Restart KOReader after installing an update so it loads the new code.
-
-## Compatibility
-
-- **Kindle Scribe** is the primary hardware target; native KOReader checks
-  have also been run on the device. Stylus input, pressure and button support
-  depend on KOReader's device driver and the device firmware.
-- **KOReader desktop emulator (Linux)** is used for automated checks and native
-  offscreen rendering/layout tests. Mouse input can exercise the interface.
-- **Other devices** are not confirmed by these tests. A stylus-capable screen
-  alone does not establish compatibility; please report your model, firmware
-  and KOReader version when testing another device.
-- LocalSend is optional and only needed for wireless sharing. SimpleUI is
-  optional; Notebook is also available from KOReader's normal Tools menu.
-
-The source repository keeps the installable plugin in `lua/`. A source checkout
-or a contrib submodule is **not** the ready-to-install plugin directory: use the
-release ZIP or copy the contents of `lua/` as described above. Developers can
-also run `make package` to build their own installable ZIP in `build/`.
-
-## Features
-
-- **Versatile Pen Tools**:
-  - **Fineliner** (uniform line width), pressure-sensitive **Fountain pen**, and textured **Pencil**.
-  - 5 stroke widths and an 8-color palette (Black, White, Red, Blue, Orange, Green, Yellow, Purple) with instant live preview and deferred e-ink color refresh.
-- **Highlighter**: Semi-transparent marker with color options and light hatched live preview so underlying text remains readable.
-- **Flexible Eraser Modes**:
-  - **Whole strokes**: Erase entire strokes at once on contact.
-  - **Part of a stroke**: Precise segment erasing that removes only the ink directly touched by the eraser.
-  - 5 eraser size choices.
-- **Shapes & Straight Strokes**:
-  - Draw explicit shapes: **Square**, **Rectangle**, **Circle**, and **Triangle**, with outline or solid **Filled shape** options.
-  - **Hold to straighten**: Hold the pen still at the end of a stroke to automatically snap into a straight line or an arrow (configurable in settings, enabled by default).
-- **2× Writing Zoom**: Available on notebooks and imported PDF pages. Tap `2×` on the toolbar for high-precision writing, drag with a finger to pan across the page, and tap `1×` to return, with automatic background cleanup at rest.
-- **Lasso Selection & Clipboard**: Select strokes and text objects with a freehand boundary to move, cut, copy, paste, duplicate, or delete them.
-- **Rich Text Tool**:
-  - Insert editable on-page text with **Sans-serif**, **Serif**, or **Monospace** font families.
-  - Typography styles: **Bold**, **Italic**, **Underline**, and **White** or **Transparent** background.
-  - 10–96 pt font size selector with −/+ stepper buttons and live sample preview.
-- **Hardware Stylus Integration**: Direct digitizer event processing, palm rejection, and configurable stylus barrel button (toggle highlighter, eraser or lasso).
-- **Multi-page Notebooks & Paper Templates**:
-  - Multi-page management with visual thumbnail gallery and reordering.
-  - Built-in paper templates: Blank, Lined, Narrow lined, Grid, Dot grid, Checklist, and custom PDF page backgrounds.
-- **Export & Sync**: PDF export using the page renderer, vector SVG ink, and editable Xournal++ (`.xopp`) export, with optional wireless file transfer via LocalSend.
-
-Hold or double-tap any tool button to open its options popover. After cutting or copying, use the Paste button in the top bar.
-
-### Daily notebook actions
-
-Open the settings button to create a notebook, import a PDF, open the library or
-switch to one of the eight most recent notebooks. The current notebook is saved
-automatically before switching; a failed save leaves it open.
-
-The same menu offers paper spacing and ruling tone, and **Insert image** for
-PNG/JPEG files. Images are embedded in the notebook: the original file is no
-longer needed. Use the lasso to move, resize, duplicate or delete an image; the
-eraser affects ink. Images are included in PDF, SVG and XOPP exports. Imports
-are limited to 4 MiB and 8 megapixels per image.
-
-### Custom icons
-
-All icons used across Notebook (toolbar tools, pen styles, shapes, lasso actions, gallery buttons, etc.) are standard SVGs and can be easily replaced.
-
-#### Icon directories
-
-KOReader resolves icons from two locations:
-1. **Plugin directory**: `koreader/plugins/notebook.koplugin/icons/` (in this source repo: `lua/icons/`).
-2. **KOReader user icons directory**: `<koreader-dir>/icons/` (e.g., `/mnt/us/koreader/icons/` on Kindle, or `/.adds/koreader/icons/` on Kobo).
-
-On startup, Notebook automatically synchronizes its bundled icons into the KOReader user `icons/` folder so that KOReader's `IconWidget` can resolve them. You can customize any icon by replacing the SVG file in `koreader/plugins/notebook.koplugin/icons/` and/or in `<koreader-dir>/icons/`.
-
-#### SVG requirements
-
-- **Renderer compatibility**: KOReader uses NanoSVG; use standard SVG elements (`<path>`, `<rect>`, `<circle>`, `<polygon>`) with `fill` and `stroke`. Avoid CSS styles, `<mask/>`, or `<clipPath/>`.
-- **ViewBox**: Use a square `viewBox="0 0 24 24"` or `viewBox="0 0 32 32"`.
-- **Coloring**: Draw icons in solid black (`#000` or `black`) on a transparent background. KOReader automatically inverts the icon to white when selected on the toolbar or menus, and when night mode is active.
-- **Cache**: Restart KOReader after modifying or adding icons so its icon cache reloads them.
-
-## Development
-
-Requires LuaJIT, `luacheck` and gettext (`msgfmt`). For architecture, input, rendering and tests, see the [Technical Reference Manual](docs/README.md).
-Reader overlays are future work described in the [Reader Annotations Plan](docs/READER_ANNOTATIONS.md); importing a PDF as notebook paper already supports 2× zoom.
-For language catalogs, see [Translating Notebook](lua/locale/README.md).
+Non serve compilare il plugin Lua.
 
 ```bash
-make verify       # lint and tests
-make ci           # verification plus package checks
-make package      # build the installable zip in build/
+git clone --branch main --depth 1 https://github.com/pierspad/notebook.koplugin.git
+cd notebook.koplugin
 ```
 
-For device deployment, copy `kindle.env.example` to `kindle.env`, configure the
-device, then run `make deploy`. See `tools/deploy.sh --help` for options.
+Chiudi KOReader e copia **il contenuto di `lua/`**, inclusi `icons/` e `locale/`,
+in `koreader/plugins/notebook.koplugin/`. La cartella `spec/` dei test può essere
+omessa. Non copiare il repository intero e non aggiungere un livello `lua/`.
+Per un checkout da contrib, usa il contenuto di `notebook.koplugin/lua/`.
 
-### Gestures and non-obvious hints
-To undo, tap twice with **two fingers per tap**, in the same area, within half
-a second. The gesture is disabled while drawing with fingers, selecting objects,
-using the stylus or sleeping. Redo remains available from the toolbar.
+Per aggiornare, sposta prima la vecchia cartella del plugin fuori da `plugins/`
+come backup e copia la nuova cartella completa. I quaderni sono separati, in
+`koreader/notebook/`: conserva quella directory.
 
-### Input debug log
+Il menu **Aggiornamenti → Controlla aggiornamenti** cerca nuove release stabili.
+Dopo aver installato un aggiornamento, riavvia KOReader.
 
-To capture a device-specific pen problem, open the notebook settings menu and
-select **Start input log**. Reproduce the problem on a test page, then select
-**Stop input log** and attach `koreader/notebook/notebook-debug.log`.
+<img src="docs/images/updates-2026-10-05.png" width="300" alt="Controllo aggiornamenti e verifica settimanale" />
 
-Alternatively, create a new notebook named `_debug_` in the Notebook gallery (or create an empty file named `_debug_` inside `koreader/notebook/`).
-Then open the `_debug_` notebook, reproduce the problem, and send `koreader/notebook/notebook-debug.log` with your device model and firmware version.
-The log records raw and screen coordinates, selected tools, touch events, and rotation, plus the stylus button and physical tool flags. It does not embed notebook files or page images, but coordinates can describe your pen movements: reproduce the problem on a non-sensitive test page. The log rotates at about 1 MB: if `notebook-debug.log.1` exists, send that too.
-Together the two files use at most about 2 MB. Delete the `_debug_` notebook (or `_debug_` marker file) and reopen Notebook to stop logging.
-You can then delete both log files.
+## Funzioni
 
-If the problem only occurs in an existing notebook, use the empty `_debug_` marker file and reopen that notebook before reproducing it.
-For a plugin error/shutdown, also attach `koreader/notebook/.logs/notebook-error.log` if present. For a KOReader crash, include `koreader/crash.log` if available. Logs can be attached as a ZIP.
+- **Penna**: fineliner a spessore uniforme, stilografica sensibile alla pressione
+  e matita; cinque spessori e otto colori. Sono disponibili gli stili linea e
+  freccia e il raddrizzamento tenendo ferma la penna al termine del tratto.
+- **Evidenziatore**: colori e spessori selezionabili, con anteprima leggera che
+  mantiene leggibile il contenuto sottostante.
+- **Gomma**: cancella tratti interi oppure soltanto la parte toccata, con cinque
+  dimensioni disponibili.
+- **Forme**: quadrati, rettangoli, cerchi e triangoli, con contorno o riempimento.
+- **Testo**: blocchi modificabili, caratteri sans-serif, serif e monospaziati,
+  dimensioni da 10 a 96 pt, grassetto, corsivo, sottolineato e sfondo bianco o
+  trasparente. Il selettore mostra un’anteprima.
+- **Lazo e appunti**: seleziona tratti, testo e immagini per spostarli, copiarli,
+  tagliarli, duplicarli o eliminarli. Il pulsante Incolla si attiva quando sono
+  presenti elementi negli appunti.
+- **Zoom 2×**: scrittura ingrandita anche sui PDF importati; trascina con un dito
+  per spostarti e usa di nuovo il pulsante zoom per tornare alla pagina intera.
+- **Quaderni multipagina**: galleria, cartelle, miniature delle pagine e riordino.
+  Carta bianca, a righe, a righe strette, quadrettata, puntinata e checklist.
+- **Stilo**: gestione degli eventi del digitalizzatore, esclusione dei tocchi
+  del palmo e pulsante laterale configurabile per evidenziatore, gomma o lazo.
 
-### Reporting a bug
+Una pressione prolungata o un doppio tocco su uno strumento apre le sue opzioni.
+I menu degli strumenti restano aperti per modificare più proprietà.
+Per annullare con il gesto, esegui due tocchi consecutivi **con due dita per
+ciascun tocco**, nella stessa zona entro mezzo secondo. Il gesto è disattivato
+durante il disegno con le dita, una selezione, l’uso dello stilo o la sospensione.
+Annulla e Ripeti sono disponibili anche nella barra.
 
-Use the **Bug report** form when opening an issue. Include your device model, firmware/OS, jailbreak and hotfix versions (or "not applicable"), exact KOReader and Notebook versions, installation source, stylus model, and other enabled plugins/launcher.
-Describe the steps, expected/actual behavior, and frequency. For drawing problems, include orientation, zoom, tool, and whether the issue starts during hover, contact, or lift. For suspend/resume problems, include sleep duration and how you locked/unlocked the device.
-If a version is unknown, say so; logs are helpful but not required to report a bug.
+## Menu del quaderno
 
-> [!TIP]
-> You can also place Notebook directly on KOReader's bottom navigation bar using [SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) (Custom quick actions → Plugin → Notebook, icon `F405`).
+<img src="docs/images/notebook-menu-2026-10-05.png" width="300" alt="Menu del quaderno suddiviso in sezioni" />
 
----
+L’ingranaggio apre le sezioni **Quaderni**, **Pagina** e **Impostazioni**.
+Le voci si affiancano quando le etichette entrano per intero. L’ingranaggio
+si evidenzia mentre il menu è aperto; alla chiusura torna selezionato lo
+strumento in uso, senza cambiare lo strumento di disegno.
 
-## Performance and maintenance checks
+Dal menu puoi creare un quaderno, aprire un PDF, tornare alla libreria oppure
+scegliere uno degli ultimi otto quaderni, con miniature caricate progressivamente. Il documento corrente viene salvato
+prima del cambio; se il salvataggio fallisce, resta aperto.
+Puoi anche regolare distanza e tonalità delle righe o della griglia, inserire
+immagini e aprire le preferenze degli strumenti.
 
-Run `make verify` for correctness, lint, translations and benchmark comparison tests.
-Run `make test-native-features` with a built sibling KOReader runtime to check
-menus, icons, embedded images and exports at three screen sizes.
-Run `make benchmark BENCH_ARGS='--extended --jit both'` for native offscreen timings.
-The runner supports isolated Kindle SSH runs and CPU, wall-time and retained-heap
-regression limits; see the [current maintenance audit](docs/audits/2026-10-01-maintenance-current.md)
-for commands, coverage, raw results and measurement limits.
-The [1.6.0 release audit](docs/audits/2026-10-01-release-1.6.0.md) adds the mixed
-edit/page/zoom/save workflow and records the release verification.
-The [1.6.3 eraser audit](docs/audits/2026-10-02-release-1.6.3.md) covers continuous
-rubbing of dense markers, discontinuous input and shared 1×/2× batching.
+### Immagini incorporate
 
-## Contributing
+**Inserisci immagine** importa PNG/JPEG, fino a 4 MiB e 8 megapixel per immagine.
+I dati vengono incorporati nel quaderno: il file originale non serve più.
+Il lazo permette di spostare, ridimensionare, duplicare ed eliminare le immagini;
+la gomma agisce sull’inchiostro. Le immagini sono incluse in PDF, SVG e XOPP.
 
-Pull requests are welcome! For major changes, please open an issue first to discuss your ideas.
+## PDF, esportazione e condivisione
 
-If Notebook is useful to you and you want to support its maintenance, you can support via:
-- [GitHub Sponsors](https://github.com/sponsors/pierspad)
-- [Buy Me a Coffee](https://buymeacoffee.com/pierspad)
-- [Ko-fi](https://ko-fi.com/pierspad)
+Importa un PDF dalla galleria o dal menu del quaderno per usarne le pagine come
+sfondo. Le annotazioni sono conservate in un documento Notebook separato e il
+PDF originale resta intatto.
 
-Sponsorship is optional and does not unlock features.
+- **PDF**: sfondo e annotazioni composti in un unico documento.
+- **SVG**: tratti e testo vettoriali, con immagini incorporate; esclude la carta
+  e lo sfondo PDF.
+- **Xournal++ (`.xopp`)**: annotazioni modificabili. Per quaderni basati su PDF,
+  conserva `.xopp` e il relativo `.xopp.bg.pdf` nella stessa cartella.
 
----
+[LocalSend](https://github.com/kaikozlov/localsend.koplugin) è opzionale e permette
+l’invio via rete locale. Installa anche l’app LocalSend sul destinatario.
+[SimpleUI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) è opzionale:
+puoi aggiungere Notebook alla barra inferiore con **Azioni rapide personalizzate
+→ Plugin → Notebook**, usando il simbolo Nerd Font `F405`.
 
-## LLM Disclosure
+## Compatibilità
 
-This project was developed with the assistance of Large Language Models, used to support code writing and documentation.
+Il Kindle Scribe è il dispositivo principale di sviluppo e verifica. Pressione,
+pulsanti e input della penna dipendono dal driver KOReader e dal firmware.
+L’emulatore Linux viene usato per test automatici e controlli di layout con
+widget reali. Altri dispositivi non sono confermati da questi controlli:
+uno schermo con stilo, da solo, non garantisce la compatibilità.
+Per segnalare problemi includi modello, firmware e versione di KOReader.
 
----
+## Icone personalizzate
 
-## Acknowledgements
+Le icone SVG sono in `lua/icons/` nel sorgente e in
+`koreader/plugins/notebook.koplugin/icons/` nell’installazione. All’avvio vengono
+sincronizzate nella cartella utente `icons/` di KOReader: personalizza i file
+nella cartella del plugin, perché le copie utente possono essere sovrascritte.
 
-Inspired by [localsend.koplugin](https://github.com/kaikozlov/localsend.koplugin), [pencil.koplugin](https://github.com/mysticknits/pencil.koplugin), and [ink-away.koplugin](https://github.com/EmirErtorer/ink-away.koplugin).
+Usa elementi SVG standard compatibili con NanoSVG (`path`, `rect`, `circle`,
+`polygon`), un viewBox quadrato e nero su sfondo trasparente. Evita CSS, maschere
+e clipPath. Riavvia KOReader dopo le modifiche per ricaricare la cache.
 
----
+## Diagnostica e segnalazioni
 
-## License
+Apri il menu dell’ingranaggio e scegli **Avvia log di input**. Riproduci il
+problema sul quaderno già aperto (preferibilmente su una pagina di prova), poi scegli **Ferma log di input** e allega
+`koreader/notebook/notebook-debug.log`. Se esiste anche `.log.1`, allega entrambi.
+Fermare la registrazione conserva i file prodotti.
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+In alternativa, crea un quaderno `_debug_` oppure un file vuoto `_debug_` in
+`koreader/notebook/` e riapri Notebook. Per fermare questo metodo, elimina il
+quaderno o il marcatore e riapri Notebook. Il marcatore viene controllato
+all’apertura; il comando dal menu agisce immediatamente sul quaderno aperto e
+vale anche passando ad altri quaderni nella stessa sessione. **Ferma log di input**
+ha priorità sul marcatore fino al riavvio di KOReader. I due metodi scrivono lo
+stesso file e non recuperano eventi avvenuti prima dell’attivazione.
+
+Il log registra coordinate, tocchi, rotazione e stato dello stilo. Non incorpora
+pagine o immagini, ma le coordinate possono descrivere i movimenti della penna:
+usa una pagina senza contenuti sensibili. La rotazione limita i due file a circa
+2 MB complessivi. Per un errore del plugin allega anche
+`koreader/notebook/.logs/notebook-error.log`, se presente; per un crash di KOReader,
+`koreader/crash.log`.
+
+Usa il modulo **Bug report** nelle issue. Indica dispositivo, firmware/OS,
+versioni KOReader e Notebook, sorgente dell’installazione, modello di stilo e
+altri plugin attivi. Descrivi passaggi, risultato atteso ed effettivo e frequenza.
+Per problemi di disegno aggiungi orientamento, zoom e strumento; per sospensione
+indica durata e modalità di blocco/sblocco. I log aiutano ma non sono obbligatori.
+
+## Sviluppo
+
+Servono LuaJIT, luacheck e gettext (`msgfmt`) per i controlli, non per installare
+il sorgente sul dispositivo. Architettura e test sono nel
+[manuale tecnico](docs/README.md); i cataloghi in
+[Tradurre Notebook](lua/locale/README.md).
+
+```bash
+make verify                # lint, test, traduzioni e controlli benchmark
+make test-native-features  # widget ed esportazioni con un runtime KOReader compilato
+make package               # ZIP installabile in build/
+make ci                    # verifica e controllo del pacchetto
+```
+
+Per il deploy sul dispositivo, configura `kindle.env` a partire da
+`kindle.env.example` e usa `make deploy`; consulta `tools/deploy.sh --help`.
+Le annotazioni sovrapposte al lettore sono un progetto futuro descritto in
+[Reader Annotations Plan](docs/READER_ANNOTATIONS.md).
+
+## Contributi e sostegno
+
+Pull request e segnalazioni sono benvenute. Per cambiamenti importanti, apri
+prima una issue per discuterne. Puoi sostenere la manutenzione tramite
+[GitHub Sponsors](https://github.com/sponsors/pierspad),
+[Buy Me a Coffee](https://buymeacoffee.com/pierspad) o
+[Ko-fi](https://ko-fi.com/pierspad). Il sostegno è facoltativo e non sblocca funzioni.
+
+Il progetto è stato sviluppato con l’assistenza di modelli linguistici per
+codice e documentazione. Si ispira a
+[localsend.koplugin](https://github.com/kaikozlov/localsend.koplugin),
+[pencil.koplugin](https://github.com/mysticknits/pencil.koplugin) e
+[ink-away.koplugin](https://github.com/EmirErtorer/ink-away.koplugin).
+
+Licenza [MIT](LICENSE).

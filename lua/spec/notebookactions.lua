@@ -34,6 +34,14 @@ order={};assert(nb:_saveForSwitch() and table.concat(order,',')=='finish,save',
 -- File-action menus close before dispatch; tool-option menus remain selectable.
 nb:_showNotebookMenu();local menu=record.shown[#record.shown]
 assert(menu.close_on_select and #menu.actions==8)
+assert(menu.actions[1].section and menu.actions[5].section and menu.actions[7].section)
+assert(menu.actions[1].pair and menu.actions[3].pair and menu.actions[5].pair)
+assert(nb.settings_button.selected and not nb.tool_buttons[1].selected,
+    'settings did not replace the selected tool highlight')
+assert(nb.canvas.tool=='pen', 'opening settings changed the drawing tool')
+menu:onCloseWidget()
+assert(not nb.settings_button.selected and nb.tool_buttons[1].selected,
+    'closing settings did not restore the drawing tool highlight')
 menu.action_rows[1].row:onTap()
 assert(record.closed[#record.closed]==menu,'file menu retained modal ownership')
 assert(not require('safe').failed)
@@ -41,6 +49,18 @@ assert(not require('safe').failed)
 local Recents=require('recents')
 Recents.remember('/data/notebook/work/b.scribe');Recents.remember('/data/notebook/a.scribe')
 assert(Recents.list()[1]=='a.scribe' and Recents.list()[2]=='work/b.scribe')
+nb:_showRecentNotebooks();local recent_menu=record.shown[#record.shown]
+assert(recent_menu.actions[1].preview_source=='/data/notebook/work/b.scribe',
+    'recent notebooks have no preview source')
+local Safe,Thumbnail=require('safe'),require('thumbnail')
+local later,get=Safe.later,Thumbnail.get;local pending,reads={},0
+Safe.later=function(_,fn) pending[#pending+1]=fn end
+Thumbnail.get=function() reads=reads+1;return nil end
+nb:_showRecentNotebooks();local closing=record.shown[#record.shown]
+closing:onCloseWidget()
+while #pending>0 do table.remove(pending,1)() end
+assert(reads==0,'closed recent menu continued reading notebooks')
+Safe.later,Thumbnail.get=later,get
 settings.notebook_recent={'../a.scribe','/a.scribe','missing.scribe',false,'a.scribe','a.scribe','work/b.scribe'}
 local list=Recents.list('a.scribe');assert(#list==1 and list[1]=='work/b.scribe')
 for i=1,12 do fs['/data/notebook/'..i..'.scribe']={mode='file'};Recents.remember('/data/notebook/'..i..'.scribe') end
