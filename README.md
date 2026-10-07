@@ -52,10 +52,18 @@ make check-package         # build and validate the installable ZIP
 
 See the [technical reference](docs/README.md), [translation guide](lua/locale/README.md), [contribution workflow](docs/CONTRIB.md) and [release verification](docs/audits/README.md).
 
-Report issues with your device, firmware, KOReader and Notebook versions, and steps to reproduce the problem. Pull requests are welcome.
+## Acknowledgements
 
-## License and acknowledgements
+Inspired by [LocalSend](https://github.com/kaikozlov/localsend.koplugin), [Pencil](https://github.com/mysticknits/pencil.koplugin) and [Ink Away](https://github.com/EmirErtorer/ink-away.koplugin).
 
-[MIT](LICENSE). Developed with assistance from language models for code and documentation, with inspiration from [LocalSend](https://github.com/kaikozlov/localsend.koplugin), [Pencil](https://github.com/mysticknits/pencil.koplugin) and [Ink Away](https://github.com/EmirErtorer/ink-away.koplugin).
+## Contributing
 
-Support development through [GitHub Sponsors](https://github.com/sponsors/pierspad), [Buy Me a Coffee](https://buymeacoffee.com/pierspad) or [Ko-fi](https://ko-fi.com/pierspad).
+Bug reports and pull requests are welcome. For major changes, open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## AI Disclosure
+
+Developed with assistance from language models for code and documentation.
+
+## License
+
+See [LICENSE](LICENSE).

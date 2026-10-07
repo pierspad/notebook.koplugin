@@ -116,7 +116,7 @@ body:
         These logs contain input coordinates and tool/device state. Coordinates can describe your movements; use a non-sensitive test page.
         **Crashes/plugin shutdowns:** attach `koreader/notebook/.logs/notebook-error.log` if present; for KOReader crashes, also attach `koreader/crash.log` if available.
         You can compress logs into a ZIP before attaching them.
-        [README: Input debug log](https://github.com/pierspad/notebook.koplugin/blob/dev/README.md#input-debug-log)
+        [User guide: Diagnostics](https://github.com/pierspad/notebook.koplugin/blob/main/docs/USER_GUIDE.md#diagnostics)
   - type: textarea
     id: attachments
     attributes:

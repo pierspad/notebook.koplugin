@@ -1,28 +1,27 @@
 name: Feature request
-description: Suggest an improvement to Notebook.
+description: Suggest an improvement.
 title: "[Feature]: "
 body:
   - type: textarea
     id: problem
     attributes:
       label: What everyday task would this improve?
-      description: Describe the problem and how you currently work around it.
+      description: Describe the problem and your current workaround.
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
       label: Suggested behavior
-      description: Describe the result you would like, with an example if useful.
+      description: Give a concrete example of the desired result.
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
       label: Alternatives or references
-      description: Optional screenshots, links, or other approaches.
   - type: input
     id: environment
     attributes:
-      label: Device and Notebook version
-      description: Useful when the suggestion depends on screen size, stylus, or hardware.
+      label: Environment and version
+      description: Include device or operating system details when relevant.
