@@ -328,7 +328,8 @@ function Document:eraseAlongPath(path, r, shapes)
     for i = 1, count do
         local stroke = strokes[i]
         local hit = stroke:hitTestPath(path, r)
-        if stroke.image_data or shapes and stroke.shape_kind then
+        if stroke.image_data or shapes and stroke.shape_kind
+            and stroke.shape_kind ~= "line" and stroke.shape_kind ~= "arrow" then
             if not stroke.image_data and hit then shapes[stroke] = true end
             strokes[write] = stroke
             write = write + 1
@@ -395,7 +396,8 @@ function Document:eraseAreaAlongPath(path, r, shapes)
     for i = 1, #strokes do
         local stroke = strokes[i]
         local fragments, ex, ey, ew, eh
-        if shapes and stroke.shape_kind then
+        if shapes and stroke.shape_kind
+            and stroke.shape_kind ~= "line" and stroke.shape_kind ~= "arrow" then
             if not stroke.image_data and stroke:hitTestPath(path, r) then shapes[stroke] = true end
         else
             if stroke.tool == "highlighter" then marker_context = marker_context or {} end

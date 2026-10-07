@@ -96,4 +96,31 @@ d.save=function() saves=saves+1;return true end
 c:_eraseAlong(100,180);c.autosave_cb()
 assert(saves==0 and scheduled[c.autosave_cb],'eraser contact allowed an idle save')
 c:_endErase();c.autosave_cb();assert(saves==1,'idle save did not resume after erase release')
+-- Recognized open shapes erase as ink, without opening object controls.
+for _,zoom in ipairs({1,2}) do
+ for _,mode in ipairs({'area','stroke'}) do
+  for _,kind in ipairs({'line','arrow'}) do
+   c,d=new();c.eraser_mode=mode;c:setZoom(zoom)
+   local shape=Stroke:new{shape_kind=kind,width=2,tool='pen'}
+   shape:addPoint(100,180,1);shape:addPoint(300,180,1)
+   if kind=='arrow' then
+    shape:addPoint(280,170,1);shape:addPoint(300,180,1);shape:addPoint(280,190,1)
+   end
+   d:addStroke(shape);local history=#d.undo_stack
+   c:_eraseAlong(200,180);c:_endErase()
+   assert(not c.selected_strokes and not c.lasso_menu,'eraser selected '..kind)
+   if mode=='stroke' then assert(#d:getPage().strokes==0,'whole shape survived eraser')
+   else
+    assert(#d:getPage().strokes==2,'shape midpoint was not split')
+    for _,part in ipairs(d:getPage().strokes) do
+     assert(not part.shape_kind,'partial ink kept shape handles')
+     assert(not part:hitTestPath({200,180},3),'erased midpoint survived')
+    end
+   end
+   assert(#d.undo_stack==history+1,'shape erasing did not form one undo action')
+   d:undo();assert(#d:getPage().strokes==1 and d:getPage().strokes[1]==shape,'undo lost original shape')
+   d:redo();assert(d:getPage().strokes[1]~=shape,'redo restored erased shape')
+  end
+ end
+end
 print('eraser interaction: discontinuity, canvas reentry, input clock, stationary nib and 2x coalescing passed')

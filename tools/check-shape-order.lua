@@ -49,4 +49,31 @@ for _,zoom in ipairs({1,2}) do
  c:_showLassoMenu({shape});c.lasso_menu.content_frame[1][1][3]:onTap();c:_deselectLasso();c:paintTo(Screen.bb,0,0)
  assert(Screen.bb:getPixel(x,y):getColor8().a==0,'back shape hid ink')
 end
+-- Open shapes retain lasso actions but omit the text-order switch. Their
+-- shafts must erase even when the original stores only two distant endpoints.
+for _,zoom in ipairs({1,2}) do
+ for _,kind in ipairs({'line','arrow'}) do
+  local doc=Document:new(nil);doc:setTemplate('blank')
+  local c=Canvas:new{document=doc,content={x=0,y=0,w=Screen:getWidth(),h=Screen:getHeight()}}
+  local shape=Stroke:new{tool='pen',shape_kind=kind,width=2}
+  shape:addPoint(100,140,1);shape:addPoint(300,140,1)
+  if kind=='arrow' then
+   shape:addPoint(280,130,1);shape:addPoint(300,140,1);shape:addPoint(280,150,1)
+  end
+  doc:addStroke(shape);c:setZoom(zoom);c:paintTo(Screen.bb,0,0)
+  c:_showLassoMenu({shape})
+  assert(not c.lasso_menu.on_order and c.lasso_menu.content_frame[1][1].icon=='notebook.cut',
+   'open shape still displays text-order controls')
+  c:_deselectLasso();c:paintTo(Screen.bb,0,0)
+  c.eraser_mode='area';c.eraser_size=8
+  c:_eraseAlong(200,140);c:_endErase()
+  assert(not c.lasso_menu,'arrow erasing reopened object menu')
+  c:paintTo(Screen.bb,0,0)
+  local x,y=c:_viewPoint(200,140)
+  assert(Screen.bb:getPixel(x,y):getColor8().a==255,'erased shaft still visible')
+  doc:undo();c:_clearZoomCache();c:paintTo(Screen.bb,0,0)
+  assert(Screen.bb:getPixel(x,y):getColor8().a==0,'undo failed to restore shaft')
+  c:stop()
+ end
+end
 print('native direct shape-order controls, rendering and undo passed at 1x/2x')

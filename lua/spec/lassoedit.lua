@@ -302,5 +302,16 @@ test("span dashes match the original pixel pattern and use fewer calls", functio
     assertTrue(calls < 35, "dashes still make a call per pixel")
 end)
 
+test("open shapes omit text stacking controls while closed shapes retain them", function()
+    for _,kind in ipairs({"line","arrow","rectangle","circle"}) do
+        local canvas,doc=newCanvas(1)
+        local shape=doc:getPage().strokes[1];shape.shape_kind=kind
+        local menu=menuFor(canvas,{shape})
+        if kind=="line" or kind=="arrow" then
+            assertTrue(not menu.on_order,"open shape offers text order")
+        else assertTrue(menu.on_order,"closed shape lost text order") end
+    end
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

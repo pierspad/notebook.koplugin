@@ -104,7 +104,7 @@ function Canvas:_debugEvent(kind, slot, x, y, tool)
         if not file then return end
     end
     local format = "%s %s id=%s slot=%s raw=(%s,%s) screen=(%s,%s) tool=%s rotation=%s"
-        .. " eraser_button=%s highlighter_button=%s physical_tool=%s\n"
+        .. " eraser_button=%s highlighter_button=%s physical_tool=%s pen_down=%s palm=%s rejected=%s zoom=%s viewport=(%s,%s)\n"
     file:write(string.format(format,
         os.date("!%Y-%m-%dT%H:%M:%SZ"), kind,
         tostring(slot and slot.id), tostring(slot and slot.slot),
@@ -112,7 +112,9 @@ function Canvas:_debugEvent(kind, slot, x, y, tool)
         tostring(x), tostring(y), tostring(tool),
         tostring(Screen.getTouchRotation and Screen:getTouchRotation()),
         tostring(Input.stylus_eraser_active), tostring(Input.stylus_highlighter_active),
-        tostring(self.physical_pen_tool)))
+        tostring(self.physical_pen_tool), tostring(self.pen_down),
+        tostring(self:_touchIsPalm()), tostring(self.touch_rejected), tostring(self.zoom),
+        tostring(self.zoom_x), tostring(self.zoom_y)))
     file:close()
 end
 

@@ -36,6 +36,7 @@ function ZoomRefresh:_cancelZoomRefresh()
     self.zoom_pan_dirty = false
     self.zoom_pan_needs_settle = false
     self.last_zoom_pan_refresh = nil
+    self.touch_rejected = false
     self.zoom_touch_moved = false
     self.zoom_touch_active = false
     self.zoom_touch_x, self.zoom_touch_y = nil, nil

@@ -31,6 +31,8 @@ change multiple properties.
 - Highlighter: selectable colors and widths, with a light preview that keeps
   underlying content readable.
 - Eraser: erase whole strokes or only the touched segment, with five sizes.
+  Recognized lines and arrows erase as ink; partial erasing leaves ordinary
+  stroke fragments. Closed shapes are selected for editing or deletion.
 - Shapes: squares, rectangles, circles and triangles, outlined or filled.
 - Text: editable blocks, sans-serif, serif and monospace fonts, 10–96 pt,
   bold, italic, underline, and white or transparent backgrounds.
@@ -49,6 +51,9 @@ is disabled during finger drawing, selection, stylus use and suspension.
 
 Use the lasso to select strokes, text and images, then move, copy, cut, duplicate
 or delete them. Paste becomes available when the clipboard contains elements.
+For a single closed shape, **Above text** and **Below text** change its drawing
+order, useful for placing a filled shape behind writing. Lines and arrows omit
+these controls.
 
 **Insert image** embeds PNG/JPEG files up to 4 MiB and 8 megapixels each. The
 original file is no longer required. Use the lasso to move, resize, duplicate or

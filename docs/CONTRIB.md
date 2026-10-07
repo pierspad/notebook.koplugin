@@ -8,7 +8,7 @@ compatibility section and verification commands. Inclusion remains a maintainer
 decision. Listing does not make the plugin part of official KOReader releases.
 
 Use a separate clone; do not change the existing workspace's `contrib` checkout.
-The current stable release is v1.7.0 (5 October 2026). Pin that tested release:
+The current stable release is v1.7.2 (7 October 2026). Pin that tested release:
 
 ```bash
 gh repo fork koreader/contrib --clone=false
@@ -19,7 +19,7 @@ git remote add upstream https://github.com/koreader/contrib.git
 git fetch upstream
 git switch -c add-notebook upstream/main
 git submodule add https://github.com/pierspad/notebook.koplugin.git notebook.koplugin
-git -C notebook.koplugin checkout v1.7.0
+git -C notebook.koplugin checkout v1.7.2
 git add .gitmodules notebook.koplugin
 git diff --cached --submodule=short
 git commit -m "Add Notebook handwriting plugin"
@@ -36,7 +36,7 @@ Suggested title: **Add Notebook handwriting plugin**
 
 Suggested body:
 
-> Adds Notebook as an upstream submodule pinned to the tested v1.7.0 release.
+> Adds Notebook as an upstream submodule pinned to the tested v1.7.2 release.
 >
 > Notebook provides stylus handwriting, pen/highlighter tools, whole-stroke and
 > area erasing, lasso, editable text, autosaved multipage notebooks, recent notebook previews, embedded PNG/JPEG

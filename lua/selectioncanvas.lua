@@ -193,9 +193,11 @@ function Canvas:_showLassoMenu(selected)
         end
     end
 
+    local can_order = #selected == 1 and selected[1].shape_kind
+        and selected[1].shape_kind ~= "line" and selected[1].shape_kind ~= "arrow"
     local order_front
     local strokes = self.document:getPage().strokes
-    if #selected == 1 and selected[1].shape_kind then
+    if can_order then
         if strokes[#strokes] == selected[1] then order_front = true
         elseif strokes[1] == selected[1] then order_front = false end
     end
@@ -208,7 +210,7 @@ function Canvas:_showLassoMenu(selected)
         bbox = display or { x = self.content.x + 100, y = self.content.y + 100, w = 200, h = 100 },
         has_clipboard = Canvas.clipboard ~= nil and #Canvas.clipboard > 0,
         order_front = order_front,
-        on_order = #selected == 1 and selected[1].shape_kind and function(front)
+        on_order = can_order and function(front)
             self.lasso_menu = nil
             self:_deselectLasso()
             if self.document:reorderStrokes(selected, front) then

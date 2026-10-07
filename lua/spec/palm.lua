@@ -738,5 +738,47 @@ test("resting hand cannot dismiss a pen selection or turn its page", function()
     assertEq(turns,0,"selection gesture changed page")
 end)
 
+test("pen takeover cancels an existing zoom pan until finger release", function()
+    local canvas = newCanvas()
+    canvas:setZoom(2)
+    canvas:onTouchStart(nil, {pos={x=300,y=400}})
+    canvas:onStylusEvent{slot=15,tool=1,id=15,x=120,y=150}
+    canvas:onStylusEvent{slot=15,tool=1,id=-1}
+    clock.ms = 2000
+    local x = canvas.zoom_x
+    canvas:onTouchPan(nil, {pos={x=200,y=300}})
+    assertEq(canvas.zoom_x, x, "old finger origin survived pen takeover")
+    assertTrue(not canvas.zoom_touch_active, "palm retained pan ownership")
+end)
+
+test("hovering pen blocks zoom palm movement", function()
+    local canvas = newCanvas()
+    canvas:setZoom(2)
+    canvas.physical_pen_tool = 1
+    local x, y = canvas.zoom_x, canvas.zoom_y
+    canvas:onTouchStart(nil, {pos={x=300,y=400}})
+    canvas:onTouchPan(nil, {pos={x=200,y=300}})
+    assertEq(canvas.zoom_x, x, "hover palm moved viewport x")
+    assertEq(canvas.zoom_y, y, "hover palm moved viewport y")
+end)
+
+test("rejected zoom contact stays rejected after pen grace expires", function()
+    local canvas = newCanvas()
+    canvas:setZoom(2)
+    canvas.pen_down = true
+    canvas:onTouchStart(nil, {pos={x=300,y=400}})
+    canvas.pen_down = false
+    clock.ms = 2000
+    local x, y = canvas.zoom_x, canvas.zoom_y
+    canvas:onTouchPan(nil, {pos={x=250,y=350}})
+    canvas:onTouchPan(nil, {pos={x=200,y=300}})
+    assertEq(canvas.zoom_x, x, "rejected contact resumed pan")
+    canvas:onPageSwipe(nil, {pos={x=300,y=400},end_pos={x=100,y=200}})
+    assertEq(canvas.zoom_y, y, "rejected contact became swipe")
+    canvas:onTouchStart(nil, {pos={x=300,y=400}})
+    canvas:onTouchPan(nil, {pos={x=200,y=300}})
+    assertTrue(canvas.zoom_x ~= x, "next deliberate pan blocked")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

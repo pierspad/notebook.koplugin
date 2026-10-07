@@ -29,6 +29,7 @@ assert(pending[canvas.zoom_pan_settle_cb]==1.2, "pan cleanup is too eager")
 local Touch=require("touchinput")
 canvas._touchIsPalm=function() return false end
 canvas._debugEvent=function() end
+canvas._rejectPalmContact=Touch._rejectPalmContact
 canvas._touchPoint=Touch._touchPoint
 canvas.onTouchRelease=Touch.onTouchRelease
 Touch.onTouchStart(canvas,nil,{pos={x=80,y=80}})

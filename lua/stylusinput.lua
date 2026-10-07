@@ -94,6 +94,14 @@ function StylusInput:onStylusEvent(slot)
         return false
     end
 
+    -- Pen takeover invalidates the finger origin even if no palm pan event
+    -- arrives until after the pen has left and its grace period has expired.
+    if slot.id ~= -1 and self.zoom_touch_active then
+        self.touch_rejected = true
+        self.zoom_touch_active = false
+        self.zoom_touch_x, self.zoom_touch_y = nil, nil
+    end
+
     -- Proximity/tool frames have coordinates but no tracking contact yet.
     -- They must never stamp the initial pen dot (also applies at 2x zoom).
     if slot.id == nil and not self.pen_down then return true end

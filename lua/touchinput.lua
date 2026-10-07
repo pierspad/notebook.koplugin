@@ -33,7 +33,7 @@ handler) rather than passing it on matters: left to the gesture engine it
 becomes a swipe, and the page turns underneath the writing.
 --]]
 function TouchInput:_touchIsPalm()
-    if self.pen_down then return true end
+    if self.pen_down or self.physical_pen_tool ~= nil then return true end
     if self.pen_left_at
         and time.to_ms(time.now() - self.pen_left_at) < Tuning.palm_grace_ms then
         return true
@@ -50,6 +50,18 @@ unanswered contact travels on to become a tap on whatever is underneath -- which
 is how resting a palm pressed toolbar buttons and repainted pieces of the screen
 under the ink.
 --]]
+-- Once rejected, a contact remains a palm until its release. Otherwise a
+-- resting hand starts panning as soon as the pen leaves proximity/grace.
+function TouchInput:_rejectPalmContact()
+    if self.touch_rejected or self:_touchIsPalm() then
+        self.touch_rejected = true
+        self.zoom_touch_active = false
+        self.zoom_touch_x, self.zoom_touch_y = nil, nil
+        return true
+    end
+    return false
+end
+
 -- Saving writes the whole file synchronously. Defer it when a deliberate
 -- finger contact starts, so it cannot stall the page swipe or zoom pan.
 local function deferTouchSave(self)
@@ -60,11 +72,14 @@ local function deferTouchSave(self)
 end
 
 function TouchInput:onTouchStart(_, ges)
+    self.touch_rejected = false
+    self.touch_start_x, self.touch_start_y = nil, nil
+    self.touch_last_x, self.touch_last_y = nil, nil
     self.sample_time=nil
     self:_debugEvent("touch-start", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
-        if self:_touchIsPalm() then return true end
+        if self:_rejectPalmContact() then return true end
         deferTouchSave(self)
         self.zoom_touch_x, self.zoom_touch_y = self:_touchPoint(ges)
         self.zoom_touch_active = self.zoom_touch_x ~= nil
@@ -72,7 +87,7 @@ function TouchInput:onTouchStart(_, ges)
         self.zoom_touch_moved = false
         return true
     end
-    if self:_touchIsPalm() then return true end
+    if self:_rejectPalmContact() then return true end
     deferTouchSave(self)
 
     local x, y = self:_touchPoint(ges)
@@ -137,7 +152,7 @@ function TouchInput:onTouchPan(_, ges)
     self:_debugEvent("touch-pan", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
-        if self:_touchIsPalm() then return true end
+        if self:_rejectPalmContact() then return true end
         local x, y = self:_touchPoint(ges)
         if x and self.zoom_touch_x then
             self:_zoomPan(x - self.zoom_touch_x, y - self.zoom_touch_y)
@@ -147,7 +162,7 @@ function TouchInput:onTouchPan(_, ges)
         self.zoom_touch_active = x ~= nil
         return true
     end
-    if self:_touchIsPalm() then return true end
+    if self:_rejectPalmContact() then return true end
 
     local x, y = self:_touchPoint(ges)
     if not x then return true end
@@ -203,6 +218,8 @@ function TouchInput:onZoomTouchEnd(_, ges)
 end
 
 function TouchInput:onTouchRelease(_, ges)
+    local rejected = self.touch_rejected
+    self.touch_rejected = false
     self:_debugEvent("touch-release", nil, ges and ges.pos and ges.pos.x,
         ges and ges.pos and ges.pos.y, self.tool)
     if self.zoom > 1 then
@@ -219,7 +236,7 @@ function TouchInput:onTouchRelease(_, ges)
     self.touch_start_x, self.touch_start_y = nil, nil
     self.touch_last_x, self.touch_last_y = nil, nil
 
-    if self:_touchIsPalm() then return true end
+    if rejected or self:_touchIsPalm() then return true end
 
     if self.transform_gesture then self:_endShapeTransform(); return true end
 
@@ -254,7 +271,7 @@ end
 --- Horizontal finger swipes turn the page, the way they do in the reader.
 function TouchInput:onPageSwipe(_, ges)
     if self.zoom > 1 then
-        if self:_touchIsPalm() then return self:onTouchRelease(_, ges) end
+        if self:_rejectPalmContact() then return self:onTouchRelease(_, ges) end
         local first, last = ges.pos, ges.end_pos
         if first and last and not self.zoom_touch_moved then
             self:_zoomPan(last.x-first.x, last.y-first.y)
@@ -271,7 +288,7 @@ function TouchInput:onPageSwipe(_, ges)
         return self:onTouchRelease(_, ges)
     end
     if self.selected_strokes or self.dragging_selection then return true end
-    if self:_touchIsPalm() then return true end
+    if self:_rejectPalmContact() then return self:onTouchRelease(_, ges) end
     if not self.on_page_swipe then return false end
 
     local dir = ges.direction
@@ -302,10 +319,11 @@ function TouchInput:onHistoryTap(_, ges)
         self.two_finger_tap_at, self.two_finger_tap_pos = nil, nil
         return true
     end
+    local rejected = self.touch_rejected
     local moved = self.zoom_touch_moved
     self:onZoomTouchEnd(_, ges)
     local pos = ges and ges.pos
-    if not pos or self:_touchIsPalm() or self.draw_with_finger or self.stroke or self.erasing
+    if rejected or not pos or self:_touchIsPalm() or self.draw_with_finger or self.stroke or self.erasing
         or self.zoom_stroke or self.zoom_erasing or self.selected_strokes
         or self.dragging_selection or self.transform_gesture or self.shape_gesture
         or (self.zoom > 1 and moved) then

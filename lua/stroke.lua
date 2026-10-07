@@ -481,6 +481,31 @@ function Stroke:splitAlongPath(path, r, marker_context)
     if self.tool == "highlighter" then return require("markerarea").erase(self,path,r,marker_context) end
     if #path < 2 then return nil end
 
+    -- Recognized lines/arrows contain only endpoints and arrowhead corners.
+    -- Sample the segments before area erasing so a dab on the shaft cannot
+    -- miss simply because no stored vertex is nearby. The fragments are ink;
+    -- undo keeps the original geometric object and its handles intact.
+    if self.shape_kind == "line" or self.shape_kind == "arrow" then
+        if not self:hitTestPath(path, r) then return nil end
+        local ink = Stroke:new{tool=self.tool, width=self.width, color=self.color,
+            tint=self.tint, pen_style=self.pen_style}
+        local step = math.max(0.5, r / 2)
+        for i = 1, self.n do
+            local x, y, p = self:getPoint(i)
+            if i == 1 then ink:addPoint(x, y, p)
+            else
+                local ax, ay, ap = self:getPoint(i-1)
+                local dx, dy = x-ax, y-ay
+                local count = math.max(1, math.ceil(math.sqrt(dx*dx+dy*dy) / step))
+                for j = 1, count do
+                    local t = j / count
+                    ink:addPoint(ax+dx*t, ay+dy*t, ap+(p-ap)*t)
+                end
+            end
+        end
+        return ink:splitAlongPath(path, r, marker_context)
+    end
+
     -- Settle first whether anything is taken at all. Almost always nothing is,
     -- and that answer costs no allocation -- where building the surviving
     -- fragments, only to find they are the whole stroke again, would copy every
