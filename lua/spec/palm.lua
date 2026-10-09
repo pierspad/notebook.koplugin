@@ -780,5 +780,99 @@ test("rejected zoom contact stays rejected after pen grace expires", function()
     assertTrue(canvas.zoom_x ~= x, "next deliberate pan blocked")
 end)
 
+-- Exercise the actual slot contract, including the tool=2 panel frames
+-- reported on Scribe 2. Always restore the shared Input stub after a failure.
+local function withPenSlot(value, fn)
+    local input = Device.input
+    local old = input.pen_slot
+    input.pen_slot = value
+    local ok, err = pcall(fn)
+    input.pen_slot = old
+    if not ok then error(err, 0) end
+end
+
+for _, zoom in ipairs({1, 2}) do
+    test("mislabeled panel never creates ink at zoom " .. zoom, function()
+        withPenSlot(15, function()
+            for _, state in ipairs({"hover", "down", "grace", "idle"}) do
+                local canvas, doc = newCanvas()
+                canvas:setZoom(zoom)
+                if state == "hover" then canvas.physical_pen_tool = 1
+                elseif state == "down" then canvas.pen_down = true
+                elseif state == "grace" then canvas.pen_left_at = clock.ms end
+                for _, id in ipairs({10, -1}) do
+                    local ret = canvas:onStylusEvent{slot=0, tool=2, id=id, x=300, y=400}
+                    assertEq(ret, false, state .. " panel accepted")
+                    assertTrue(not canvas.stroke and not canvas.zoom_stroke, "panel started ink")
+                    assertEq(#doc:getPage().strokes, 0, "panel committed ink")
+                    assertEq(canvas.pen_down, state == "down", "panel changed pen contact")
+                end
+                assertEq(canvas.touch_rejected == true, state ~= "idle", "palm latch")
+            end
+        end)
+    end)
+
+    test("panel cannot extend or release real pen at zoom " .. zoom, function()
+        withPenSlot(15, function()
+            local canvas, doc = newCanvas()
+            canvas:setZoom(zoom)
+            canvas.physical_pen_tool = 1
+            canvas:onStylusEvent{slot=15, tool=1, id=15, x=120, y=150}
+            canvas:onStylusEvent{slot=0, tool=2, id=10, x=500, y=700}
+            canvas:onStylusEvent{slot=0, tool=2, id=-1, x=500, y=700}
+            assertTrue(canvas.pen_down, "panel released pen")
+            after(10)
+            canvas:onStylusEvent{slot=15, tool=1, id=15, x=130, y=150}
+            canvas:onStylusEvent{slot=15, tool=0, id=-1}
+            assertTrue(not canvas.pen_down, "real release ignored")
+            assertEq(#doc:getPage().strokes, 1, "pen stroke split or lost")
+            assertTrue(doc:getPage().strokes[1].y_max < 400, "palm entered stroke")
+            doc:undo()
+            assertEq(#doc:getPage().strokes, 0, "undo lost contact boundary")
+            doc:redo()
+            assertEq(#doc:getPage().strokes, 1, "redo lost real stroke")
+        end)
+    end)
+end
+
+test("missing pen slot retains conservative tool fallback", function()
+    withPenSlot(nil, function()
+        for _, tool in ipairs({0, 99, false}) do
+            local canvas = newCanvas()
+            local ret = canvas:onStylusEvent{slot=0, tool=tool or nil, id=10, x=120, y=150}
+            assertEq(ret, false, "invalid fallback tool accepted")
+            assertTrue(not canvas.pen_down and not canvas.stroke, "invalid tool started contact")
+        end
+        for _, tool in ipairs({1, 2, 3}) do
+            local canvas = newCanvas()
+            assertTrue(canvas:onStylusEvent{tool=tool, id=10, x=120, y=150}, "valid fallback tool rejected")
+            assertTrue(canvas.pen_down, "fallback did not start contact")
+            canvas:onStylusEvent{tool=tool, id=-1}
+            assertTrue(not canvas.pen_down, "fallback release ignored")
+        end
+    end)
+end)
+
+test("panel palm latch expires only with release and deliberate new touch", function()
+    withPenSlot(15, function()
+        local canvas = newCanvas()
+        canvas:setZoom(2)
+        canvas.physical_pen_tool = 1
+        canvas:onStylusEvent{slot=0, tool=2, id=10, x=300, y=400}
+        canvas.physical_pen_tool = nil
+        canvas.pen_left_at = clock.ms
+        after(Tuning.palm_grace_ms + 1)
+        local x, y = canvas.zoom_x, canvas.zoom_y
+        canvas:onTouchPan(nil, {pos={x=200,y=300}})
+        assertEq(canvas.zoom_x, x, "old palm resumed pan x")
+        assertEq(canvas.zoom_y, y, "old palm resumed pan y")
+        canvas:onTouchRelease(nil, {pos={x=200,y=300}})
+        canvas:onTouchStart(nil, {pos={x=300,y=400}})
+        assertTrue(canvas.zoom_touch_active and not canvas.touch_rejected, "fresh pan blocked")
+        canvas:onTouchPan(nil, {pos={x=200,y=300}})
+        assertTrue(canvas.zoom_x ~= x or canvas.zoom_y ~= y, "fresh pan cannot move")
+    end)
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

@@ -69,6 +69,14 @@ function StylusInput:onStylusEvent(slot)
         end
     end
 
+    -- The bridge routes the digitizer to pen_slot. Panel contacts can carry
+    -- a stylus tool (Scribe 2 reports tool=2), so trust the source slot first.
+    -- Keep the tool checks below for input paths without a dedicated pen slot.
+    if Input.pen_slot and slot.slot ~= Input.pen_slot then
+        if self:_touchIsPalm() then self.touch_rejected = true end
+        return false
+    end
+
     -- Explicit finger tools are always rejected from the stylus callback
     local pen_release = slot.id == -1 and Input.pen_slot and slot.slot == Input.pen_slot
     if slot.tool == Input.TOOL_TYPE_FINGER and not pen_release then
