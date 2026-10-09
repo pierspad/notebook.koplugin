@@ -681,3 +681,12 @@ msgstr "頁面"
 
 msgid "Settings"
 msgstr "設定"
+
+msgid "Include prerelease updates"
+msgstr "包含預先發行更新"
+
+msgid "Prerelease updates are disabled."
+msgstr "預先發行更新已停用。"
+
+msgid "No newer Notebook release is available."
+msgstr "沒有更新的 Notebook 版本。"

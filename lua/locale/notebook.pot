@@ -660,3 +660,12 @@ msgstr ""
 
 msgid "Settings"
 msgstr ""
+
+msgid "Include prerelease updates"
+msgstr ""
+
+msgid "Prerelease updates are disabled."
+msgstr ""
+
+msgid "No newer Notebook release is available."
+msgstr ""

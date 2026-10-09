@@ -680,3 +680,12 @@ msgstr "页面"
 
 msgid "Settings"
 msgstr "设置"
+
+msgid "Include prerelease updates"
+msgstr "包含预发布更新"
+
+msgid "Prerelease updates are disabled."
+msgstr "预发布更新已禁用。"
+
+msgid "No newer Notebook release is available."
+msgstr "没有更新的 Notebook 版本。"

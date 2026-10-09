@@ -34,6 +34,9 @@ local function transfer(url,limit,done)
 end
 function M.install(release,owner)
     if M.busy or M.installed then return end
+    if release.prerelease and setting("prereleases") ~= true then
+        message(_("Prerelease updates are disabled."));return
+    end
     local stage,backup=paths()
     if not stage or not M.plugin_dir:match("/notebook%.koplugin$") then
         message(_("Updates can only be installed in a packaged Notebook plugin."));return
@@ -98,7 +101,9 @@ function M.check(manual,owner)
         M.busy=true
         save("attempt",os.time())
         if manual then message(_("Checking for Notebook updates…")) end
-        transfer(Policy.API,1024*1024,function(path,err)
+        local include_prereleases = setting("prereleases") == true
+        local api = include_prereleases and Policy.API_ALL or Policy.API
+        transfer(api,1024*1024,function(path,err)
             M.busy=false
             local release
             if path then
@@ -107,20 +112,27 @@ function M.check(manual,owner)
                 if file then file:close() end
                 os.remove(path)
                 local ok,data=pcall(require("json").decode,body or "")
-                if ok then release,err=Policy.release(data) else err="Invalid release response" end
+                if ok then
+                    -- A channel can be disabled while the transfer is in flight.
+                    include_prereleases = include_prereleases and setting("prereleases") == true
+                    if api == Policy.API_ALL then release,err=Policy.select(data,include_prereleases)
+                    else release,err=Policy.release(data) end
+                else err="Invalid release response" end
             end
             if not release then
                 if manual then message(T(_("Could not check updates:\n%1"),tostring(err))) end
                 return
             end
             save("last_check",os.time())
-            if Policy.newer(release.tag,version) then
+            if Policy.newer(release.tag,version,include_prereleases) then
                 local previous=setting("notified")
                 save("notified",release.tag)
                 if manual then offer(release,owner)
                 elseif previous~=release.tag then message(T(_("Notebook update available: %1"),release.tag)) end
             elseif manual then
-                message(_("No newer stable Notebook release is available.").."\n"..version.." / "..release.tag)
+                local text = include_prereleases and _("No newer Notebook release is available.")
+                    or _("No newer stable Notebook release is available.")
+                message(text.."\n"..version.." / "..release.tag)
             end
         end)
     end
@@ -155,6 +167,12 @@ function M.showMenu(owner,anchor)
         actions={
             {text=_("Check updates weekly"),checkbox=true,selected=function() return setting("weekly")~=false end,
                 callback=function() save("weekly",setting("weekly")==false) end},
+            {text=_("Include prerelease updates"),checkbox=true,
+                selected=function() return setting("prereleases")==true end,
+                callback=function()
+                    save("prereleases",setting("prereleases")~=true)
+                    save("last_check",nil);save("attempt",nil)
+                end},
             {text=_("Check update"),icon="notebook.refresh",
                 callback=function() UIManager:close(menu);M.check(true,owner) end},
         },

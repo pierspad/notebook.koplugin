@@ -133,3 +133,15 @@ long-press drags and releases outside the page all finish the owned drawing.
 For native regression checks, run `make test-native-features` with a compiled
 KOReader runtime. These include real gesture dispatch and check that colored
 mouse strokes survive a page repaint.
+
+## Updates
+
+Open **Updates** in Notebook settings and choose **Check update** to view a newer
+release and its notes before choosing **Install**. Restart KOReader after an
+installation. Weekly checks notify you when a newer version is available;
+installation always requires choosing **Install**.
+
+**Include prerelease updates** is disabled by default, including when running a
+prerelease build. Enable it explicitly to check for and install published testing
+versions such as `-dev.1`. Stable releases remain eligible. Disable it to return
+to stable-only checks; this does not downgrade your installed version.

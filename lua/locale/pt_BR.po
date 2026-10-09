@@ -683,3 +683,12 @@ msgstr "Página"
 
 msgid "Settings"
 msgstr "Configurações"
+
+msgid "Include prerelease updates"
+msgstr "Incluir versões de pré-lançamento"
+
+msgid "Prerelease updates are disabled."
+msgstr "As atualizações de pré-lançamento estão desativadas."
+
+msgid "No newer Notebook release is available."
+msgstr "Não há uma versão mais recente do Notebook disponível."

@@ -3,7 +3,7 @@ require("support").installStubs()
 local fs={["/plugins"]={mode="directory"},["/plugins/notebook.koplugin"]={mode="directory"},
  ["/plugins/notebook.koplugin/old.lua"]={mode="file"},["/plugins/stage"]={mode="directory"},
  ["/plugins/stage/main.lua"]={mode="file"}}
-require("uistubs").install(fs)
+local rec=require("uistubs").install(fs)
 local Policy=require("updatepolicy")
 assert(Policy.newer("v1.5.0","v1.5.0-dev.3"))
 assert(not Policy.newer("v1.4.0","v1.5.0-dev.3"))
@@ -24,6 +24,38 @@ end
 assert(not Policy.entry("notebook.koplugin/link","link"))
 assert(Policy.entry("notebook.koplugin/locale/it.po","file")=="locale/it.po")
 assert(Policy.due(100,200) and Policy.due(Policy.WEEK,0) and not Policy.due(100,99))
+local function published(tag, prerelease)
+ return {tag_name=tag,draft=false,prerelease=prerelease,assets={{
+  name="notebook.koplugin-"..tag..".zip",state="uploaded",size=123,
+  browser_download_url="https://github.com/pierspad/notebook.koplugin/releases/download/"..tag.."/notebook.koplugin-"..tag..".zip",
+  digest="sha256:"..string.rep("a",64)}}}
+end
+local dev=published("v1.8.0-dev.10",true)
+assert(not Policy.release(dev),"prerelease accepted by default")
+assert(Policy.release(dev,true),"explicit prerelease opt-in ignored")
+assert(not Policy.newer(dev.tag_name,"v1.7.2"),"default channel offers prerelease")
+assert(Policy.newer(dev.tag_name,"v1.7.2",true))
+assert(Policy.newer("v1.8.0-dev.10","v1.8.0-dev.9",true),"numeric identifier comparison")
+assert(not Policy.newer("v1.8.0-dev.9","v1.8.0-dev.10",true),"prerelease downgrade")
+assert(not Policy.newer("v1.8.0-dev.10","v1.8.0",true),"stable downgraded to same-version prerelease")
+assert(Policy.newer("v1.8.0","v1.8.0-dev.10",true),"stable promotion missing")
+assert(not Policy.newer("v1.8.0-dev.10","v1.8.0-dev.10",true))
+assert(Policy.newer("v1.8.0-beta.1","v1.8.0-alpha.9",true))
+assert(Policy.newer("v1.8.0-dev.1.1","v1.8.0-dev.1",true))
+assert(not Policy.newer("v1.8.0-dev..1","v1.7.2",true))
+assert(not Policy.newer("v1.8.0-dev.01","v1.7.2",true))
+dev.draft=true;assert(not Policy.release(dev,true));dev.draft=false
+dev.prerelease=false;assert(not Policy.release(dev,true));dev.prerelease=true
+local stable=published("v1.8.0",false)
+local invalid=published("v9.0.0-dev.1",true);invalid.assets[1].digest=nil
+local chosen=assert(Policy.select({dev,invalid,stable},true))
+assert(chosen.tag==stable.tag_name,"release order supersedes version order")
+assert(Policy.select({dev,stable},false).tag==stable.tag_name)
+assert(not Policy.select({dev},false),"stable channel leaked prerelease")
+assert(Policy.select({stable,dev},true).tag==stable.tag_name)
+dev.assets[1].browser_download_url="https://example.test/unsafe.zip"
+assert(not Policy.release(dev,true),"prerelease bypassed download validation")
+
 local Installer=require("updateinstaller")
 local rename=os.rename
 os.rename=function(from,to)
@@ -75,6 +107,43 @@ settings.notebook_update_attempt=nil
 scheduled[1][2]();assert(calls==2,"disabled weekly checks ran")
 
 print("updater: stable policy, rollback/orphan removal, HTTPS quoting, weekly/offline scheduling and retry guards passed")
+
+-- Both menu defaults and real asynchronous checks honor explicit opt-in.
+Updater.showMenu()
+local menu=rec.shown[#rec.shown]
+assert(not menu.actions[2].selected(),"prerelease menu enabled by default")
+menu.actions[2].callback();assert(settings.notebook_update_prereleases==true)
+menu.actions[2].callback();assert(settings.notebook_update_prereleases==false)
+local response=published("v9.9.9-dev.10",true)
+local stableResponse=published("v9.9.8",false)
+package.loaded["ui/widget/textviewer"]={new=function(_,options) return options end}
+local pending,requested
+Transport.fetch=function(url,_,_,_,callback) requested=url;pending=callback end
+local decoded
+package.loaded.json={decode=function() return decoded end}
+local function finish(data)
+ decoded=data
+ local path=os.tmpname();local file=assert(io.open(path,"w"));file:write("{}");file:close()
+ pending(path)
+end
+settings.notebook_update_prereleases=nil
+Updater.check(true);assert(requested==Policy.API,"default used prerelease API")
+finish(response)
+assert(settings.notebook_update_notified==nil,"default offered prerelease")
+settings.notebook_update_prereleases="true"
+Updater.check(true);assert(requested==Policy.API,"non-boolean setting enabled prereleases")
+finish(response)
+settings.notebook_update_prereleases=true
+Updater.check(true);assert(requested==Policy.API_ALL)
+finish({response,stableResponse})
+assert(settings.notebook_update_notified==response.tag_name,"opt-in failed to offer prerelease")
+settings.notebook_update_notified=nil
+Updater.check(true)
+settings.notebook_update_prereleases=false
+finish({response,stableResponse})
+assert(settings.notebook_update_notified==stableResponse.tag_name,"disabled in-flight channel leaked prerelease")
+Updater.install(assert(Policy.release(response,true)))
+assert(not Updater.installed and not Updater.busy,"stale offer installed disabled prerelease")
 
 local Notes=require("releasenotes")
 assert(Notes.plain("### Changes\n* **Fix** [issue](https://example.org/1)\n[https://example.org](https://example.org)")=="Changes\n• Fix issue (https://example.org/1)\nhttps://example.org")

@@ -682,3 +682,12 @@ msgstr "Страница"
 
 msgid "Settings"
 msgstr "Настройки"
+
+msgid "Include prerelease updates"
+msgstr "Включить предварительные версии"
+
+msgid "Prerelease updates are disabled."
+msgstr "Обновления до предварительных версий отключены."
+
+msgid "No newer Notebook release is available."
+msgstr "Более новая версия Notebook недоступна."

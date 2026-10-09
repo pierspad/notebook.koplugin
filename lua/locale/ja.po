@@ -683,3 +683,12 @@ msgstr "ページ"
 
 msgid "Settings"
 msgstr "設定"
+
+msgid "Include prerelease updates"
+msgstr "プレリリースの更新を含める"
+
+msgid "Prerelease updates are disabled."
+msgstr "プレリリースの更新は無効です。"
+
+msgid "No newer Notebook release is available."
+msgstr "新しい Notebook リリースはありません。"

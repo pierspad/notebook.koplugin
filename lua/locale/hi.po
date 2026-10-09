@@ -681,3 +681,12 @@ msgstr "पृष्ठ"
 
 msgid "Settings"
 msgstr "सेटिंग्स"
+
+msgid "Include prerelease updates"
+msgstr "प्रीरिलीज़ अपडेट शामिल करें"
+
+msgid "Prerelease updates are disabled."
+msgstr "प्रीरिलीज़ अपडेट अक्षम हैं।"
+
+msgid "No newer Notebook release is available."
+msgstr "Notebook का कोई नया संस्करण उपलब्ध नहीं है।"
