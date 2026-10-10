@@ -4,7 +4,24 @@
   "tagFormat": "v${version}",
   "plugins": [
     ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
-    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/release-notes-generator", {
+      "preset": "conventionalcommits",
+      "presetConfig": {
+        "types": [
+          { "type": "feat", "section": "✨ New Features", "hidden": false },
+          { "type": "fix", "section": "🐛 Bug Fixes", "hidden": false },
+          { "type": "perf", "section": "🔧 Improvements", "hidden": false },
+          { "type": "revert", "section": "⏪ Reverts", "hidden": false },
+          { "type": "docs", "hidden": true },
+          { "type": "style", "hidden": true },
+          { "type": "chore", "hidden": true },
+          { "type": "refactor", "hidden": true },
+          { "type": "test", "hidden": true },
+          { "type": "build", "hidden": true },
+          { "type": "ci", "hidden": true }
+        ]
+      }
+    }],
     ["@semantic-release/exec", { "prepareCmd": "node tools/prepare-release.mjs ${nextRelease.version} && make ci" }],
     ["@semantic-release/git", { "assets": ["lua/_meta.lua"], "message": "chore(release): v${nextRelease.version} [skip ci]" }],
     ["@semantic-release/github", { "assets": [{ "path": "build/*.zip", "label": "Notebook KOReader plugin" }], "successComment": false, "failComment": false, "releasedLabels": false }]
