@@ -404,6 +404,10 @@ function ActionMenu:paintTo(bb, x, y)
     local sz = self.panel:getSize()
     local px = math.max(0, math.min(self.anchor.x, Screen:getWidth()-sz.w))
     local py = math.max(0, math.min(self.anchor.y+self.anchor.h, Screen:getHeight()-sz.h))
+    if self.anchor_position == "above" then
+        px = math.max(0, math.min(self.anchor.x+self.anchor.w-sz.w, Screen:getWidth()-sz.w))
+        py = math.max(0, math.min(self.anchor.y-Size.padding.large-sz.h, Screen:getHeight()-sz.h))
+    end
     self.panel:paintTo(bb, px, py)
 end
 

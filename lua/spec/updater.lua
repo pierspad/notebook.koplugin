@@ -111,6 +111,9 @@ print("updater: stable policy, rollback/orphan removal, HTTPS quoting, weekly/of
 -- Both menu defaults and real asynchronous checks honor explicit opt-in.
 Updater.showMenu()
 local menu=rec.shown[#rec.shown]
+local dirty=#rec.dirty
+menu.on_dismiss()
+assert(#rec.dirty==dirty+1 and rec.dirty[#rec.dirty].widget=="all","Updates dismissal leaves stale pixels")
 assert(not menu.actions[2].selected(),"prerelease menu enabled by default")
 menu.actions[2].callback();assert(settings.notebook_update_prereleases==true)
 menu.actions[2].callback();assert(settings.notebook_update_prereleases==false)

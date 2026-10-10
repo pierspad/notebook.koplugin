@@ -276,12 +276,6 @@ msgstr "Não foi possível abrir este PDF."
 msgid "Could not save the notebook."
 msgstr "Não foi possível salvar o caderno."
 
-msgid "Work"
-msgstr "Trabalho"
-
-msgid "Personal"
-msgstr "Pessoal"
-
 msgid "Open"
 msgstr "Abrir"
 

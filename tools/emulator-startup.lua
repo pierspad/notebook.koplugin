@@ -8,13 +8,14 @@ local showFiles = FileManager.showFiles
 local launched = false
 FileManager.showFiles = function(self, ...)
     showFiles(self, ...)
-    if launched or os.getenv("NOTEBOOK_EMULATOR_START") ~= "notebook" then return end
+    local start = os.getenv("NOTEBOOK_EMULATOR_START")
+    if launched or (start ~= "notebook" and start ~= "gallery") then return end
     launched = true
     UIManager:scheduleIn(0.2, function()
         local fm = FileManager.instance
         if not fm or not fm.notebook then return end
         local relative = os.getenv("NOTEBOOK_EMULATOR_NOTEBOOK") or ""
-        if relative ~= "" then
+        if start == "notebook" and relative ~= "" then
             local folder, name = relative:match("^(.*)/([^/]+)$")
             name = (name or relative):gsub("%.scribe$", "")
             fm.notebook:_openByName(name, folder or "")

@@ -277,12 +277,6 @@ msgstr "このPDFを開けませんでした。"
 msgid "Could not save the notebook."
 msgstr "ノートを保存できませんでした。"
 
-msgid "Work"
-msgstr "仕事"
-
-msgid "Personal"
-msgstr "プライベート"
-
 msgid "Open"
 msgstr "開く"
 

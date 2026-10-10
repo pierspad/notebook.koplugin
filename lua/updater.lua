@@ -160,10 +160,11 @@ function M.start(plugin_dir)
         end
     end)
 end
-function M.showMenu(owner,anchor)
+function M.showMenu(owner,anchor,position)
     local menu
     menu=ActionMenu:new{
-        title=_("Updates"),anchor=anchor,
+        title=_("Updates"),anchor=anchor,anchor_position=position,
+        on_dismiss=function() UIManager:setDirty("all", "ui") end,
         actions={
             {text=_("Check updates weekly"),checkbox=true,selected=function() return setting("weekly")~=false end,
                 callback=function() save("weekly",setting("weekly")==false) end},

@@ -275,12 +275,6 @@ msgstr "इस PDF को खोला नहीं जा सका।"
 msgid "Could not save the notebook."
 msgstr "नोटबुक को सहेजा नहीं जा सका।"
 
-msgid "Work"
-msgstr "काम"
-
-msgid "Personal"
-msgstr "व्यक्तिगत"
-
 msgid "Open"
 msgstr "खोलें"
 

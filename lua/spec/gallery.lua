@@ -131,6 +131,29 @@ local function pictures(widget, found)
     return found
 end
 
+test("folder presets fill an editable name and wait for Save", function()
+    local gallery, rec = newGallery(1)
+    gallery:_createFolder()
+    local dialog = rec.shown[#rec.shown]
+    local created
+    local Library = require("library")
+    Library.createFolder = function(name) created = name; return true end
+    gallery._rebuild = function() end
+    dialog.setInputText = function(self, text) self.input = text end
+    assertEq(#dialog.buttons[1], 2, "date presets")
+    local closed = #rec.closed
+    for index, format in ipairs{"%Y-%m", "%Y-%m-%d"} do
+        dialog.buttons[1][index].callback()
+        assertEq(dialog:getInputText(), os.date(format), "preset name")
+        assertEq(created, nil, "preset created a folder")
+        assertEq(#rec.closed, closed, "preset closed the dialog")
+    end
+    dialog:setInputText(dialog:getInputText() .. " notes")
+    dialog.buttons[2][2].callback()
+    assertEq(created, os.date("%Y-%m-%d") .. " notes", "Save uses edited name")
+    assertEq(rec.closed[#rec.closed], dialog, "Save closes the dialog")
+end)
+
 -- Painting ------------------------------------------------------------------------
 
 io.write("gallery painting\n")
@@ -190,18 +213,27 @@ test("there is always a way out, even at the top", function()
     assertEq(rec.closed[#rec.closed], gallery, "the back arrow did not close it")
 end)
 
-test("inside a folder the same arrow goes up instead", function()
+test("inside a folder the double arrow returns to the notebook root", function()
     local gallery, rec = newGallery(6)
     gallery:paintTo(RectBB.new(), 0, 0)
     gallery:_goTo("Trip")
     rec.closed = {}
 
-    local back = withIcon(gallery.header_row, "chevron.left")
-    assertTrue(back ~= nil, "no back control inside a folder")
+    local back = withIcon(gallery.header_row, "chevron.first")
+    assertTrue(back ~= nil, "no root control inside a folder")
     back.onTap()
 
     assertEq(gallery.folder, "", "the arrow did not go up a level")
     assertEq(#rec.closed, 0, "going up closed the notebooks instead")
+end)
+
+test("deep folders return to root in one tap", function()
+    local gallery = newGallery(6)
+    gallery:_goTo("Trip/ac/ad/ae")
+    local back = withIcon(gallery.header_row, "chevron.first")
+    assertTrue(back ~= nil, "missing double arrow")
+    back.onTap()
+    assertEq(gallery.folder, "", "root destination")
 end)
 
 -- Repainting ----------------------------------------------------------------------
@@ -515,6 +547,29 @@ test("changing folder drops the selection", function()
         "the selection followed us into a folder its items are not in")
 end)
 
+test("breadcrumbs navigate to the full ancestor path", function()
+    local gallery = newGallery(6)
+    gallery:_goTo("ab/ac/ad/ae")
+    local ancestor = labelled(gallery.header_row, "ac")
+    assertTrue(ancestor ~= nil, "missing ancestor button")
+    ancestor.onTap()
+    assertEq(gallery.folder, "ab/ac", "ancestor destination")
+end)
+
+test("deep paths and long UTF-8 names fit and expose hidden ancestors", function()
+    local gallery, rec = newGallery(6)
+    gallery:_goTo("ab/ac/ad/" .. string.rep("Cartella日本語", 30))
+    local row = gallery:_breadcrumbs(220)
+    assertTrue(row:getSize().w <= 220, "breadcrumbs overflow")
+    local more = labelled(row, "…")
+    assertTrue(more ~= nil, "hidden ancestors have no access")
+    more.onTap()
+    local menu = rec.shown[#rec.shown]
+    assertEq(#menu.actions, 3, "hidden ancestor count")
+    menu.actions[2].callback()
+    assertEq(gallery.folder, "ab/ac", "hidden ancestor destination")
+end)
+
 test("select all takes the whole folder, not just the page on screen", function()
     local gallery = newGallery(40)
     gallery:paintTo(RectBB.new(), 0, 0)
@@ -632,7 +687,7 @@ end)
 
 test("a lone PDF is sent from where it lies, not staged first", function()
     local sent
-    local gallery = newGallery(6, { on_share = function(p) sent = p end })
+    local gallery = newGallery(3, { on_share = function(p) sent = p end })
     gallery:paintTo(RectBB.new(), 0, 0)
     local pdf = cardWhere(gallery, function(it) return it.is_pdf end)
     assertTrue(pdf ~= nil, "the fixture has no exported PDF in it")
@@ -707,6 +762,44 @@ local function rowOf(gallery, text)
         if labelled(child, text) then return i end
     end
 end
+
+test("sorting sits at the right edge and updates live in the footer", function()
+    local gallery = newGallery(20)
+    gallery:paintTo(RectBB.new(), 0, 0)
+    local sort = labelled(gallery.header_row, "Last edited")
+    assertTrue(sort ~= nil, "sort control missing")
+    local right = gallery.header_row[1]
+    assertEq(right[#right], sort, "sort is the last top-row widget")
+    assertTrue(labelled(gallery.header_row, "Updates") == nil, "updates still in header")
+    assertTrue(labelled(gallery.footer, "Updates") ~= nil, "footer updates missing")
+    local next_page = withIcon(gallery.footer, "chevron.right")
+    assertTrue(next_page ~= nil, "next page missing")
+    next_page:onTap()
+    assertEq(gallery.page, 2, "next page")
+    withIcon(gallery.footer, "chevron.left"):onTap()
+    assertEq(gallery.page, 1, "previous page")
+end)
+
+test("page counter reserves two digits and Updates opens above its button", function()
+    local gallery = newGallery(20)
+    gallery.page, gallery.page_count = 1, 2
+    local footer = gallery:_buildFooter()
+    local counter_width = gallery.page_counter:getSize().w
+    gallery.page, gallery.page_count = 12, 99
+    local wider = gallery:_buildFooter()
+    assertEq(gallery.page_counter:getSize().w, counter_width, "two-digit counter width")
+    local Updater = require("updater")
+    local show = Updater.showMenu
+    local anchor, owner, position
+    Updater.showMenu = function(target, rect, placement) owner, anchor, position = target, rect, placement end
+    gallery.updates_button:onTap()
+    Updater.showMenu = show
+    assertEq(owner, gallery, "Updates owner")
+    assertEq(anchor, gallery.updates_button.dimen, "Updates anchor")
+    assertEq(position, "above", "Updates placement")
+    footer:free()
+    wider:free()
+end)
 
 test("the actions are on the second row, whatever is chosen", function()
     local gallery = newGallery(6, { on_share = function() end })

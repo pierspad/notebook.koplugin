@@ -274,12 +274,6 @@ msgstr "无法打开此 PDF。"
 msgid "Could not save the notebook."
 msgstr "无法保存笔记本。"
 
-msgid "Work"
-msgstr "工作"
-
-msgid "Personal"
-msgstr "个人"
-
 msgid "Open"
 msgstr "打开"
 

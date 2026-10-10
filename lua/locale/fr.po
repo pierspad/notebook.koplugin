@@ -277,12 +277,6 @@ msgstr "Impossible d'ouvrir ce PDF."
 msgid "Could not save the notebook."
 msgstr "Impossible d'enregistrer le carnet."
 
-msgid "Work"
-msgstr "Travail"
-
-msgid "Personal"
-msgstr "Personnel"
-
 msgid "Open"
 msgstr "Ouvrir"
 

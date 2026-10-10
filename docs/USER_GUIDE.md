@@ -5,11 +5,21 @@ See the [README](../README.md) for installation and compatibility, and the
 
 ## Gallery and pages
 
-Create notebooks and folders, or import a PDF from the gallery. Select items to
+Create notebooks and folders, or import a PDF from the gallery.
+When naming a new folder, tap a date preset (current month or current day) to
+fill the name field, edit it if needed, then tap Save to create the folder. Select items to
 open, rename, move, duplicate, share, export or delete them. Page thumbnails
 provide navigation and reordering. Changes are saved automatically; closing a
 notebook or switching documents completes the current interaction and saves it.
 If saving fails during a document switch, the current document remains open.
+
+Inside folders, tap a folder name in the header path to return to that level.
+The double left arrow returns directly to the notebook gallery root. Deep paths
+show the most recent folders; tap the ellipsis to choose a hidden ancestor.
+Long folder names are shortened to fit the available space.
+The sort control sits at the top right. Version and Updates sit at the bottom
+right. The Updates menu opens just above its button, aligned to the right.
+Use the arrows beside the page counter or swipe to change gallery pages.
 
 <img src="images/gallery-2026-10-05.png" width="300" alt="Notebook gallery" />
 <img src="images/gallery-selection-2026-10-05.png" width="300" alt="Gallery selection and actions" />

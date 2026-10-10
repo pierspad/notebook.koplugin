@@ -278,12 +278,6 @@ msgstr "Dieses PDF konnte nicht geöffnet werden."
 msgid "Could not save the notebook."
 msgstr "Das Notizbuch konnte nicht gespeichert werden."
 
-msgid "Work"
-msgstr "Arbeit"
-
-msgid "Personal"
-msgstr "Privat"
-
 msgid "Open"
 msgstr "Öffnen"
 

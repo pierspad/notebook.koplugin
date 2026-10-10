@@ -37,6 +37,12 @@ with tempfile.TemporaryDirectory(prefix='notebook-native-') as directory:
                             'EMULATE_READER_W': str(width), 'EMULATE_READER_H': str(height),
                             'EMULATE_READER_DPI': str(dpi), 'LANGUAGE': language})
 
+        subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/check-updates-ui.lua'),
+                        str(ROOT / 'lua'), str(output)], cwd=stage, check=True, timeout=30,
+                       env={**os.environ, 'SDL_VIDEODRIVER': 'dummy', 'KO_HOME': str(output),
+                            'EMULATE_READER_W': str(width), 'EMULATE_READER_H': str(height),
+                            'EMULATE_READER_DPI': str(dpi), 'LANGUAGE': language})
+
         subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/check-shape-order.lua'),
                         str(ROOT / 'lua'), str(output)], cwd=stage, check=True, timeout=30,
                        env={**os.environ, 'SDL_VIDEODRIVER': 'dummy', 'KO_HOME': str(output),

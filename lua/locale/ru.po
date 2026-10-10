@@ -276,12 +276,6 @@ msgstr "Не удалось открыть этот PDF."
 msgid "Could not save the notebook."
 msgstr "Не удалось сохранить блокнот."
 
-msgid "Work"
-msgstr "Работа"
-
-msgid "Personal"
-msgstr "Личное"
-
 msgid "Open"
 msgstr "Открыть"
 

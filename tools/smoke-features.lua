@@ -29,6 +29,27 @@ local function paint(name,widget)
     assert(d.x>=0 and d.y>=0 and d.x+d.w<=w and d.y+d.h<=h,"offscreen panel: "..name)
     bb:writePNG(tmp.."/"..name..".png");bb:free()
 end
+local gallery=load("gallery"):new{}
+gallery.items={}
+for i=1,30 do gallery.items[i]={name="Folder "..i,path="folder-"..i,is_folder=true} end
+gallery:_layout()
+paint("gallery-layout",gallery)
+assert(gallery.content:getSize().h<=h-2*require("ui/size").padding.large,string.format("gallery exceeds its height: %s footer %s reserved %s",gallery.content:getSize().h,gallery.footer:getSize().h,gallery:_footerHeight()))
+assert(gallery.footer:getSize().w<=w-2*require("ui/size").padding.large,"gallery footer overflows")
+local counter_width=gallery.page_counter:getSize().w
+for i=31,594 do gallery.items[i]={name="Folder "..i,path="folder-"..i,is_folder=true} end
+gallery.page=12
+gallery:_layout()
+paint("gallery-two-digits",gallery)
+if gallery.page_count<100 then assert(gallery.page_counter:getSize().w==counter_width,"two-digit pagination shifts arrows") end
+gallery.items={}
+for i,path in ipairs({"ab/ac/ad/ae", "ab/ac/ad/"..string.rep("Cartella日本語",30),
+    string.rep("folder/",30).."current"}) do
+    gallery:_goTo(path)
+    assert(gallery.header_row[1]:getSize().w<=w,"gallery header overflows")
+    paint("gallery-path-"..i,gallery)
+end
+gallery:free()
 nb:paintTo(screen.bb,0,0)
 nb:_showNotebookMenu()
 assert(nb.settings_button.selected and not nb.tool_buttons[1].selected)

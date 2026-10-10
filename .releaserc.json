@@ -4,7 +4,17 @@
   "tagFormat": "v${version}",
   "plugins": [
     ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
-    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/release-notes-generator", {
+      "preset": "conventionalcommits",
+      "presetConfig": {
+        "types": [
+          { "type": "fix", "section": "🐛 Bug Fixes", "hidden": false },
+          { "type": "feat", "section": "✨ New Features", "hidden": false },
+          { "type": "perf", "section": "🔧 Improvements", "hidden": false },
+          { "type": "refactor", "section": "♻️ Refactoring", "hidden": false }
+        ]
+      }
+    }],
     ["@semantic-release/exec", { "prepareCmd": "node tools/prepare-release.mjs ${nextRelease.version} && make ci" }],
     ["@semantic-release/git", { "assets": ["lua/_meta.lua"], "message": "chore(release): v${nextRelease.version} [skip ci]" }],
     ["@semantic-release/github", { "assets": [{ "path": "build/*.zip", "label": "Notebook KOReader plugin" }], "successComment": false, "failComment": false, "releasedLabels": false }]

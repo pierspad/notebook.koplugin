@@ -268,12 +268,6 @@ msgstr ""
 msgid "Could not save the notebook."
 msgstr ""
 
-msgid "Work"
-msgstr ""
-
-msgid "Personal"
-msgstr ""
-
 msgid "Open"
 msgstr ""
 

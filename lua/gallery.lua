@@ -13,6 +13,8 @@ Folders are ordinary directories on disk, shown as cards of their own.
 local ActionMenu = require("actionmenu")
 local Updater = require("updater")
 local Blitbuffer = require("ffi/blitbuffer")
+local CenterContainer = require("ui/widget/container/centercontainer")
+local Widgets = require("widgets")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local Document = require("document")
@@ -175,8 +177,9 @@ function Gallery:_layout()
     local header_h = header:getSize().h
     local footer_h = self:_footerHeight()
 
-    local grid_h = self.dimen.h - self:_topInset() - header_h - footer_h - 2 * margin
-    local rows = math.max(1, math.floor((grid_h + margin) / (card_h + margin)))
+    local row_gap = margin + 3 * Size.padding.small
+    local grid_h = self.dimen.h - self:_topInset() - header_h - footer_h - 2 * margin - row_gap
+    local rows = math.max(1, math.floor((grid_h + row_gap) / (card_h + row_gap)))
     self.per_page = rows * COLUMNS
     self.page_count = math.max(1, math.ceil(#self.items / self.per_page))
     if self.page > self.page_count then self.page = self.page_count end
@@ -222,7 +225,7 @@ function Gallery:_layout()
         end
         if any then
             if r > 0 then
-                table.insert(grid, VerticalSpan:new{ width = margin })
+                table.insert(grid, VerticalSpan:new{ width = row_gap })
             end
             table.insert(grid, row)
         end
@@ -235,15 +238,16 @@ function Gallery:_layout()
         })
     end
 
+    self.footer = self:_buildFooter()
     self.content = VerticalGroup:new{
         align = "left",
         VerticalSpan:new{ width = self:_topInset() },
         header,
-        VerticalSpan:new{ width = margin },
+        VerticalSpan:new{ width = row_gap },
         grid,
+        VerticalSpan:new{ width = math.max(0, grid_h - grid:getSize().h) },
+        self.footer,
     }
-
-    self.footer = self:_buildFooter()
 
     -- Sized to the whole rectangle we were given, not to the cards in it.
     --
@@ -268,7 +272,6 @@ end
 --- Frees the widgets of the current layout, if there is one.
 function Gallery:_freeWidgets()
     if self.holder[1] then self.holder[1]:free() end
-    if self.footer then self.footer:free() end
 end
 
 --[[--
@@ -282,24 +285,57 @@ its words away.
 require("galleryheader")(Gallery)
 
 local FOOTER_FONT_SIZE = 17
+local UPDATE_FONT_SIZE = 15
 
 function Gallery:_buildFooter()
-    if self.page_count <= 1 then return nil end
-    return TextWidget:new{
-        text = T(_("Page %1 of %2"), self.page, self.page_count),
-        face = Font:getFace("cfont", FOOTER_FONT_SIZE),
+    local gap = Size.padding.small
+    local width = self.dimen.w - 2 * Size.padding.large
+    local pages = HorizontalGroup:new{ align = "center" }
+    if self.page_count > 1 then
+        table.insert(pages, Widgets.iconButton("chevron.left", function() self:_turnPage(-1) end))
+        table.insert(pages, HorizontalSpan:new{ width = Size.padding.large })
+        local text = T(_("Page %1 of %2"), self.page, self.page_count)
+        local probe = TextWidget:new{
+            text = T(_("Page %1 of %2"), 88, 88),
+            face = Font:getFace("cfont", FOOTER_FONT_SIZE),
+        }
+        local label = TextWidget:new{ text = text, face = Font:getFace("cfont", FOOTER_FONT_SIZE) }
+        self.page_counter = CenterContainer:new{
+            dimen = Geom:new{ w = math.max(probe:getSize().w, label:getSize().w), h = label:getSize().h }, label,
+        }
+        probe:free()
+        table.insert(pages, self.page_counter)
+        table.insert(pages, HorizontalSpan:new{ width = Size.padding.large })
+        table.insert(pages, Widgets.iconButton("chevron.right", function() self:_turnPage(1) end))
+    end
+    local version = TextWidget:new{
+        text = require("_meta").version, face = Font:getFace("cfont", UPDATE_FONT_SIZE),
+    }
+    local updates
+    updates = Widgets.textButton{
+        text = _("Updates"), font_size = UPDATE_FONT_SIZE,
+        callback = function() Updater.showMenu(self, updates.dimen, "above") end,
+    }
+    self.version_text, self.updates_button = version, updates
+    local bottom = HorizontalGroup:new{ align = "center",
+        HorizontalSpan:new{ width = math.max(0, width - version:getSize().w - Size.padding.large - updates:getSize().w) },
+        version, HorizontalSpan:new{ width = Size.padding.large }, updates,
+    }
+    return VerticalGroup:new{ align = "left",
+        CenterContainer:new{ dimen = Geom:new{ w = width, h = self:_pageControlsHeight() }, pages },
+        VerticalSpan:new{ width = gap }, bottom,
     }
 end
 
---- How much room the page counter needs, measured rather than guessed at.
+function Gallery:_pageControlsHeight()
+    return Screen:scaleBySize(40) + 2 * Size.padding.button + 2 * Size.border.thin
+end
+
 function Gallery:_footerHeight()
-    local sizer = TextWidget:new{
-        text = "0",
-        face = Font:getFace("cfont", FOOTER_FONT_SIZE),
-    }
-    local h = sizer:getSize().h
-    sizer:free()
-    return h + Size.padding.small
+    local probe = Widgets.textButton{ text = _("Updates"), font_size = UPDATE_FONT_SIZE, callback = function() end }
+    local h = self:_pageControlsHeight() + Size.padding.small + probe:getSize().h
+    probe:free()
+    return h
 end
 
 --[[--
@@ -312,16 +348,6 @@ different offsets. A widget paints at the origin it is given.
 --]]
 function Gallery:paintTo(bb, x, y)
     InputContainer.paintTo(self, bb, x, y)
-
-    if self.footer then
-        -- Placed by its own height, not by a guess at it. The guess was 18
-        -- scaled pixels, and the line of text is taller than that, so "Page 1
-        -- of 2" was drawn half off the bottom of the screen.
-        local size = self.footer:getSize()
-        self.footer:paintTo(bb,
-            x + math.floor((self.dimen.w - size.w) / 2),
-            y + self.dimen.h - size.h - Size.padding.small)
-    end
 end
 
 -- Navigation ----------------------------------------------------------------------
@@ -614,8 +640,7 @@ function Gallery:_askName(title, initial, commit, presets)
         local row = {}
         for _, name in ipairs(presets) do
             row[#row + 1] = {text=name, callback=function()
-                UIManager:close(dialog)
-                commit(name)
+                dialog:setInputText(name, true, false)
             end}
         end
         table.insert(args.buttons, 1, row)
@@ -703,7 +728,7 @@ function Gallery:_createFolder()
         local ok, reason = Library.createFolder(name, self.folder)
         if not ok then return self:_error(nameError(reason)) end
         self:_rebuild()
-    end, {_("Work"), _("Personal"), os.date("%Y-%m")})
+    end, {os.date("%Y-%m"), os.date("%Y-%m-%d")})
 end
 
 -- Choosing several things ------------------------------------------------------------

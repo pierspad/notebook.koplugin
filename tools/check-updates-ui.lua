@@ -28,17 +28,19 @@ local Gallery=load("gallery")
 local gallery=Gallery:new{}
 assert(not load("safe").failed)
 gallery:paintTo(bb,0,0)
-local top=gallery.header_row[1]
-local version_x
-for i,widget in ipairs(top) do if widget==gallery.version_text then version_x=top._offsets[i].x end end
 local updates=gallery.updates_button.dimen
-assert(version_x and updates.x>=version_x+gallery.version_text:getSize().w,"Updates button precedes or overlaps version")
+local bottom=gallery.footer[3]
+local version_x=bottom._offsets[2].x+require("ui/size").padding.large
+assert(updates.x>=version_x+gallery.version_text:getSize().w,"Updates overlaps version")
 assert(updates.x+updates.w<=screen:getWidth(),"Updates button outside screen")
 bb:writePNG(tmp.."/updates-gallery.png")
-load("updater").showMenu(gallery,updates)
+gallery.updates_button:onTap()
 assert(shown.actions[1].selected() and shown.actions[1].text)
 shown:paintTo(bb,0,0)
 assert(shown.panel.dimen.x>=0 and shown.panel.dimen.x+shown.panel.dimen.w<=screen:getWidth())
+assert(shown.panel.dimen.y+shown.panel.dimen.h<updates.y,"Updates menu is not above its button")
+assert(math.abs(shown.panel.dimen.x+shown.panel.dimen.w-updates.x-updates.w)<=1,"Updates menu is not right aligned")
+assert(gallery.updates_button.frame.background==BB.COLOR_WHITE,"Updates button appears disabled")
 bb:writePNG(tmp.."/updates-menu.png")
 assert(shown.action_rows[1].row.icon_widget.text=="☑","checked option lacks checkbox")
 shown.actions[1].callback();assert(not shown.actions[1].selected())

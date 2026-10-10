@@ -276,12 +276,6 @@ msgstr "Nie udało się otworzyć tego pliku PDF."
 msgid "Could not save the notebook."
 msgstr "Nie udało się zapisać notatnika."
 
-msgid "Work"
-msgstr "Praca"
-
-msgid "Personal"
-msgstr "Osobiste"
-
 msgid "Open"
 msgstr "Otwórz"
 

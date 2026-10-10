@@ -279,12 +279,6 @@ msgstr "Impossibile aprire questo PDF."
 msgid "Could not save the notebook."
 msgstr "Impossibile salvare il blocco note."
 
-msgid "Work"
-msgstr "Lavoro"
-
-msgid "Personal"
-msgstr "Personale"
-
 msgid "Open"
 msgstr "Apri"
 

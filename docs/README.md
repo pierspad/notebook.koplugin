@@ -196,7 +196,10 @@ Kindle-matching launcher profile uses 160 UI DPI with a fixed 1860×2480 logical
 framebuffer. `tools/emulator-display.lua` scales only the desktop SDL window;
 window resizing must not change saved page geometry or pointer coordinates.
 `tools/emulator-startup.lua` opens Notebook from FileManager for that local
-profile. These optional development patches are not installed with the plugin.
+profile. The launcher opens the gallery by default (`NOTEBOOK_EMULATOR_START=gallery`).
+Set `NOTEBOOK_EMULATOR_START=notebook` and `NOTEBOOK_EMULATOR_NOTEBOOK` to open a
+specific notebook, or `NOTEBOOK_EMULATOR_START=home` to keep the normal home screen.
+These optional development patches are not installed with the plugin.
 
 ### 2.2 E-Ink Waveform Pipeline & Partial Refreshes
 
