@@ -29,6 +29,14 @@ local function paint(name,widget)
     assert(d.x>=0 and d.y>=0 and d.x+d.w<=w and d.y+d.h<=h,"offscreen panel: "..name)
     bb:writePNG(tmp.."/"..name..".png");bb:free()
 end
+local gallery=load("gallery"):new{}
+for i,path in ipairs({"ab/ac/ad/ae", "ab/ac/ad/"..string.rep("Cartella日本語",30),
+    string.rep("folder/",30).."current"}) do
+    gallery:_goTo(path)
+    assert(gallery.header_row[1]:getSize().w<=w,"gallery header overflows")
+    paint("gallery-path-"..i,gallery)
+end
+gallery:free()
 nb:paintTo(screen.bb,0,0)
 nb:_showNotebookMenu()
 assert(nb.settings_button.selected and not nb.tool_buttons[1].selected)

@@ -147,13 +147,14 @@ function Gallery:_fitHeader(make)
     local top = HorizontalGroup:new{ align = "center" }
     table.insert(top, back)
     table.insert(top, HorizontalSpan:new{ width = gap })
-    table.insert(top, TextWidget:new{
+    local title_width = math.max(
+        avail - back:getSize().w - gap
+              - (corner and corner:getSize().w + gap or 0) - version_w - gap,
+        Screen:scaleBySize(40))
+    table.insert(top, type(title) == "function" and title(title_width) or TextWidget:new{
         text = title,
         face = Font:getFace("tfont", 22),
-        max_width = math.max(
-            avail - back:getSize().w - gap
-                  - (corner and corner:getSize().w + gap or 0) - version_w - gap,
-            Screen:scaleBySize(40)),
+        max_width = title_width,
     })
     if corner then
         table.insert(top, HorizontalSpan:new{ width = gap })
@@ -215,26 +216,70 @@ function Gallery:_fitHeader(make)
     return header
 end
 
+-- Keep the newest contiguous suffix of the path. Ellipsis opens the omitted
+-- ancestors; even a single very long folder keeps a bounded, tappable label.
+function Gallery:_breadcrumbs(width)
+    local parts, path = {}, ""
+    for name in self.folder:gmatch("[^/]+") do
+        path = path == "" and name or path .. "/" .. name
+        parts[#parts + 1] = { name = name, path = path }
+    end
+    local function button(part, limit)
+        return Widgets.textButton{
+            text = part.name, width = limit, font_size = 17,
+            callback = function() self:_goTo(part.path) end,
+        }
+    end
+    local row = HorizontalGroup:new{ align = "center" }
+    local separator = TextWidget:new{ text = " / ", face = Font:getFace("cfont", 17) }
+    local sep_w = separator:getSize().w
+    local overflow = Widgets.textButton{ text = "…", callback = function()
+        local actions = {}
+        for i = 1, row.first_visible - 1 do
+            local part = parts[i]
+            actions[#actions + 1] = {
+                text = part.path, callback = function() self:_goTo(part.path) end,
+            }
+        end
+        UIManager:show(ActionMenu:new{ title = _("Notebooks"), actions = actions })
+    end }
+    local reserve = #parts > 1 and overflow:getSize().w + sep_w or 0
+    local probe = button(parts[#parts])
+    local padding = 2 * Size.padding.button + 2 * Size.border.thin
+    local last_w = math.min(probe:getSize().w, math.max(padding + 1, width - reserve))
+    probe:free()
+    local visible = { button(parts[#parts], math.max(1, last_w - padding)) }
+    local used, first = visible[1]:getSize().w, #parts
+    for i = #parts - 1, 1, -1 do
+        local candidate = button(parts[i])
+        local extra = i > 1 and reserve or 0
+        if used + sep_w + candidate:getSize().w + extra > width then
+            candidate:free()
+            break
+        end
+        table.insert(visible, 1, candidate)
+        used, first = used + sep_w + candidate:getSize().w, i
+    end
+    row.first_visible = first
+    if first > 1 then table.insert(row, overflow) else overflow:free() end
+    separator:free()
+    for _, crumb in ipairs(visible) do
+        if #row > 0 then
+            table.insert(row, TextWidget:new{ text = " / ", face = Font:getFace("cfont", 17) })
+        end
+        table.insert(row, crumb)
+    end
+    return row
+end
+
 --- A header button at the given level of detail; see _fitHeader.
 
 function Gallery:_buildHeader()
     if self.selection then return self:_buildSelectionHeader() end
 
     return self:_fitHeader(function(mode)
-        --[[
-        The back arrow is always there, and always means "out of here".
-
-        Inside a folder it goes up one. At the top it closes the notebooks,
-        which until now had no control at all: you left by tapping another tab
-        on the launcher bar, and if that bar is not installed there was nothing
-        to tap. Worse, a screen this one covers the whole panel with is one the
-        launcher bar itself cannot close -- it only knows how to close its own
-        -- so leaving had to be something the reader could always do from here.
-        --]]
-        local back = Widgets.iconButton("chevron.left", function()
-            if self.folder ~= "" then
-                return self:_goTo(Library.parentOf(self.folder) or "")
-            end
+        local back = Widgets.iconButton(self.folder ~= "" and "chevron.first" or "chevron.left", function()
+            if self.folder ~= "" then return self:_goTo("") end
             self:onClose()
         end)
 
@@ -265,8 +310,9 @@ function Gallery:_buildHeader()
                 end))
         end
 
-        local title = self.folder ~= "" and self.folder:match("[^/]+$")
-            or _("Notebooks")
+        local title = self.folder ~= "" and function(width)
+            return self:_breadcrumbs(width)
+        end or _("Notebooks")
         return title, back, buttons, self:_orderButton()
     end)
 end

@@ -190,18 +190,27 @@ test("there is always a way out, even at the top", function()
     assertEq(rec.closed[#rec.closed], gallery, "the back arrow did not close it")
 end)
 
-test("inside a folder the same arrow goes up instead", function()
+test("inside a folder the double arrow returns to the notebook root", function()
     local gallery, rec = newGallery(6)
     gallery:paintTo(RectBB.new(), 0, 0)
     gallery:_goTo("Trip")
     rec.closed = {}
 
-    local back = withIcon(gallery.header_row, "chevron.left")
-    assertTrue(back ~= nil, "no back control inside a folder")
+    local back = withIcon(gallery.header_row, "chevron.first")
+    assertTrue(back ~= nil, "no root control inside a folder")
     back.onTap()
 
     assertEq(gallery.folder, "", "the arrow did not go up a level")
     assertEq(#rec.closed, 0, "going up closed the notebooks instead")
+end)
+
+test("deep folders return to root in one tap", function()
+    local gallery = newGallery(6)
+    gallery:_goTo("Trip/ac/ad/ae")
+    local back = withIcon(gallery.header_row, "chevron.first")
+    assertTrue(back ~= nil, "missing double arrow")
+    back.onTap()
+    assertEq(gallery.folder, "", "root destination")
 end)
 
 -- Repainting ----------------------------------------------------------------------
@@ -513,6 +522,29 @@ test("changing folder drops the selection", function()
     gallery:_goTo("Trip")
     assertTrue(gallery.selection == nil,
         "the selection followed us into a folder its items are not in")
+end)
+
+test("breadcrumbs navigate to the full ancestor path", function()
+    local gallery = newGallery(6)
+    gallery:_goTo("ab/ac/ad/ae")
+    local ancestor = labelled(gallery.header_row, "ac")
+    assertTrue(ancestor ~= nil, "missing ancestor button")
+    ancestor.onTap()
+    assertEq(gallery.folder, "ab/ac", "ancestor destination")
+end)
+
+test("deep paths and long UTF-8 names fit and expose hidden ancestors", function()
+    local gallery, rec = newGallery(6)
+    gallery:_goTo("ab/ac/ad/" .. string.rep("Cartella日本語", 30))
+    local row = gallery:_breadcrumbs(220)
+    assertTrue(row:getSize().w <= 220, "breadcrumbs overflow")
+    local more = labelled(row, "…")
+    assertTrue(more ~= nil, "hidden ancestors have no access")
+    more.onTap()
+    local menu = rec.shown[#rec.shown]
+    assertEq(#menu.actions, 3, "hidden ancestor count")
+    menu.actions[2].callback()
+    assertEq(gallery.folder, "ab/ac", "hidden ancestor destination")
 end)
 
 test("select all takes the whole folder, not just the page on screen", function()

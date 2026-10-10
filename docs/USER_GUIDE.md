@@ -11,6 +11,11 @@ provide navigation and reordering. Changes are saved automatically; closing a
 notebook or switching documents completes the current interaction and saves it.
 If saving fails during a document switch, the current document remains open.
 
+Inside folders, tap a folder name in the header path to return to that level.
+The double left arrow returns directly to the notebook gallery root. Deep paths
+show the most recent folders; tap the ellipsis to choose a hidden ancestor.
+Long folder names are shortened to fit the available space.
+
 <img src="images/gallery-2026-10-05.png" width="300" alt="Notebook gallery" />
 <img src="images/gallery-selection-2026-10-05.png" width="300" alt="Gallery selection and actions" />
 
