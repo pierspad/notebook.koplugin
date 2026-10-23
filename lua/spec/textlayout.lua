@@ -73,3 +73,10 @@ editor.buttons[1][5].callback();assert(preview._text_widget==old_widget,'underli
 editor.buttons[2][1].callback();assert(preview._text_widget==old_widget,'background recreated glyphs')
 editor.buttons[1][1].callback();assert(not preview._text_widget,'cancel leaked preview')
 print('text: menu sections, size limits, live sample, cache invalidation and minimal cursor refresh passed')
+-- UIManager dispatches the editor's events independently of Notebook's widget.
+local Safe=require('safe')
+editor.editor_cleanup=function() error('injected text editor cleanup failure') end
+local contained=pcall(function() editor:handleEvent({handler='onCloseWidget'}) end)
+assert(contained,'text dialog event failure escaped into UIManager')
+assert(Safe.failed,'text dialog failure bypassed safe shutdown')
+print('text dialog: standalone event failure is contained by Safe')

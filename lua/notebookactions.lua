@@ -55,7 +55,9 @@ function Actions:_showRecentNotebooks()
         index=index+1
         local action=actions[index]
         if not action then return end
-        local row=menu.action_rows[index].row
+        local entry=menu.action_rows and menu.action_rows[index]
+        local row=entry and entry.row
+        if not row then return end
         if not action.preview then
             local path=Thumbnail.get(action.preview_source,row.preview_size,row.preview_size,1860,2480)
             if path then

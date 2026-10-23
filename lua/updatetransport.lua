@@ -1,5 +1,6 @@
 -- Bounded HTTPS transfers in a background process; UI polls completion only.
 local UIManager=require("ui/uimanager")
+local Safe=require("safe")
 local function shellEscape(args)
     local out={}
     for i,value in ipairs(args) do out[i]="'"..tostring(value):gsub("'", "'\"'\"'").."'" end
@@ -59,8 +60,8 @@ function M.fetch(url,path,limit,ca,done)
             done(nil,"Update request timed out")
             return
         end
-        UIManager:scheduleIn(0.25,poll)
+        UIManager:scheduleIn(0.25,Safe.wrap("updater:transport-poll",poll))
     end
-    UIManager:scheduleIn(0.25,poll)
+    UIManager:scheduleIn(0.25,Safe.wrap("updater:transport-poll",poll))
 end
 return M

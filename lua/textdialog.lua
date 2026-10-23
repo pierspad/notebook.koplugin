@@ -4,6 +4,7 @@ local Device = require("device")
 local InputDialog = require("ui/widget/inputdialog")
 local InputText = require("ui/widget/inputtext")
 local Size = require("ui/size")
+local Safe = require("safe")
 local VerticalSpan = require("ui/widget/verticalspan")
 local Screen = Device.screen
 
@@ -83,4 +84,4 @@ function CanvasTextDialog:onCloseWidget()
     if InputDialog.onCloseWidget then return InputDialog.onCloseWidget(self) end
 end
 
-return CanvasTextDialog
+return Safe.widget(CanvasTextDialog, "textdialog")

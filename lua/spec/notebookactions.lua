@@ -60,6 +60,11 @@ nb:_showRecentNotebooks();local closing=record.shown[#record.shown]
 closing:onCloseWidget()
 while #pending>0 do table.remove(pending,1)() end
 assert(reads==0,'closed recent menu continued reading notebooks')
+-- A reconstructed menu may no longer contain the row captured by the worker.
+nb:_showRecentNotebooks();local rebuilt_menu=record.shown[#record.shown]
+rebuilt_menu.action_rows={}
+while #pending>0 do table.remove(pending,1)() end
+assert(reads==0,'missing recent row continued thumbnail generation')
 Safe.later,Thumbnail.get=later,get
 settings.notebook_recent={'../a.scribe','/a.scribe','missing.scribe',false,'a.scribe','a.scribe','work/b.scribe'}
 local list=Recents.list('a.scribe');assert(#list==1 and list[1]=='work/b.scribe')

@@ -70,6 +70,7 @@ assert(fs["/plugins/notebook.koplugin/main.lua"] and fs["/plugins/backup/old.lua
 assert(not fs["/plugins/notebook.koplugin/old.lua"],"orphan files survived replacement")
 assert(not Installer.install("/plugins/notebook.koplugin","/plugins/stage","/plugins/backup"))
 local Transport=require("updatetransport")
+local production_fetch=Transport.fetch
 fs["/cache"]={mode="directory"}
 fs["/cache/1-1"]={mode="file",modification=0}
 fs["/cache/1-2"]={mode="file",modification=100000}
@@ -105,6 +106,51 @@ Updater.check(true);assert(calls==2 and prompted and not Updater.busy)
 settings.notebook_update_weekly=false
 settings.notebook_update_attempt=nil
 scheduled[1][2]();assert(calls==2,"disabled weekly checks ran")
+
+-- Invoke the actual production timer and transport callbacks with injected
+-- failures, and verify Safe contains them before they escape into UIManager.
+local Safe=require("safe")
+Safe.failed=false
+settings.notebook_update_weekly=true
+local due=Policy.due
+Policy.due=function() error("injected weekly timer failure") end
+local ok=pcall(scheduled[1][2])
+assert(ok,"weekly timer failure escaped into UIManager")
+assert(Safe.failed,"weekly timer failure did not shut down through Safe")
+Policy.due=due
+Safe.failed=false
+
+local remove_tree=Installer.removeTree
+Installer.removeTree=function() error("injected backup cleanup failure") end
+settings.notebook_update_installed=require("_meta").version
+local ok_cleanup=pcall(scheduled[2][2])
+assert(ok_cleanup,"backup cleanup failure escaped into UIManager")
+assert(Safe.failed,"backup cleanup failure did not shut down through Safe")
+Installer.removeTree=remove_tree
+settings.notebook_update_installed=nil
+Safe.failed=false
+
+local execute=os.execute
+local open=io.open
+os.execute=function() return 0 end
+fs["/cache/probe.zip"]={mode="file",size=1}
+io.open=function(path,mode)
+ if path=="/cache/probe.zip.status" then
+  return {read=function() return "200" end,close=function() end}
+ elseif path=="/cache/probe.zip.error" then
+  return {read=function() return "" end,close=function() end}
+ end
+ return open(path,mode)
+end
+local before_poll=#scheduled
+production_fetch("https://example.test/probe","/cache/probe.zip",10,nil,function()
+ error("injected transport completion failure")
+end)
+local ok_poll=pcall(scheduled[before_poll+1][2])
+assert(ok_poll,"transport failure escaped into UIManager")
+assert(Safe.failed,"transport failure did not shut down through Safe")
+os.execute=execute;io.open=open
+Safe.failed=false
 
 print("updater: stable policy, rollback/orphan removal, HTTPS quoting, weekly/offline scheduling and retry guards passed")
 

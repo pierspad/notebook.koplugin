@@ -6,6 +6,7 @@ local UIManager=require("ui/uimanager")
 local Policy=require("updatepolicy")
 local Installer=require("updateinstaller")
 local Transport=require("updatetransport")
+local Safe=require("safe")
 local DataStorage=require("datastorage")
 local lfs=require("libs/libkoreader-lfs")
 local _=require("i18n")
@@ -30,7 +31,8 @@ local function transfer(url,limit,done)
     while lfs.symlinkattributes(path) or lfs.symlinkattributes(path..".status.pending") do
         serial=serial+1;path=root.."/"..tostring(os.time()).."-"..serial
     end
-    Transport.fetch(url,path,limit,DataStorage:getDataDir().."/data/ca-bundle.crt",done)
+    Transport.fetch(url,path,limit,DataStorage:getDataDir().."/data/ca-bundle.crt",
+        Safe.wrap("updater:transfer",done))
 end
 function M.install(release,owner)
     if M.busy or M.installed then return end
@@ -136,7 +138,7 @@ function M.check(manual,owner)
             end
         end)
     end
-    if manual then NetworkMgr:runWhenOnline(run)
+    if manual then NetworkMgr:runWhenOnline(Safe.wrap("updater:check",run))
     elseif NetworkMgr:isOnline() then run() end
 end
 function M.start(plugin_dir)
@@ -148,17 +150,17 @@ function M.start(plugin_dir)
             local attempt=setting("attempt")
             if type(attempt)~="number" or attempt~=attempt or attempt>os.time() or os.time()-attempt>=3600 then M.check(false) end
         end
-        UIManager:scheduleIn(3600,tick)
+        UIManager:scheduleIn(3600,Safe.wrap("updater:weekly-check",tick))
     end
-    UIManager:scheduleIn(60,tick)
-    UIManager:scheduleIn(10,function()
+    UIManager:scheduleIn(60,Safe.wrap("updater:weekly-check",tick))
+    UIManager:scheduleIn(10,Safe.wrap("updater:backup-cleanup",function()
         local _,backup=paths()
         if backup and setting("installed")==version then
             -- Only the newly loaded version retires its previous package.
             local ok=Installer.removeTree(backup)
             if ok then save("installed",nil) end
         end
-    end)
+    end))
 end
 function M.showMenu(owner,anchor,position)
     local menu
