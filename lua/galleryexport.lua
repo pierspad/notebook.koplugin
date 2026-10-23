@@ -31,8 +31,8 @@ selection so much as sending several times over.
 The staged copies are meant to be temporary and are not deleted here; see
 share.lua for why, and for what does delete them.
 
-Rendered one per tick, like the Export action and for the same reason: a dozen
-notebooks back to back would freeze the screen for the whole run.
+PDF preparation yields between rendering, encoding and writing each page, using
+Export's incremental job. XOPP and file copies still yield between notebooks.
 --]]
 function Gallery:_shareMany(chosen, format, prepared)
     self:_endSelection()
@@ -131,6 +131,25 @@ function Gallery:_shareMany(chosen, format, prepared)
         end
 
         local out = outputs[i]
+        local function complete(ok)
+            if ok then done, last_out = done + 1, out
+            else failed = failed + 1 end
+            Safe.later("gallery:share", step)
+        end
+        local function preparePDF(doc, destination)
+            local job = Export.beginPDF(doc, destination)
+            if not job then return complete(false) end
+            local function pageStep()
+                local state = job:step()
+                if state == "working" then
+                    return Safe.later("gallery:share-page", pageStep)
+                end
+                local ok = state == "done"
+                if ok and destination ~= out then ok = Library.copyFile(destination, out) end
+                complete(ok)
+            end
+            Safe.later("gallery:share-page", pageStep)
+        end
         local ok
         if isExport(item) then
             ok = Library.copyFile(item.path, out)
@@ -159,7 +178,7 @@ function Gallery:_shareMany(chosen, format, prepared)
                 elseif cached then
                     local extra
                     if format=="xopp" then ok,extra=Xopp.toXOPP(doc,cached)
-                    else ok=Export.toPDF(doc,cached) end
+                    else return preparePDF(doc,cached) end
                     if ok then
                         ok=Library.copyFile(cached,out)
                         if ok and extra then
@@ -172,16 +191,10 @@ function Gallery:_shareMany(chosen, format, prepared)
                     local extra
                     ok,extra=Xopp.toXOPP(doc,out)
                     if extra then multiple_files=true end
-                else ok=Export.toPDF(doc,out) end
+                else return preparePDF(doc,out) end
             end
         end
-        if ok then
-            done, last_out = done + 1, out
-        else
-            failed = failed + 1
-        end
-
-        Safe.later("gallery:share", step)
+        complete(ok)
     end
 
     -- A tick later, so the message is on screen before the first render blocks.

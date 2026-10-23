@@ -1454,7 +1454,7 @@ test("sharing an identically named notebook and PDFs preserves every file", func
     local Export = require("export")
     local BB = package.loaded["ffi/blitbuffer"]
     BB.new = function(w, h) return support.FakeBB.new(w, h) end
-    local stagingDir, cachedExport, toPDF = Share.stagingDir, Share.cachedExport, Export.toPDF
+    local stagingDir, cachedExport, beginPDF = Share.stagingDir, Share.cachedExport, Export.beginPDF
     local dir = os.tmpname()
     os.remove(dir)
     assert(os.execute(string.format("mkdir %q", dir)) == 0)
@@ -1470,8 +1470,8 @@ test("sharing an identically named notebook and PDFs preserves every file", func
     Share.stagingDir = function() return dir end
     -- Keep the real export/file-copy path; isolate the persistent share cache.
     Share.cachedExport = function() return nil end
-    Export.toPDF = function(doc, out)
-        return toPDF(doc, out, { width = 12, height = 16 })
+    Export.beginPDF = function(doc, out)
+        return beginPDF(doc, out, { width = 12, height = 16 })
     end
     local store = support._store
     store["/share-note"] = { version = 1, pages = { { strokes = {} } } }
@@ -1488,7 +1488,7 @@ test("sharing an identically named notebook and PDFs preserves every file", func
         assertEq(read(outputs[2]), "second original PDF", "an original filename was taken by a suffix")
         assertEq(read(outputs[3]), "original PDF", "the duplicate display name lost its PDF")
     end)
-    Share.stagingDir, Share.cachedExport, Export.toPDF = stagingDir, cachedExport, toPDF
+    Share.stagingDir, Share.cachedExport, Export.beginPDF = stagingDir, cachedExport, beginPDF
     -- Remove all possible outputs even when an assertion failed before listing them.
     for _, name in ipairs{ "Foo.pdf", "Foo (2).pdf", "Foo (3).pdf" } do
         os.remove(dir .. "/" .. name); os.remove(dir .. "/" .. name .. ".tmp")
