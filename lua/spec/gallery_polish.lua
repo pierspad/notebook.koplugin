@@ -60,3 +60,30 @@ while #callbacks>0 do table.remove(callbacks,1)() end
 assert(#rendered==1 and not g.thumb_working,'closing the gallery rendered pending thumbnails')
 Safe.later,Thumbnail.get=old_later,old_get
 print('gallery thumbnails: rapid folder switches, return navigation and close cancel stale work')
+
+-- Grid density toggle: 3x2 <-> 4x3 and vertical centering
+local saved_settings = {}
+G_reader_settings = {
+    readSetting = function(self, k) return saved_settings[k] end,
+    saveSetting = function(self, k, v) saved_settings[k] = v end,
+    flush = function() end,
+}
+local items = {}
+for i = 1, 12 do items[#items + 1] = { name = 'nb' .. i, path = '/data/notebook/nb' .. i .. '.scribe' } end
+local g2 = Gallery:new{ items = items }
+g2.dimen = { x = 0, y = 0, w = 1000, h = 1400 }
+g2:_layout()
+assert(g2.columns == 3, 'initial density is 3 columns')
+local per_page_3 = g2.per_page
+assert(per_page_3 == 6, '3 columns fits 6 per page (3x2), got ' .. tostring(per_page_3))
+
+g2:_toggleDensity()
+assert(g2.columns == 4, 'toggled density to 4 columns')
+assert(saved_settings['notebook_gallery_columns'] == 4, 'columns setting persisted')
+local per_page_4 = g2.per_page
+assert(per_page_4 == 12, '4 columns fits 12 per page (4x3), got ' .. tostring(per_page_4))
+
+g2:_toggleDensity()
+assert(g2.columns == 3 and saved_settings['notebook_gallery_columns'] == 3, 'toggled back to 3 columns')
+assert(g2.per_page == 6, 'back to 6 per page')
+print('gallery density: toggle between 3x2 and 4x3 preserves settings and updates per_page')

@@ -109,14 +109,15 @@ function Gallery:_fitHeader(make)
     not -- a language far wider than any we ship, or a much narrower screen --
     are the icons dropped, and then the words.
     --]]
-    local title, back, buttons, corner, widest
+    local title, back, buttons, corner, widest, right_btn
     for i, mode in ipairs(HEADER_MODES) do
         if i > 1 then
             back:free()
             if corner then corner:free() end
+            if right_btn then right_btn:free() end
             for _, button in ipairs(buttons) do button:free() end
         end
-        title, back, buttons, corner, widest = make(mode)
+        title, back, buttons, corner, widest, right_btn = make(mode)
         --[[
         Sized for the most it will ever hold, not for what it holds now.
 
@@ -127,7 +128,8 @@ function Gallery:_fitHeader(make)
         and kept it.
         --]]
         for _, button in ipairs(widest or {}) do button:free() end
-        if widthOf(widest or buttons) <= avail then break end
+        local total_w = widthOf(widest or buttons) + (right_btn and right_btn:getSize().w + gap or 0)
+        if total_w <= avail then break end
     end
 
     -- The title row: what you are looking at, and the one control that is about
@@ -154,11 +156,20 @@ function Gallery:_fitHeader(make)
     end
 
     local bottom = HorizontalGroup:new{ align = "center" }
+    local left_w = 0
     for _, button in ipairs(buttons) do
         if #bottom > 0 then
             table.insert(bottom, HorizontalSpan:new{ width = gap })
+            left_w = left_w + gap
         end
         table.insert(bottom, button)
+        left_w = left_w + button:getSize().w
+    end
+    if right_btn then
+        table.insert(bottom, HorizontalSpan:new{
+            width = math.max(gap, avail - left_w - right_btn:getSize().w),
+        })
+        table.insert(bottom, right_btn)
     end
 
     --[[
@@ -298,7 +309,7 @@ function Gallery:_buildHeader()
         local title = self.folder ~= "" and function(width)
             return self:_breadcrumbs(width)
         end or _("Notebooks")
-        return title, back, buttons, self:_orderButton()
+        return title, back, buttons, self:_orderButton(), nil, self:_densityButton(mode)
     end)
 end
 
@@ -401,6 +412,24 @@ function Gallery:_chooseOrder()
         })
     end
     UIManager:show(ActionMenu:new{ title = _("Sort by"), actions = actions })
+end
+
+function Gallery:_densityButton(mode)
+    local text = self.columns == 4 and _("3×2") or _("4×3")
+    local icon = self.columns == 4 and "notebook.page" or "notebook.duplicate"
+    return headerButton(mode, text, icon, function()
+        self:_toggleDensity()
+    end)
+end
+
+function Gallery:_toggleDensity()
+    self.columns = (self.columns == 4) and 3 or 4
+    if G_reader_settings then
+        G_reader_settings:saveSetting("notebook_gallery_columns", self.columns)
+        if G_reader_settings.flush then G_reader_settings:flush() end
+    end
+    self:_layout()
+    self:_repaint()
 end
 
 end

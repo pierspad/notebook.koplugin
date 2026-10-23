@@ -685,3 +685,9 @@ msgstr "Обновления до предварительных версий о
 
 msgid "No newer Notebook release is available."
 msgstr "Более новая версия Notebook недоступна."
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"

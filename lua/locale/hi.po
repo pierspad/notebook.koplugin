@@ -684,3 +684,9 @@ msgstr "प्रीरिलीज़ अपडेट अक्षम हैं
 
 msgid "No newer Notebook release is available."
 msgstr "Notebook का कोई नया संस्करण उपलब्ध नहीं है।"
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"

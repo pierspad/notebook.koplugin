@@ -685,3 +685,9 @@ msgstr "Оновлення до попередніх версій вимкнен
 
 msgid "No newer Notebook release is available."
 msgstr "Новіша версія Notebook недоступна."
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"

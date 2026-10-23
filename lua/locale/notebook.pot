@@ -663,3 +663,9 @@ msgstr ""
 
 msgid "No newer Notebook release is available."
 msgstr ""
+
+msgid "3×2"
+msgstr ""
+
+msgid "4×3"
+msgstr ""

@@ -689,3 +689,9 @@ msgstr "Updates auf Vorabversionen sind deaktiviert."
 
 msgid "No newer Notebook release is available."
 msgstr "Keine neuere Notebook-Version verfügbar."
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"

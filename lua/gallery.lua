@@ -111,6 +111,11 @@ function Gallery:init()
         or Library.DEFAULT_ORDER
     if not Library.ORDERS[self.order] then self.order = Library.DEFAULT_ORDER end
 
+    self.columns = self.columns
+        or (G_reader_settings and G_reader_settings:readSetting("notebook_gallery_columns"))
+        or COLUMNS
+    if self.columns ~= 4 then self.columns = COLUMNS end
+
     -- Whatever an earlier send left staged in the cache and is now certainly
     -- finished with. Done here because opening the gallery is the one moment
     -- that is both frequent and not in the middle of anything.
@@ -166,21 +171,23 @@ function Gallery:_layout()
     self:_freeWidgets()
 
     local margin = Size.padding.large
+    local cols = self.columns or COLUMNS
     local avail_w = self.dimen.w - 2 * margin
-    local card_w = math.floor((avail_w - (COLUMNS - 1) * margin) / COLUMNS)
+    local card_w = math.floor((avail_w - (cols - 1) * margin) / cols)
     -- Taller than wide, echoing the page they show -- but only slightly. The
     -- ratio is what decides how many rows fit, and at 1.25 a Scribe screen took
     -- two rows and left the bottom third of the gallery empty.
-    local card_h = math.floor(card_w * 1.1)
+    local card_h = math.floor(card_w * (cols == 4 and 1.02 or 1.1))
 
     local header = self:_buildHeader()
     local header_h = header:getSize().h
     local footer_h = self:_footerHeight()
 
-    local row_gap = margin + 3 * Size.padding.small
+    local row_gap = margin + (cols == 4 and Size.padding.small or 3 * Size.padding.small)
     local grid_h = self.dimen.h - self:_topInset() - header_h - footer_h - 2 * margin - row_gap
     local rows = math.max(1, math.floor((grid_h + row_gap) / (card_h + row_gap)))
-    self.per_page = rows * COLUMNS
+    if cols == 4 and rows > 3 then rows = 3 end
+    self.per_page = rows * cols
     self.page_count = math.max(1, math.ceil(#self.items / self.per_page))
     if self.page > self.page_count then self.page = self.page_count end
 
@@ -195,8 +202,8 @@ function Gallery:_layout()
     for r = 0, rows - 1 do
         local row = HorizontalGroup:new{ align = "top" }
         local any = false
-        for c = 0, COLUMNS - 1 do
-            local idx = first + r * COLUMNS + c
+        for c = 0, cols - 1 do
+            local idx = first + r * cols + c
             local item = self.items[idx]
             if item then
                 any = true
@@ -239,13 +246,15 @@ function Gallery:_layout()
     end
 
     self.footer = self:_buildFooter()
+    local full_grid_h = rows * card_h + (rows - 1) * row_gap
+    local slack_top = #self.items > 0 and math.max(0, math.floor((grid_h - full_grid_h) / 2)) or 0
     self.content = VerticalGroup:new{
         align = "left",
         VerticalSpan:new{ width = self:_topInset() },
         header,
-        VerticalSpan:new{ width = row_gap },
+        VerticalSpan:new{ width = row_gap + slack_top },
         grid,
-        VerticalSpan:new{ width = math.max(0, grid_h - grid:getSize().h) },
+        VerticalSpan:new{ width = math.max(0, grid_h - slack_top - grid:getSize().h) },
         self.footer,
     }
 
