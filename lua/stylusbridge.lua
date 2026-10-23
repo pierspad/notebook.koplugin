@@ -1,128 +1,153 @@
 -- KOReader stylus event bridge. Owns the temporary Wacom slot and
 -- keyboard/touch handlers; the canvas owns drawing and session lifecycle.
+--
+-- KOReader's input handlers and stylus callback are shared with KOReader
+-- itself (input inhibition during suspend) and with any other plugin that
+-- wraps them. Unwrapping is only possible while our closure is still the
+-- outermost one; otherwise another wrapper holds it, and may later even put it
+-- back. Every closure installed here therefore belongs to a *session*, and
+-- once that session is stopped the closure is an inert pass-through to the
+-- handler it captured: it never faults, never redirects slots and never
+-- swallows a key (sleep cover and power events included).
 local Device = require("device")
 local Safe = require("safe")
 local Input = Device.input
 local StylusBridge = {}
 
+local EV_ABS = 3
+local ABS_X, ABS_Y, ABS_PRESSURE = 0, 1, 24
+local ABS_MT_SLOT, ABS_MT_LAST = 47, 61
+local BTN_TOOL_PEN, BTN_TOOL_RUBBER = 320, 321
+local BTN_TOUCH, BTN_STYLUS = 330, 331
+
+-- Returns true when the event was consumed for the pen slot.
+local function touchActive(self, session, this, ev)
+    if ev.type ~= EV_ABS then return false end
+    local code = ev.code
+    -- Each device retains its own current slot across frames.
+    -- Wacom ABS_X/Y must not redirect a later slotless MT frame.
+    if ev.fd and code >= ABS_MT_SLOT and code <= ABS_MT_LAST then
+        session.panel_fds[ev.fd] = true
+    end
+    if code == ABS_MT_SLOT then
+        session.panel_slot = ev.value
+    elseif code > ABS_MT_SLOT and code <= ABS_MT_LAST then
+        this:setupSlotData(session.panel_slot)
+    end
+    if code ~= ABS_X and code ~= ABS_Y and code ~= ABS_PRESSURE then return false end
+    -- The panel may report legacy axes as well as MT axes.
+    -- Identify the digitizer by its tool proximity event's fd.
+    if ev.fd and (session.panel_fds[ev.fd] or session.pen_fd and ev.fd ~= session.pen_fd) then
+        return true
+    end
+    this:setupSlotData(this.pen_slot)
+    this:setCurrentMtSlotChecked(code == ABS_X and "x" or code == ABS_Y and "y" or "pressure", ev.value)
+    return true
+end
+
+local function keyActive(self, session, this, ev)
+    local code = ev.code
+    if code == BTN_STYLUS then -- including SDL input paths
+        self.barrel_down = ev.value == 1
+    elseif code == BTN_TOOL_PEN or code == BTN_TOOL_RUBBER then
+        if ev.fd then session.pen_fd = ev.fd end
+        self.physical_pen_tool = ev.value == 1
+            and (code == BTN_TOOL_PEN and this.TOOL_TYPE_PEN or this.TOOL_TYPE_ERASER) or nil
+    elseif code == BTN_TOUCH then
+        if ev.fd and (not session.pen_fd or ev.fd ~= session.pen_fd) then return true end
+        this:setupSlotData(this.pen_slot)
+        this:setCurrentMtSlot("id", ev.value == 1 and this.pen_slot or -1)
+        return true
+    end
+    -- Everything else, power keys and sleep cover first of all, is KOReader's.
+    return false
+end
+
+-- A handler that is active only for its session. A fault in it ends the
+-- session instead of propagating out of input polling, where it would take
+-- KOReader down with it.
+local function sessionHandler(self, session, orig, active)
+    return function(this, ev)
+        if session.active then
+            local ok, consumed = pcall(active, self, session, this, ev)
+            if not ok then
+                session.active = false
+                Safe.report("canvas:input-bridge", consumed)
+            elseif consumed then
+                return
+            end
+        end
+        return orig(this, ev)
+    end
+end
+
+-- Puts `orig` back wherever our handler is visible to KOReader: directly, or
+-- parked by Input:inhibitInput while the device is suspending.
+local function unhook(name, parked, handler, orig)
+    if Input[parked] == handler then Input[parked] = orig end
+    if Input[name] == handler then Input[name] = orig end
+end
+
 function StylusBridge.start(self)
     if self.stylus_callback then return end
+    local session = {active = true, panel_fds = {}}
+    self.bridge_session = session
     if Input and Input.pen_slot and Input.wacom_protocol then
         self.pressure_sensor = require("pressure").open()
-        self.orig_pen_slot = Input.pen_slot
+        session.orig_pen_slot = Input.pen_slot
         -- Move pen_slot out of the capacitive multi-touch panel's slot range (0..9)
         Input.pen_slot = 15
-        self.panel_slot = Input.main_finger_slot or 0
-        self.panel_fds = {}
+        session.panel_slot = Input.main_finger_slot or 0
 
         -- On Notebook: ensure all single-touch Wacom digitizer events route strictly to pen_slot
-        if not self.orig_handleTouchEv and Input.handleTouchEv then
-            self.orig_handleTouchEv = Input.handleTouchEv
-            self.touch_handler = function(this, ev)
-                if ev.type == 3 then -- EV_ABS
-                    -- Each device retains its own current slot across frames.
-                    -- Wacom ABS_X/Y must not redirect a later slotless MT frame.
-                    if ev.fd and ev.code >= 47 and ev.code <= 61 then
-                        self.panel_fds[ev.fd] = true
-                    end
-                    if ev.code == 47 then -- ABS_MT_SLOT
-                        self.panel_slot = ev.value
-                    elseif ev.code >= 48 and ev.code <= 61 then -- ABS_MT_*
-                        this:setupSlotData(self.panel_slot)
-                    end
-                    -- The panel may report legacy axes as well as MT axes.
-                    -- Identify the digitizer by its tool proximity event's fd.
-                    if (ev.code == 0 or ev.code == 1 or ev.code == 24)
-                        and ev.fd and (self.panel_fds[ev.fd]
-                            or self.pen_fd and ev.fd ~= self.pen_fd) then
-                        return
-                    end
-                    if ev.code == 0 then -- ABS_X
-                        this:setupSlotData(this.pen_slot)
-                        this:setCurrentMtSlotChecked("x", ev.value)
-                        return
-                    elseif ev.code == 1 then -- ABS_Y
-                        this:setupSlotData(this.pen_slot)
-                        this:setCurrentMtSlotChecked("y", ev.value)
-                        return
-                    elseif ev.code == 24 then -- ABS_PRESSURE
-                        this:setupSlotData(this.pen_slot)
-                        this:setCurrentMtSlotChecked("pressure", ev.value)
-                        return
-                    end
-                end
-                return self.orig_handleTouchEv(this, ev)
-            end
-            Input.handleTouchEv = self.touch_handler
+        if Input.handleTouchEv then
+            session.orig_touch = Input.handleTouchEv
+            session.touch = sessionHandler(self, session, session.orig_touch, touchActive)
+            Input.handleTouchEv = session.touch
         end
-
-        if not self.orig_handleKeyBoardEv and Input.handleKeyBoardEv then
-            self.orig_handleKeyBoardEv = Input.handleKeyBoardEv
-            self.key_handler = function(this, ev)
-                if ev.code == 331 then -- BTN_STYLUS, including SDL input paths
-                    self.barrel_down = ev.value == 1
-                end
-                if ev.code == 320 or ev.code == 321 then -- BTN_TOOL_PEN/RUBBER
-                    if ev.fd then self.pen_fd = ev.fd end
-                    self.physical_pen_tool = ev.value == 1
-                        and (ev.code == 320 and this.TOOL_TYPE_PEN or this.TOOL_TYPE_ERASER) or nil
-                end
-                if ev.code == 330 then -- BTN_TOUCH
-                    if ev.fd and (not self.pen_fd or ev.fd ~= self.pen_fd) then return end
-                    this:setupSlotData(this.pen_slot)
-                    if ev.value == 1 then
-                        this:setCurrentMtSlot("id", this.pen_slot)
-                    else
-                        this:setCurrentMtSlot("id", -1)
-                    end
-                    return
-                end
-                return self.orig_handleKeyBoardEv(this, ev)
-            end
-            Input.handleKeyBoardEv = self.key_handler
+        if Input.handleKeyBoardEv then
+            session.orig_key = Input.handleKeyBoardEv
+            session.key = sessionHandler(self, session, session.orig_key, keyActive)
+            Input.handleKeyBoardEv = session.key
         end
     end
-    self.previous_stylus_callback = Input.stylus_callback
-    self.stylus_callback = Safe.wrap("canvas:stylus", function(_, slot)
+    local previous = Input.stylus_callback
+    session.previous_stylus_callback = previous
+    local protected = Safe.wrap("canvas:stylus", function(_, slot)
         return self:onStylusEvent(slot)
     end)
+    self.stylus_callback = function(input, slot)
+        if session.active then return protected(input, slot) end
+        -- Restored by someone else after we stopped: behave as what we replaced.
+        if previous then
+            local ok, claimed = pcall(previous, input, slot)
+            return ok and claimed or false
+        end
+        return false
+    end
     Input:registerStylusCallback(self.stylus_callback)
 end
 
 function StylusBridge.stop(self)
     if self.pressure_sensor then self.pressure_sensor:close(); self.pressure_sensor = nil end
+    local session = self.bridge_session
+    self.bridge_session = nil
+    if session then session.active = false end
 
-    if self.stylus_callback and (Input.stylus_callback == self.stylus_callback
+    if self.stylus_callback and Input and (Input.stylus_callback == self.stylus_callback
         or Safe.failed and Input.stylus_callback == nil) then
-        Input:registerStylusCallback(self.previous_stylus_callback)
+        local previous = session and session.previous_stylus_callback
+        if previous then Input:registerStylusCallback(previous)
+        elseif Input.unregisterStylusCallback then Input:unregisterStylusCallback()
+        else Input:registerStylusCallback(nil) end
     end
     self.stylus_callback = nil
-    self.previous_stylus_callback = nil
-    self.pen_fd, self.panel_fds = nil, nil
-    if self.orig_handleTouchEv and Input then
-        if Input._abs_ev_handler == self.touch_handler then
-            Input._abs_ev_handler = self.orig_handleTouchEv
-        end
-        if Input.handleTouchEv == self.touch_handler then
-            Input.handleTouchEv = self.orig_handleTouchEv
-        end
-        self.touch_handler = nil
-        self.orig_handleTouchEv = nil
-    end
-    if self.orig_handleKeyBoardEv and Input then
-        if Input._key_ev_handler == self.key_handler then
-            Input._key_ev_handler = self.orig_handleKeyBoardEv
-        end
-        if Input.handleKeyBoardEv == self.key_handler then
-            Input.handleKeyBoardEv = self.orig_handleKeyBoardEv
-        end
-        self.key_handler = nil
-        self.orig_handleKeyBoardEv = nil
-    end
-    if self.orig_pen_slot and Input then
-        Input.pen_slot = self.orig_pen_slot
+    if not session or not Input then return end
+    if session.touch then unhook("handleTouchEv", "_abs_ev_handler", session.touch, session.orig_touch) end
+    if session.key then unhook("handleKeyBoardEv", "_key_ev_handler", session.key, session.orig_key) end
+    if session.orig_pen_slot then
+        Input.pen_slot = session.orig_pen_slot
         Input.cur_slot = Input.main_finger_slot or 0
-        self.orig_pen_slot = nil
     end
 end
 

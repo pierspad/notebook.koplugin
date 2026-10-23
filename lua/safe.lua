@@ -72,7 +72,13 @@ local YIELD = 0.01
 -- comes close, short enough that a runaway is caught before anyone reaches for
 -- the power button.
 local WATCHDOG_INSTRUCTIONS = 20000000
-local WATCHDOG_BUDGET = 5
+-- The budget is deliberately generous (about a second of interpreted Lua per
+-- ten units on a Kindle). The hook raises its error wherever the VM happens to
+-- be, including halfway through KOReader's own UIManager:show/close, so a
+-- false positive on a slow device (opening a large notebook from the gallery)
+-- can leave KOReader's window stack inconsistent. Only real runaways should
+-- ever reach it.
+local WATCHDOG_BUDGET = 50
 
 -- Set once we have shut down, so a fault that repeats on every event reports
 -- once rather than putting a dialog up forever.

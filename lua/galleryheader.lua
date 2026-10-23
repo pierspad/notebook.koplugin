@@ -9,7 +9,6 @@ local Library = require("library")
 local Size = require("ui/size")
 local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
-local Updater = require("updater")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
 local Widgets = require("widgets")
@@ -110,14 +109,15 @@ function Gallery:_fitHeader(make)
     not -- a language far wider than any we ship, or a much narrower screen --
     are the icons dropped, and then the words.
     --]]
-    local title, back, buttons, corner, widest
+    local title, back, buttons, corner, widest, right_btn
     for i, mode in ipairs(HEADER_MODES) do
         if i > 1 then
             back:free()
             if corner then corner:free() end
+            if right_btn then right_btn:free() end
             for _, button in ipairs(buttons) do button:free() end
         end
-        title, back, buttons, corner, widest = make(mode)
+        title, back, buttons, corner, widest, right_btn = make(mode)
         --[[
         Sized for the most it will ever hold, not for what it holds now.
 
@@ -128,28 +128,18 @@ function Gallery:_fitHeader(make)
         and kept it.
         --]]
         for _, button in ipairs(widest or {}) do button:free() end
-        if widthOf(widest or buttons) <= avail then break end
+        local total_w = widthOf(widest or buttons) + (right_btn and right_btn:getSize().w + gap or 0)
+        if total_w <= avail then break end
     end
 
     -- The title row: what you are looking at, and the one control that is about
     -- the row itself rather than about what is in the grid.
-    local version = TextWidget:new{
-        text = require("_meta").version,
-        face = Font:getFace("cfont", 12),
-    }
-    self.version_text = version
-    local updates
-    updates = headerButton("labels", _("Updates"), nil, function()
-        Updater.showMenu(self, updates.dimen)
-    end)
-    self.updates_button = updates
-    local version_w = version:getSize().w + gap + updates:getSize().w
     local top = HorizontalGroup:new{ align = "center" }
     table.insert(top, back)
     table.insert(top, HorizontalSpan:new{ width = gap })
     local title_width = math.max(
         avail - back:getSize().w - gap
-              - (corner and corner:getSize().w + gap or 0) - version_w - gap,
+              - (corner and corner:getSize().w + gap or 0),
         Screen:scaleBySize(40))
     table.insert(top, type(title) == "function" and title(title_width) or TextWidget:new{
         text = title,
@@ -157,23 +147,29 @@ function Gallery:_fitHeader(make)
         max_width = title_width,
     })
     if corner then
-        table.insert(top, HorizontalSpan:new{ width = gap })
+        local used = 0
+        for _, widget in ipairs(top) do used = used + widget:getSize().w end
+        table.insert(top, HorizontalSpan:new{
+            width = math.max(gap, avail - used - corner:getSize().w),
+        })
         table.insert(top, corner)
     end
 
-    local used = 0
-    for _, widget in ipairs(top) do used = used + widget:getSize().w end
-    table.insert(top, HorizontalSpan:new{width=math.max(gap, avail-used-version_w)})
-    table.insert(top, version)
-    table.insert(top, HorizontalSpan:new{width=gap})
-    table.insert(top, updates)
-
     local bottom = HorizontalGroup:new{ align = "center" }
+    local left_w = 0
     for _, button in ipairs(buttons) do
         if #bottom > 0 then
             table.insert(bottom, HorizontalSpan:new{ width = gap })
+            left_w = left_w + gap
         end
         table.insert(bottom, button)
+        left_w = left_w + button:getSize().w
+    end
+    if right_btn then
+        table.insert(bottom, HorizontalSpan:new{
+            width = math.max(gap, avail - left_w - right_btn:getSize().w),
+        })
+        table.insert(bottom, right_btn)
     end
 
     --[[
@@ -313,7 +309,7 @@ function Gallery:_buildHeader()
         local title = self.folder ~= "" and function(width)
             return self:_breadcrumbs(width)
         end or _("Notebooks")
-        return title, back, buttons, self:_orderButton()
+        return title, back, buttons, self:_orderButton(), nil, self:_densityButton(mode)
     end)
 end
 
@@ -416,6 +412,24 @@ function Gallery:_chooseOrder()
         })
     end
     UIManager:show(ActionMenu:new{ title = _("Sort by"), actions = actions })
+end
+
+function Gallery:_densityButton(mode)
+    local text = self.columns == 4 and _("3×2") or _("4×3")
+    local icon = self.columns == 4 and "notebook.page" or "notebook.duplicate"
+    return headerButton(mode, text, icon, function()
+        self:_toggleDensity()
+    end)
+end
+
+function Gallery:_toggleDensity()
+    self.columns = (self.columns == 4) and 3 or 4
+    if G_reader_settings then
+        G_reader_settings:saveSetting("notebook_gallery_columns", self.columns)
+        if G_reader_settings.flush then G_reader_settings:flush() end
+    end
+    self:_layout()
+    self:_repaint()
 end
 
 end

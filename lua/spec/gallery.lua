@@ -131,6 +131,29 @@ local function pictures(widget, found)
     return found
 end
 
+test("folder presets fill an editable name and wait for Save", function()
+    local gallery, rec = newGallery(1)
+    gallery:_createFolder()
+    local dialog = rec.shown[#rec.shown]
+    local created
+    local Library = require("library")
+    Library.createFolder = function(name) created = name; return true end
+    gallery._rebuild = function() end
+    dialog.setInputText = function(self, text) self.input = text end
+    assertEq(#dialog.buttons[1], 2, "date presets")
+    local closed = #rec.closed
+    for index, format in ipairs{"%Y-%m", "%Y-%m-%d"} do
+        dialog.buttons[1][index].callback()
+        assertEq(dialog:getInputText(), os.date(format), "preset name")
+        assertEq(created, nil, "preset created a folder")
+        assertEq(#rec.closed, closed, "preset closed the dialog")
+    end
+    dialog:setInputText(dialog:getInputText() .. " notes")
+    dialog.buttons[2][2].callback()
+    assertEq(created, os.date("%Y-%m-%d") .. " notes", "Save uses edited name")
+    assertEq(rec.closed[#rec.closed], dialog, "Save closes the dialog")
+end)
+
 -- Painting ------------------------------------------------------------------------
 
 io.write("gallery painting\n")
@@ -664,7 +687,7 @@ end)
 
 test("a lone PDF is sent from where it lies, not staged first", function()
     local sent
-    local gallery = newGallery(6, { on_share = function(p) sent = p end })
+    local gallery = newGallery(3, { on_share = function(p) sent = p end })
     gallery:paintTo(RectBB.new(), 0, 0)
     local pdf = cardWhere(gallery, function(it) return it.is_pdf end)
     assertTrue(pdf ~= nil, "the fixture has no exported PDF in it")
@@ -739,6 +762,44 @@ local function rowOf(gallery, text)
         if labelled(child, text) then return i end
     end
 end
+
+test("sorting sits at the right edge and updates live in the footer", function()
+    local gallery = newGallery(20)
+    gallery:paintTo(RectBB.new(), 0, 0)
+    local sort = labelled(gallery.header_row, "Last edited")
+    assertTrue(sort ~= nil, "sort control missing")
+    local right = gallery.header_row[1]
+    assertEq(right[#right], sort, "sort is the last top-row widget")
+    assertTrue(labelled(gallery.header_row, "Updates") == nil, "updates still in header")
+    assertTrue(labelled(gallery.footer, "Updates") ~= nil, "footer updates missing")
+    local next_page = withIcon(gallery.footer, "chevron.right")
+    assertTrue(next_page ~= nil, "next page missing")
+    next_page:onTap()
+    assertEq(gallery.page, 2, "next page")
+    withIcon(gallery.footer, "chevron.left"):onTap()
+    assertEq(gallery.page, 1, "previous page")
+end)
+
+test("page counter reserves two digits and Updates opens above its button", function()
+    local gallery = newGallery(20)
+    gallery.page, gallery.page_count = 1, 2
+    local footer = gallery:_buildFooter()
+    local counter_width = gallery.page_counter:getSize().w
+    gallery.page, gallery.page_count = 12, 99
+    local wider = gallery:_buildFooter()
+    assertEq(gallery.page_counter:getSize().w, counter_width, "two-digit counter width")
+    local Updater = require("updater")
+    local show = Updater.showMenu
+    local anchor, owner, position
+    Updater.showMenu = function(target, rect, placement) owner, anchor, position = target, rect, placement end
+    gallery.updates_button:onTap()
+    Updater.showMenu = show
+    assertEq(owner, gallery, "Updates owner")
+    assertEq(anchor, gallery.updates_button.dimen, "Updates anchor")
+    assertEq(position, "above", "Updates placement")
+    footer:free()
+    wider:free()
+end)
 
 test("the actions are on the second row, whatever is chosen", function()
     local gallery = newGallery(6, { on_share = function() end })

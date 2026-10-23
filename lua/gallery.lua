@@ -13,6 +13,8 @@ Folders are ordinary directories on disk, shown as cards of their own.
 local ActionMenu = require("actionmenu")
 local Updater = require("updater")
 local Blitbuffer = require("ffi/blitbuffer")
+local CenterContainer = require("ui/widget/container/centercontainer")
+local Widgets = require("widgets")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local Document = require("document")
@@ -109,6 +111,11 @@ function Gallery:init()
         or Library.DEFAULT_ORDER
     if not Library.ORDERS[self.order] then self.order = Library.DEFAULT_ORDER end
 
+    self.columns = self.columns
+        or (G_reader_settings and G_reader_settings:readSetting("notebook_gallery_columns"))
+        or COLUMNS
+    if self.columns ~= 4 then self.columns = COLUMNS end
+
     -- Whatever an earlier send left staged in the cache and is now certainly
     -- finished with. Done here because opening the gallery is the one moment
     -- that is both frequent and not in the middle of anything.
@@ -164,20 +171,23 @@ function Gallery:_layout()
     self:_freeWidgets()
 
     local margin = Size.padding.large
+    local cols = self.columns or COLUMNS
     local avail_w = self.dimen.w - 2 * margin
-    local card_w = math.floor((avail_w - (COLUMNS - 1) * margin) / COLUMNS)
+    local card_w = math.floor((avail_w - (cols - 1) * margin) / cols)
     -- Taller than wide, echoing the page they show -- but only slightly. The
     -- ratio is what decides how many rows fit, and at 1.25 a Scribe screen took
     -- two rows and left the bottom third of the gallery empty.
-    local card_h = math.floor(card_w * 1.1)
+    local card_h = math.floor(card_w * (cols == 4 and 1.02 or 1.1))
 
     local header = self:_buildHeader()
     local header_h = header:getSize().h
     local footer_h = self:_footerHeight()
 
-    local grid_h = self.dimen.h - self:_topInset() - header_h - footer_h - 2 * margin
-    local rows = math.max(1, math.floor((grid_h + margin) / (card_h + margin)))
-    self.per_page = rows * COLUMNS
+    local row_gap = margin + (cols == 4 and Size.padding.small or 3 * Size.padding.small)
+    local grid_h = self.dimen.h - self:_topInset() - header_h - footer_h - 2 * margin - row_gap
+    local rows = math.max(1, math.floor((grid_h + row_gap) / (card_h + row_gap)))
+    if cols == 4 and rows > 3 then rows = 3 end
+    self.per_page = rows * cols
     self.page_count = math.max(1, math.ceil(#self.items / self.per_page))
     if self.page > self.page_count then self.page = self.page_count end
 
@@ -192,8 +202,8 @@ function Gallery:_layout()
     for r = 0, rows - 1 do
         local row = HorizontalGroup:new{ align = "top" }
         local any = false
-        for c = 0, COLUMNS - 1 do
-            local idx = first + r * COLUMNS + c
+        for c = 0, cols - 1 do
+            local idx = first + r * cols + c
             local item = self.items[idx]
             if item then
                 any = true
@@ -222,7 +232,7 @@ function Gallery:_layout()
         end
         if any then
             if r > 0 then
-                table.insert(grid, VerticalSpan:new{ width = margin })
+                table.insert(grid, VerticalSpan:new{ width = row_gap })
             end
             table.insert(grid, row)
         end
@@ -235,15 +245,18 @@ function Gallery:_layout()
         })
     end
 
+    self.footer = self:_buildFooter()
+    local full_grid_h = rows * card_h + (rows - 1) * row_gap
+    local slack_top = #self.items > 0 and math.max(0, math.floor((grid_h - full_grid_h) / 2)) or 0
     self.content = VerticalGroup:new{
         align = "left",
         VerticalSpan:new{ width = self:_topInset() },
         header,
-        VerticalSpan:new{ width = margin },
+        VerticalSpan:new{ width = row_gap + slack_top },
         grid,
+        VerticalSpan:new{ width = math.max(0, grid_h - slack_top - grid:getSize().h) },
+        self.footer,
     }
-
-    self.footer = self:_buildFooter()
 
     -- Sized to the whole rectangle we were given, not to the cards in it.
     --
@@ -268,7 +281,6 @@ end
 --- Frees the widgets of the current layout, if there is one.
 function Gallery:_freeWidgets()
     if self.holder[1] then self.holder[1]:free() end
-    if self.footer then self.footer:free() end
 end
 
 --[[--
@@ -282,24 +294,57 @@ its words away.
 require("galleryheader")(Gallery)
 
 local FOOTER_FONT_SIZE = 17
+local UPDATE_FONT_SIZE = 15
 
 function Gallery:_buildFooter()
-    if self.page_count <= 1 then return nil end
-    return TextWidget:new{
-        text = T(_("Page %1 of %2"), self.page, self.page_count),
-        face = Font:getFace("cfont", FOOTER_FONT_SIZE),
+    local gap = Size.padding.small
+    local width = self.dimen.w - 2 * Size.padding.large
+    local pages = HorizontalGroup:new{ align = "center" }
+    if self.page_count > 1 then
+        table.insert(pages, Widgets.iconButton("chevron.left", function() self:_turnPage(-1) end))
+        table.insert(pages, HorizontalSpan:new{ width = Size.padding.large })
+        local text = T(_("Page %1 of %2"), self.page, self.page_count)
+        local probe = TextWidget:new{
+            text = T(_("Page %1 of %2"), 88, 88),
+            face = Font:getFace("cfont", FOOTER_FONT_SIZE),
+        }
+        local label = TextWidget:new{ text = text, face = Font:getFace("cfont", FOOTER_FONT_SIZE) }
+        self.page_counter = CenterContainer:new{
+            dimen = Geom:new{ w = math.max(probe:getSize().w, label:getSize().w), h = label:getSize().h }, label,
+        }
+        probe:free()
+        table.insert(pages, self.page_counter)
+        table.insert(pages, HorizontalSpan:new{ width = Size.padding.large })
+        table.insert(pages, Widgets.iconButton("chevron.right", function() self:_turnPage(1) end))
+    end
+    local version = TextWidget:new{
+        text = require("_meta").version, face = Font:getFace("cfont", UPDATE_FONT_SIZE),
+    }
+    local updates
+    updates = Widgets.textButton{
+        text = _("Updates"), font_size = UPDATE_FONT_SIZE,
+        callback = function() Updater.showMenu(self, updates.dimen, "above") end,
+    }
+    self.version_text, self.updates_button = version, updates
+    local bottom = HorizontalGroup:new{ align = "center",
+        HorizontalSpan:new{ width = math.max(0, width - version:getSize().w - Size.padding.large - updates:getSize().w) },
+        version, HorizontalSpan:new{ width = Size.padding.large }, updates,
+    }
+    return VerticalGroup:new{ align = "left",
+        CenterContainer:new{ dimen = Geom:new{ w = width, h = self:_pageControlsHeight() }, pages },
+        VerticalSpan:new{ width = gap }, bottom,
     }
 end
 
---- How much room the page counter needs, measured rather than guessed at.
+function Gallery:_pageControlsHeight()
+    return Screen:scaleBySize(40) + 2 * Size.padding.button + 2 * Size.border.thin
+end
+
 function Gallery:_footerHeight()
-    local sizer = TextWidget:new{
-        text = "0",
-        face = Font:getFace("cfont", FOOTER_FONT_SIZE),
-    }
-    local h = sizer:getSize().h
-    sizer:free()
-    return h + Size.padding.small
+    local probe = Widgets.textButton{ text = _("Updates"), font_size = UPDATE_FONT_SIZE, callback = function() end }
+    local h = self:_pageControlsHeight() + Size.padding.small + probe:getSize().h
+    probe:free()
+    return h
 end
 
 --[[--
@@ -312,16 +357,6 @@ different offsets. A widget paints at the origin it is given.
 --]]
 function Gallery:paintTo(bb, x, y)
     InputContainer.paintTo(self, bb, x, y)
-
-    if self.footer then
-        -- Placed by its own height, not by a guess at it. The guess was 18
-        -- scaled pixels, and the line of text is taller than that, so "Page 1
-        -- of 2" was drawn half off the bottom of the screen.
-        local size = self.footer:getSize()
-        self.footer:paintTo(bb,
-            x + math.floor((self.dimen.w - size.w) / 2),
-            y + self.dimen.h - size.h - Size.padding.small)
-    end
 end
 
 -- Navigation ----------------------------------------------------------------------
@@ -614,8 +649,7 @@ function Gallery:_askName(title, initial, commit, presets)
         local row = {}
         for _, name in ipairs(presets) do
             row[#row + 1] = {text=name, callback=function()
-                UIManager:close(dialog)
-                commit(name)
+                dialog:setInputText(name, true, false)
             end}
         end
         table.insert(args.buttons, 1, row)
@@ -703,7 +737,7 @@ function Gallery:_createFolder()
         local ok, reason = Library.createFolder(name, self.folder)
         if not ok then return self:_error(nameError(reason)) end
         self:_rebuild()
-    end, {_("Work"), _("Personal"), os.date("%Y-%m")})
+    end, {os.date("%Y-%m"), os.date("%Y-%m-%d")})
 end
 
 -- Choosing several things ------------------------------------------------------------

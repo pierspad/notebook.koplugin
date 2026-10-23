@@ -276,12 +276,6 @@ msgstr "Nie udało się otworzyć tego pliku PDF."
 msgid "Could not save the notebook."
 msgstr "Nie udało się zapisać notatnika."
 
-msgid "Work"
-msgstr "Praca"
-
-msgid "Personal"
-msgstr "Osobiste"
-
 msgid "Open"
 msgstr "Otwórz"
 
@@ -692,3 +686,9 @@ msgstr "Aktualizacje do wersji wstępnych są wyłączone."
 
 msgid "No newer Notebook release is available."
 msgstr "Nowsza wersja Notebook nie jest dostępna."
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"

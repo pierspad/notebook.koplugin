@@ -277,12 +277,6 @@ msgstr "Não foi possível abrir este PDF."
 msgid "Could not save the notebook."
 msgstr "Não foi possível guardar o caderno."
 
-msgid "Work"
-msgstr "Trabalho"
-
-msgid "Personal"
-msgstr "Pessoal"
-
 msgid "Open"
 msgstr "Abrir"
 
@@ -693,3 +687,9 @@ msgstr "As atualizações de pré-lançamento estão desativadas."
 
 msgid "No newer Notebook release is available."
 msgstr "Não está disponível uma versão mais recente do Notebook."
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"

@@ -275,12 +275,6 @@ msgstr "無法開啟此 PDF。"
 msgid "Could not save the notebook."
 msgstr "無法儲存筆記本。"
 
-msgid "Work"
-msgstr "工作"
-
-msgid "Personal"
-msgstr "個人"
-
 msgid "Open"
 msgstr "開啟"
 
@@ -690,3 +684,9 @@ msgstr "預先發行更新已停用。"
 
 msgid "No newer Notebook release is available."
 msgstr "沒有更新的 Notebook 版本。"
+
+msgid "3×2"
+msgstr "3×2"
+
+msgid "4×3"
+msgstr "4×3"
