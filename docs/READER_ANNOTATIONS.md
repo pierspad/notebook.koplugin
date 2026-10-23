@@ -1,77 +1,115 @@
-# Reader annotations: integration plan
+# Reader annotations: future integration plan
 
-Reviewed against Notebook v1.7.0 on 5 October 2026.
+Reviewed against Notebook v1.10.0 on 23 October 2026. This document describes
+future work; Notebook does not currently annotate books in KOReader's Reader.
+For implemented plugin behavior and tests, see the
+[technical reference](README.md) and [user guide](USER_GUIDE.md).
 
-This is a design plan, not an implemented reader feature. For the current
-plugin architecture and tests, see the [Technical Reference Manual](README.md);
-for installation and supported tools, see the [project README](../README.md).
+Notebook's canvas is a full-screen document editor. Reader annotations need to
+live in the book's reading surface, follow ReaderUI's paint and navigation
+cycles, and be saved separately from the original book. Moving the canvas into
+ReaderUI would not provide those guarantees, especially for reflowable EPUBs.
 
-Notebook's canvas is a full-screen document editor. Pencil is a reader overlay:
-it participates in ReaderUI's paint cycle, observes page changes, and stores
-annotations in a book sidecar. Moving one widget into the other will not provide
-reliable EPUB annotations.
+## Boundaries and reusable parts
 
-## What can be shared
-
-- Pen input and ownership of KOReader's single stylus callback. Notebook now
-  restores the callback it replaced on close and yields ownership on suspend; a shared lease API would make
-  both reader and notebook surfaces use one input owner.
-- Stroke geometry, colors, erasing, smoothing, and the fast framebuffer drawing
-  path should live in reusable modules with no ReaderUI or gallery dependency.
-- Preserve `pen_style`, `filled` and text background/style fields when adapting
-  or migrating strokes. Missing brush metadata retains the legacy appearance.
-- Reuse `penink.lua` for bounded scanline pen rendering and `viewcanvas.lua`
-  coordinate mapping rather than duplicating zoom-specific tool logic.
-- Keep page geometry independent of viewport origin: grain, fill and stroke
-  width must agree between full paints and partial dirty-region repairs.
-- The notebook's text preview snapshot is valid only while its page is stable.
-  A reader controller must invalidate it on navigation/reflow and release
-  native text caches on close. Current canvas responsiveness improvements do
-  not themselves implement reader annotations.
-- Embedded images use `imagecodec.lua` and `imageobject.lua`; a reader sidecar
-  must retain the image data, MIME, bounds and layering without depending on
-  a source image path. Preserve `paper_options`, page geometry and content
+- Build a document-scoped Reader controller that owns annotation lifecycle and
+  subscribes to ReaderUI painting, page changes, close, and suspend events.
+- Keep book-specific mapping behind reader adapters. A PDF adapter maps stable
+  page coordinates; a future EPUB adapter resolves text anchors after layout
+  changes. Neither adapter should make the notebook canvas depend on ReaderUI.
+- Store reader annotations in a versioned, document-scoped sidecar with an
+  explicit migration path. Keep the storage layer separate from ReaderUI and
+  from rendering so readers and exporters can share the same data model.
+- Define stylus ownership through a small input-ownership service. The Reader
+  controller registers drawing input only while its tool is active, yields it
+  on suspend or close, and cannot leave a stale callback installed over another
+  KOReader tool.
+- Reuse stroke geometry, colors, erasing, smoothing, and the low-latency active
+  stroke renderer where their coordinate contracts fit. Keep ReaderUI paint
+  rendering responsible for committed ink; do not copy Notebook's full-screen
+  canvas into the reader.
+- Keep native KOReader text highlighting as its own annotation type and
+  interaction. A native text highlight selects text and retains its text
+  semantics; freehand ink stores drawn geometry. An explicit text-highlighter
+  tool may interpret a pen gesture as a native highlight, but must not silently
+  convert saved ink or duplicate a highlight in the ink sidecar.
+- Preserve `pen_style`, `filled`, and text background/style fields when
+  adapting or migrating notebook strokes. Missing brush metadata should retain
+  the legacy appearance. Preserve `paper_options`, page geometry, and content
   origin when importing notebook pages; these are document properties, not
-  book text anchors.
-- Rendering and export can consume the same stroke model, with a versioned
-  document format and a migration path from Pencil's `pencil_strokes.lua`.
+  anchors into book text.
+- Use `penink.lua` for bounded scanline rendering and `viewcanvas.lua` for
+  coordinate mapping only where the Reader adapter can supply the same
+  documented geometry. Keep page geometry independent of viewport origin so
+  full paints and partial dirty-region repairs agree on grain, fill, and stroke
+  width.
+- A notebook text preview snapshot is valid only while its page is stable. A
+  Reader controller must invalidate it on navigation or reflow and release
+  native text caches on close. Current canvas responsiveness work does not
+  implement Reader annotations.
 
-## Reader surface
+## First useful release
 
-The reader needs its own small controller, loaded only for a document. It must
-leave KOReader's navigation available while drawing is off, and register pen
-input only while drawing is on. Define and test completion of an in-progress stroke before page changes and
-close. On suspend, pause input and every direct framebuffer writer before the
-cover is shown; persist committed strokes and retain unfinished interaction
-state until the cover is dismissed, as Notebook currently does. Timers must
-respect screensaver/lock flags and cannot restore page snapshots over the cover. Render stored ink through ReaderUI's paint cycle and use
-Notebook's low-latency path only for the active stroke.
+The MVP should support freehand ink on one visible page of a fixed-layout PDF.
+Use stable PDF page coordinates and a versioned sidecar. It does not support
+EPUB, text reflow, spreading an annotation across pages, or changing the source
+PDF. Continuous scrolling, multiple visible pages and PDF reflow are outside
+this first release; drawing must be visibly unavailable in unsupported modes.
+It should coexist with ordinary Reader navigation while drawing is off.
 
-Imported PDF backgrounds already support Notebook's 2× zoom, finger pan,
-eraser repair and cleanup after release, including contacts ending at the screen
-edge. This edits a standalone `.scribe` notebook; it does not provide a ReaderUI
-overlay or change the original PDF. Hold-to-straighten only handles lines and
-arrows; geometric figures remain freehand unless the explicit shape tool is used.
+Register a paintable overlay with `ReaderView:registerViewModule()`. Use the
+reader's `screenToPageTransform()` and `pageToScreenTransform()` behind the PDF
+adapter, verifying their supported rotation and crop modes. Transform brush
+width as well as points, and clip ink to the page instead of painting over the
+footer or controls. Resolve sidecar paths through KOReader's document settings
+mechanism so user-configured metadata locations are respected. Keep source
+PDFs unchanged; an optional annotated export is a separate later operation.
 
-PDF pages have stable page coordinates. EPUB pagination changes with font,
+Complete an in-progress stroke before changing pages or closing. On suspend,
+pause input and direct framebuffer writers before the cover is shown; persist
+committed strokes and retain unfinished interaction state until the cover is
+dismissed. Timers must honor screensaver and lock state and must not paint a
+saved page snapshot over the cover. Render committed ink through ReaderUI's
+paint cycle and reserve the fast framebuffer path for the active stroke.
+
+## Reflow and shape limits
+
+PDF pages have stable coordinates, but EPUB pagination changes with font,
 margin, orientation, and screen size. A page number and raw screen coordinates
-are insufficient to keep annotations beside the same text. An EPUB annotation
-needs a text anchor (XPointer/range) plus a local offset or an explicit
-page-image snapshot. When the text reflows, resolve the anchor again. If it
-cannot be resolved, show the annotation in a recoverable list rather than
-silently drawing it over unrelated text. Pencil's current rolling mode derives
-pages from XPointers and includes rotation handling, but its strokes still
-carry page/screen geometry; that data needs migration and validation before
-Notebook can promise reliable reflow.
+cannot keep an annotation beside the same text. EPUB ink needs a text range
+anchor, such as an XPointer, plus a local offset or an explicit page-image
+snapshot; after reflow, the adapter must resolve the anchor again.
 
-## Safe migration order
+A word or range anchor cannot by itself warp a freehand shape that crosses
+multiple lines into the new layout. The design must choose and test a policy:
+store line-level anchored fragments, keep a page-image snapshot with its
+original layout, or leave that shape unresolved. It must not stretch one
+multi-line shape between newly positioned words or silently draw it over
+unrelated text. If an anchor cannot be resolved, retain the annotation in a
+recoverable list so the reader can inspect, reposition, or remove it.
 
-1. Keep the existing notebook format and Pencil files untouched. Add a
-   read-only importer for Pencil sidecars and fixture tests.
-2. Add a document-scoped reader controller for fixed-layout PDF, backed by a
-   new sidecar with explicit page coordinates and version.
-3. Add EPUB text anchors, reflow tests across font/margin/rotation changes,
-   and an unresolved-annotation recovery view.
-4. Add native KOReader text highlighting separately from freehand ink.
-5. Only after on-device validation, offer an explicit one-way import with a
-   backup of the Pencil source file. Never auto-delete Pencil data.
+## Verification and phases
+
+1. **Contracts and fixtures.** Keep the notebook format and Pencil files
+   untouched. Specify controller, adapter, storage, and input-ownership
+   boundaries. Add unit fixtures for coordinate mapping, versioned sidecar
+   round-trips, page changes, close, suspend, and input release.
+2. **PDF MVP.** Implement the fixed-layout, single-visible-page path. Test page
+   rotation, zoom, clipping, partial repaint, page navigation during a stroke,
+   close, suspend/cover behavior, and reopening the same PDF. Verify on device
+   that normal Reader navigation works while drawing is off.
+3. **Native text highlights.** Integrate KOReader text selection and highlight
+   persistence as a distinct type. Test selection, anchor serialization,
+   reflow, removal, and rendering independently of freehand ink.
+4. **EPUB ink and recovery.** Choose a supported multi-line shape policy and
+   implement text-anchor resolution. Test font, margin, orientation, and screen
+   changes, failed or ambiguous anchor resolution, and the recovery list. Do
+   not claim general reflow support until these cases are verified.
+5. **Pencil import.** Add a read-only importer for Pencil sidecars and fixture
+   tests. Only after on-device validation, offer an explicit one-way import with
+   a backup of the source. Never auto-delete Pencil data.
+
+The current Pencil rolling mode derives pages from XPointers and includes
+rotation handling, but its strokes still carry page or screen geometry. That
+data needs migration and validation before it can be used as reliable EPUB
+anchors.
