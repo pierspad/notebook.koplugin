@@ -22,10 +22,15 @@ function EraserCanvas:_endErase()
     self.erase_shapes = nil
     local b = self.erase_bounds
     self.erase_bounds = nil
+    local changed = self.document._batch and self.document._batch.changed
     if b then
         self.document:commitBatch(b.x, b.y, b.w, b.h)
     else
         self.document:commitBatch()
+    end
+    if changed then
+        self:_scheduleAutosave()
+        if self.on_change then self:on_change() end
     end
     if shapes and not Safe.failed and not self.stopping then
         local selected = {}

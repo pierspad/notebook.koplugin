@@ -313,5 +313,33 @@ test("open shapes omit text stacking controls while closed shapes retain them", 
     end
 end)
 
+test("lasso edits arm one idle save after committing history", function()
+    local UI=require("ui/uimanager")
+    local schedule,unschedule=UI.scheduleIn,UI.unschedule
+    local pending={}
+    UI.scheduleIn=function(_,delay,fn) pending[fn]=delay end
+    UI.unschedule=function(_,fn) pending[fn]=nil end
+    local ok,err=pcall(function()
+        for _,action in ipairs({"on_cut","on_delete","paste","move"}) do
+            local canvas,doc=newCanvas(2)
+            local selected={doc:getPage().strokes[1]}
+            local menu=menuFor(canvas,selected)
+            if action=="paste" then
+                Canvas.clipboard=selected;canvas:pasteClipboard()
+            elseif action=="move" then
+                canvas.dragging_selection=true;canvas.drag_dx=20;canvas.drag_dy=10
+                canvas:_endStroke()
+            else menu[action]() end
+            assertTrue(doc.dirty and doc:canUndo(),action.." did not commit")
+            assertEq(pending[canvas.autosave_cb],2.5,action.." did not arm autosave")
+            local saved=false;doc.save=function() saved=true;doc.dirty=false;return true end
+            canvas.autosave_cb();assertTrue(saved,action.." did not save on idle")
+            assertTrue(not pending[canvas.autosave_cb],"save left a redundant timer")
+        end
+    end)
+    UI.scheduleIn,UI.unschedule=schedule,unschedule
+    if not ok then error(err,0) end
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

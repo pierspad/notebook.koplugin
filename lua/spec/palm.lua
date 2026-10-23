@@ -643,10 +643,10 @@ test("queued drag callback is cancelled at release", function()
     after(2)
     canvas:_extendStroke(202, 202, 1)
     canvas:_endStroke()
-    local pending = 0
-    for _ in pairs(queue) do pending = pending + 1 end
+    local drag_pending, save_pending = queue[canvas.drag_step_cb], queue[canvas.autosave_cb]
     ui.scheduleIn, ui.unschedule = old_schedule, old_unschedule
-    assertEq(pending, 0, "callback escaped its drag lifetime")
+    assertTrue(not drag_pending, "callback escaped its drag lifetime")
+    assertTrue(save_pending, "committed movement did not schedule autosave")
 end)
 
 test("autosave waits while a new stroke is active", function()

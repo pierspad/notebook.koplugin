@@ -244,6 +244,7 @@ function Canvas:_showLassoMenu(selected)
             self.selected_strokes = nil
             self.selection_bbox = nil
             self:_repaintSelection(box)
+            self:_scheduleAutosave()
             if self.on_change then self:on_change() end
             if self.owner and self.owner.onClipboardChanged then
                 self.owner:onClipboardChanged(_("Cut") .. " → " .. _("Paste"))
@@ -268,6 +269,7 @@ function Canvas:_showLassoMenu(selected)
             self.selected_strokes = nil
             self.selection_bbox = nil
             self:_repaintSelection(box)
+            self:_scheduleAutosave()
             if self.on_change then self:on_change() end
         end,
         on_close = function()
@@ -297,6 +299,7 @@ function Canvas:pasteClipboard(dx, dy)
     end
     self.document:commitBatch()
     if dirty then self:_repaintRegion(dirty.x, dirty.y, dirty.w, dirty.h) end
+    self:_scheduleAutosave()
     if self.on_change then self:on_change() end
     self:_showLassoMenu(pasted)
     return true

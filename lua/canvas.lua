@@ -499,6 +499,13 @@ function Canvas:_extendStroke(x, y, p)
     self:_maybeFlush()
 end
 
+-- Mutating tools share one debounce; stopping owns its final synchronous save.
+function Canvas:_scheduleAutosave()
+    if self.stopping or Safe.failed or not self.document.dirty then return end
+    UIManager:unschedule(self.autosave_cb)
+    UIManager:scheduleIn(2.5, self.autosave_cb)
+end
+
 function Canvas:_endStroke()
     self.shape_snap:cancel()
     if self.transform_gesture then return self:_endShapeTransform() end
@@ -521,6 +528,7 @@ function Canvas:_endStroke()
             self.drag_moved_dx or 0, self.drag_moved_dy or 0)
         self.drag_moved_dx, self.drag_moved_dy = nil, nil
         self:_showLassoMenu(self.selected_strokes)
+        self:_scheduleAutosave()
         if self.on_change then self:on_change() end
         return
     end

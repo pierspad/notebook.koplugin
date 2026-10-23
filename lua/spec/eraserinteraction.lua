@@ -124,3 +124,19 @@ for _,zoom in ipairs({1,2}) do
  end
 end
 print('eraser interaction: discontinuity, canvas reentry, input clock, stationary nib and 2x coalescing passed')
+
+-- A fresh eraser gesture must start autosave itself, after its undo batch commits.
+for _,zoom in ipairs({1,2}) do
+ c,d=new();c:setZoom(zoom);stroke(d,150,180)
+ d.undo_stack={};d.redo_stack={};d.dirty=false
+ scheduled[c.autosave_cb]=nil
+ local committed=false
+ c.on_change=function() if not d._batch then committed=d:canUndo() end end
+ c:_eraseAlong(150,180);c:_endErase()
+ assert(committed,'eraser did not notify after committing undo')
+ assert(scheduled[c.autosave_cb]==2.5,'eraser release did not arm autosave')
+ local saved=false;d.save=function() saved=true;d.dirty=false;return true end
+ c.autosave_cb();assert(saved,'eraser changes did not reach idle save')
+ c:_eraseAlong(450,500);c:_endErase()
+ assert(not scheduled[c.autosave_cb],'empty eraser gesture armed autosave')
+end
