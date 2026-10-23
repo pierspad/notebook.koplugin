@@ -3,8 +3,10 @@ return function(Gallery)
 local Thumbnail=require("thumbnail")
 local Safe=require("safe")
 local PAGE_W,PAGE_H=1860,2480
+local REPAINT_EVERY=3
 --[[--
-Draws the pictures this screen is missing, one per tick.
+Draws the pictures this screen is missing, one per tick, and brings completed
+ones onto the screen in small batches.
 
 Rendering a thumbnail means loading a whole notebook and rasterising a page of
 it. Doing that while laying out meant the gallery could not appear until every
@@ -47,7 +49,7 @@ function Gallery:_drawThumbnails(missing, w, h)
 
     local folder = self.folder
     local generation = self.thumb_generation
-    local drew = false
+    local pending_repaint = 0
 
     local function step()
         -- A cancelled worker must not clear the new folder's working flag.
@@ -62,7 +64,7 @@ function Gallery:_drawThumbnails(missing, w, h)
         local job = table.remove(self.thumb_queue, 1)
         if not job then
             self.thumb_working = false
-            if drew then
+            if pending_repaint > 0 then
                 self:_layout()
                 self:_repaint()
             end
@@ -76,7 +78,12 @@ function Gallery:_drawThumbnails(missing, w, h)
         self.thumb_queued[job.source] = nil
         self.thumb_tried[job.source] = Thumbnail.stamp(job.source) or true
         if Thumbnail.get(job.source, job.w, job.h, PAGE_W, PAGE_H) then
-            drew = true
+            pending_repaint = pending_repaint + 1
+            if pending_repaint >= REPAINT_EVERY then
+                self:_layout()
+                self:_repaint()
+                pending_repaint = 0
+            end
         end
         Safe.later("gallery:thumbnail", step)
     end

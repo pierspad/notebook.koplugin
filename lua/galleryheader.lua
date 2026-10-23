@@ -416,7 +416,10 @@ end
 
 function Gallery:_densityButton(mode)
     local text = self.columns == 4 and _("3×2") or _("4×3")
-    local icon = self.columns == 4 and "notebook.page" or "notebook.duplicate"
+    -- Show the arrangement this button switches to. The label gives its
+    -- dimensions in text; the grid icon makes the disposition recognizable
+    -- when the header has collapsed to icons alone.
+    local icon = self.columns == 4 and "notebook.grid-3x2" or "notebook.grid-4x3"
     return headerButton(mode, text, icon, function()
         self:_toggleDensity()
     end)

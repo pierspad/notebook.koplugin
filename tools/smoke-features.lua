@@ -34,6 +34,12 @@ gallery.items={}
 for i=1,30 do gallery.items[i]={name="Folder "..i,path="folder-"..i,is_folder=true} end
 gallery:_layout()
 paint("gallery-layout",gallery)
+gallery:_toggleDensity()
+assert(gallery.columns==4,"density toggle did not select four columns")
+paint("gallery-layout-4x3",gallery)
+gallery:_toggleDensity()
+assert(gallery.columns==3,"density toggle did not return to three columns")
+
 assert(gallery.content:getSize().h<=h-2*require("ui/size").padding.large,string.format("gallery exceeds its height: %s footer %s reserved %s",gallery.content:getSize().h,gallery.footer:getSize().h,gallery:_footerHeight()))
 assert(gallery.footer:getSize().w<=w-2*require("ui/size").padding.large,"gallery footer overflows")
 local counter_width=gallery.page_counter:getSize().w

@@ -58,6 +58,46 @@ assert(#rendered==1 and rendered[1]=='one.scribe','returning to the original fol
 g:_goTo('closed');g:onCloseWidget()
 while #callbacks>0 do table.remove(callbacks,1)() end
 assert(#rendered==1 and not g.thumb_working,'closing the gallery rendered pending thumbnails')
+
+-- Repaint thumbnails in visible batches without restarting the queue.
+callbacks,rendered={},{}
+local rendered_set,layouts,repaints={},0,0
+local sources={}
+for i=1,7 do sources[i]='progress'..i..'.scribe' end
+g.folder='progress';g.closed=false;g.thumb_working=false;g.thumb_queue={};g.thumb_queued={}
+g._layout=function(self)
+    layouts=layouts+1
+    local missing={}
+    for _,source in ipairs(sources) do
+        if not rendered_set[source] then missing[#missing+1]=source end
+    end
+    self:_drawThumbnails(missing,100,120)
+end
+g._repaint=function() repaints=repaints+1 end
+Thumbnail.get=function(source)
+    rendered[#rendered+1]=source
+    rendered_set[source]=true
+    return true
+end
+g:_drawThumbnails(sources,100,120)
+local function runThumbnailTick()
+    local callback=table.remove(callbacks,1)
+    assert(callback,'thumbnail worker stopped before the queue emptied')
+    callback()
+end
+for _=1,2 do runThumbnailTick() end
+assert(layouts==0 and repaints==0,'gallery repainted before three completed thumbnails')
+runThumbnailTick()
+assert(layouts==1 and repaints==1,'gallery did not repaint after three completed thumbnails')
+for _=1,3 do runThumbnailTick() end
+assert(layouts==2 and repaints==2,'gallery did not repaint after six completed thumbnails')
+runThumbnailTick()
+assert(#rendered==7,'progressive relayout duplicated or lost thumbnail work')
+assert(layouts==2 and repaints==2,'gallery repainted before the worker drained its queue')
+runThumbnailTick()
+assert(layouts==3 and repaints==3,'gallery did not paint the final partial batch')
+assert(#callbacks==0 and not g.thumb_working and #g.thumb_queue==0,
+    'progressive repaint created a thumbnail worker cycle')
 Safe.later,Thumbnail.get=old_later,old_get
 print('gallery thumbnails: rapid folder switches, return navigation and close cancel stale work')
 
@@ -73,6 +113,22 @@ for i = 1, 12 do items[#items + 1] = { name = 'nb' .. i, path = '/data/notebook/
 local g2 = Gallery:new{ items = items }
 g2.dimen = { x = 0, y = 0, w = 1000, h = 1400 }
 g2:_layout()
+
+local function hasIcon(widget, name, seen)
+    if type(widget) ~= 'table' then return false end
+    seen = seen or {}
+    if seen[widget] then return false end
+    seen[widget] = true
+    if widget.icon == name then return true end
+    for _, child in pairs(widget) do
+        if hasIcon(child, name, seen) then return true end
+    end
+    return false
+end
+
+local density_header = g2:_buildHeader()
+assert(hasIcon(density_header, 'notebook.grid-4x3'),
+    '3x2 density should show the 4x3 grid disposition as its next action')
 assert(g2.columns == 3, 'initial density is 3 columns')
 local per_page_3 = g2.per_page
 assert(per_page_3 == 6, '3 columns fits 6 per page (3x2), got ' .. tostring(per_page_3))
@@ -80,6 +136,9 @@ assert(per_page_3 == 6, '3 columns fits 6 per page (3x2), got ' .. tostring(per_
 g2:_toggleDensity()
 assert(g2.columns == 4, 'toggled density to 4 columns')
 assert(saved_settings['notebook_gallery_columns'] == 4, 'columns setting persisted')
+local density_header_4 = g2:_buildHeader()
+assert(hasIcon(density_header_4, 'notebook.grid-3x2'),
+    '4x3 density should show the 3x2 grid disposition as its next action')
 local per_page_4 = g2.per_page
 assert(per_page_4 == 12, '4 columns fits 12 per page (4x3), got ' .. tostring(per_page_4))
 
