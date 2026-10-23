@@ -570,6 +570,7 @@ function stubs.install(fs)
 
     --- Records generation instead of rasterising: the cost is what matters here.
     package.loaded["thumbnail"] = {
+        emptyCached = function() return false end,
         stamp = function(path)
             local entry = fs[normalize(path)]
             return entry and entry.modification or nil

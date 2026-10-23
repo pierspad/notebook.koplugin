@@ -215,7 +215,7 @@ function Gallery:_layout()
                 -- A notebook we failed to draw is worth another try once it has
                 -- been written to, so what was tried is remembered against the
                 -- notebook's modification time rather than just its name.
-                if source and not thumb
+                if source and not thumb and not Thumbnail.emptyCached(source)
                     and self.thumb_tried[source] ~= (Thumbnail.stamp(source) or true) then
                     table.insert(missing, source)
                 end

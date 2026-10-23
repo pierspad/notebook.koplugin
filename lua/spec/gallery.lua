@@ -1447,6 +1447,20 @@ test("notebook, folder and PDF creation are direct header actions", function()
     assertTrue(labelled(gallery.header_row,"Select")~=nil,"Select is missing")
 end)
 
+test("current empty-thumbnail markers skip gallery generation and expire", function()
+    local gallery,rec=newGallery(1)
+    gallery:_cancelThumbnails()
+    rec.ticks={};rec.thumbnails={}
+    local Thumbnail=require("thumbnail")
+    local empty=true
+    Thumbnail.emptyCached=function() return empty end
+    gallery:_layout();rec.runTicks()
+    assertEq(#rec.thumbnails,0,"negative cache did not prevent notebook reads")
+    empty=false
+    gallery:_layout();rec.runTicks()
+    assertTrue(#rec.thumbnails>0,"expired negative cache never retried")
+end)
+
 test("sharing an identically named notebook and PDFs preserves every file", function()
     local sent
     local gallery, rec = newGallery(0, { on_share = function(path) sent = path end })

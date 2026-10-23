@@ -23,6 +23,19 @@ local logger = require("logger")
 local Thumbnail = {}
 
 local CACHE_DIR = ".thumbs"
+local STAMP_FIELDS = { "dev", "ino", "size", "modification", "change" }
+
+local function sourceStamp(src)
+    if not src or (src.size == nil and src.modification == nil and src.change == nil) then
+        return nil
+    end
+    local parts = { "v1" }
+    for _, field in ipairs(STAMP_FIELDS) do
+        local value = src[field]
+        parts[#parts + 1] = field .. "=" .. (value == nil and "-" or tostring(value))
+    end
+    return table.concat(parts, "\n")
+end
 
 --- Where the cache for a given notebook lives.
 function Thumbnail.pathFor(path)
@@ -41,8 +54,49 @@ end
 
 --- When a notebook was last written, or nil if it is not there.
 function Thumbnail.stamp(notebook_path)
-    local src = lfs.attributes(notebook_path)
-    return src and src.modification or nil
+    return sourceStamp(lfs.attributes(notebook_path))
+end
+
+local function emptyPath(notebook_path)
+    return Thumbnail.pathFor(notebook_path) .. ".empty"
+end
+
+--- Whether a current, valid negative cache entry exists for this notebook.
+function Thumbnail.emptyCached(notebook_path)
+    local stamp = Thumbnail.stamp(notebook_path)
+    if not stamp then return false end
+
+    local path = emptyPath(notebook_path)
+    local file = io.open(path, "rb")
+    if not file then return false end
+    local ok, content = pcall(function()
+        local data = file:read(512)
+        local closed = file:close()
+        if not closed then error("could not close empty-thumbnail marker") end
+        return data
+    end)
+    if not ok then pcall(function() file:close() end) end
+    if ok and content == stamp then return true end
+
+    os.remove(path)
+    return false
+end
+
+local function cacheEmpty(notebook_path, stamp)
+    if not stamp or Thumbnail.stamp(notebook_path) ~= stamp then return end
+    local path = emptyPath(notebook_path)
+    local temporary = path .. ".tmp"
+    os.remove(temporary)
+    local file = io.open(temporary, "wb")
+    if not file then return end
+    local write_ok, wrote = pcall(file.write, file, stamp)
+    local close_ok, closed = pcall(file.close, file)
+    if not write_ok or not wrote or not close_ok or not closed then
+        os.remove(temporary)
+        return
+    end
+    local renamed = os.rename(temporary, path)
+    if not renamed then os.remove(temporary) end
 end
 
 --[[--
@@ -59,7 +113,9 @@ function Thumbnail.cached(notebook_path)
 
     local cache = Thumbnail.pathFor(notebook_path)
     local cached = lfs.attributes(cache)
-    if cached and cached.modification >= src.modification then
+    if cached and type(cached.modification) == "number"
+        and type(src.modification) == "number"
+        and cached.modification >= src.modification then
         return cache
     end
     return nil
@@ -76,10 +132,13 @@ an empty picture says less than no picture, and the caller can show the notebook
 as blank instead.
 --]]
 function Thumbnail.get(notebook_path, w, h, page_w, page_h)
+    if Thumbnail.emptyCached(notebook_path) then return nil end
     local existing = Thumbnail.cached(notebook_path)
     if existing then return existing end
 
-    if not lfs.attributes(notebook_path) then return nil end
+    local source = lfs.attributes(notebook_path)
+    if not source then return nil end
+    local source_stamp = sourceStamp(source)
     local cache = Thumbnail.pathFor(notebook_path)
 
     Library.ensureDir(CACHE_DIR)
@@ -113,6 +172,7 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
     -- page with nothing on it has nothing to show.
     local template = doc:templateFor(index)
     if #page.strokes == 0 and not page.background and (not template or template == "blank") then
+        cacheEmpty(notebook_path, source_stamp)
         return nil
     end
 
@@ -153,6 +213,7 @@ end
 --- Drops a notebook's cached thumbnail, after it is deleted or renamed.
 function Thumbnail.forget(notebook_path)
     os.remove(Thumbnail.pathFor(notebook_path))
+    os.remove(emptyPath(notebook_path))
 end
 
 return Thumbnail
