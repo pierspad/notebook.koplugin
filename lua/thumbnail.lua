@@ -144,7 +144,10 @@ function Thumbnail.get(notebook_path, w, h, page_w, page_h)
     Library.ensureDir(CACHE_DIR)
 
     local doc = Document:new(notebook_path)
-    if not doc:load() then
+    local loaded
+    if doc.loadForThumbnail then loaded = doc:loadForThumbnail()
+    else loaded = doc:load() end
+    if not loaded then
         logger.warn("Notebook: cannot read notebook for thumbnail:", notebook_path)
         return nil
     end
