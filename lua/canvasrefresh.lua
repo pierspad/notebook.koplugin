@@ -107,15 +107,22 @@ function Refresh:_scheduleCleanScreen()
 end
 
 function Refresh:_runReconcile()
+    UIManager:unschedule(self.reconcile_cb)
+    if self.stopping then
+        self.reconcile, self.reconcile_color, self.reconcile_full = nil, nil, nil
+        return
+    end
     local r = self.reconcile
     if not r then return end
     local recent_pan=self.last_zoom_pan_refresh and time.to_ms(time.now()-self.last_zoom_pan_refresh)<600
-    if self.pen_down or self.stroke or self.zoom_stroke or self.transform_gesture or self.shape_gesture
+    if (self._isDisplayPaused and self:_isDisplayPaused())
+        or self.pen_down or self.stroke or self.zoom_stroke or self.transform_gesture or self.shape_gesture
         or self.dragging_selection or self.erasing or self.zoom_erasing or self.zoom_pan_dirty
         or self.zoom_touch_active or self.zoom_pan_needs_settle or recent_pan then
         UIManager:scheduleIn(0.6,self.reconcile_cb)
         return
     end
+    local color = self.reconcile_color
     self.reconcile = nil
     self.reconcile_color = nil
     if self.reconcile_full then
@@ -127,9 +134,17 @@ function Refresh:_runReconcile()
     local x, y, w, h = Rect.clamp(r.x, r.y, r.w, r.h, self.content)
     if not x then return end
 
-    -- The pixels are authoritative already. AUTO lets the device choose its
-    -- UI waveform without rerasterizing the page or forcing REAGL per stroke.
-    Screen:refreshUI(x, y, w, h)
+    -- AUTO/UI may skip unchanged pixels that fast ink showed only as binary
+    -- preview. REAGL drives the committed gray/color over the whole dirty box.
+    -- This can wait for panel completion: issue it only once after the quiet
+    -- window, never on contact or lift, and keep other backends' UI policy.
+    local reagl = color and Screen.refreshPartial and Screen._isREAGLWaveFormMode
+        and Screen.waveform_partial ~= nil and Screen:_isREAGLWaveFormMode(Screen.waveform_partial)
+    if reagl then
+        Screen:refreshPartial(x, y, w, h, Screen.isColorEnabled and Screen:isColorEnabled())
+    else
+        Screen:refreshUI(x, y, w, h)
+    end
 end
 
 return Refresh
