@@ -22,5 +22,5 @@ node_modules/
 # Python benchmark tooling caches.
 __pycache__/
 
-# Temporary audit and benchmark output; concise release records stay versioned.
+# Local audit and benchmark output; never publish raw device artifacts.
 docs/audits/results/

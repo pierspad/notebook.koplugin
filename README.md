@@ -50,7 +50,7 @@ make test-native-features  # UI and export checks with a compiled KOReader runti
 make check-package         # build and validate the installable ZIP
 ```
 
-See the [technical reference](docs/README.md), [translation guide](lua/locale/README.md), [contribution workflow](docs/CONTRIB.md) and [release verification](docs/audits/README.md).
+See the [technical reference](docs/README.md), [translation guide](lua/locale/README.md), [contribution workflow](docs/CONTRIB.md).
 
 ## Acknowledgements
 

@@ -45,9 +45,12 @@ or obtain ideas, but do not modify or repair them unless explicitly requested.
   preserve placeholders and technical filenames. Run `make verify`. For menu or
   translated layout changes, run
   `python3 tools/test-native-features.py --all-languages` with a compiled runtime.
-- Keep concise, reproducible release verification in `docs/audits/`; place raw
+- Keep reusable verification commands and architecture invariants in
+  `docs/README.md`; avoid dated reports and duplicate session notes. Put raw
   logs and temporary measurements outside the repository or in ignored
   `docs/audits/results/`. Historical evidence remains recoverable through Git.
+- Write short Conventional Commit subjects and bodies in English. Keep fixes
+  separate so each can be reverted independently.
 - Never publish notebook samples, device backups or private device configuration
   as documentation or release artifacts. Desktop rendering does not establish
   physical stylus latency, palm rejection or e-ink refresh behavior.

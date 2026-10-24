@@ -8,7 +8,8 @@ compatibility section and verification commands. Inclusion remains a maintainer
 decision. Listing does not make the plugin part of official KOReader releases.
 
 Use a separate clone; do not change the existing workspace's `contrib` checkout.
-The current stable release is v1.7.2 (7 October 2026). Pin that tested release:
+Select the latest published stable tag after its CI and release checks pass.
+For the 1.11 release line, the submission commands are:
 
 ```bash
 gh repo fork koreader/contrib --clone=false
@@ -19,7 +20,7 @@ git remote add upstream https://github.com/koreader/contrib.git
 git fetch upstream
 git switch -c add-notebook upstream/main
 git submodule add https://github.com/pierspad/notebook.koplugin.git notebook.koplugin
-git -C notebook.koplugin checkout v1.7.2
+git -C notebook.koplugin checkout v1.11.0
 git add .gitmodules notebook.koplugin
 git diff --cached --submodule=short
 git commit -m "Add Notebook handwriting plugin"
@@ -36,7 +37,7 @@ Suggested title: **Add Notebook handwriting plugin**
 
 Suggested body:
 
-> Adds Notebook as an upstream submodule pinned to the tested v1.7.2 release.
+> Adds Notebook as an upstream submodule pinned to the tested v1.11.0 release.
 >
 > Notebook provides stylus handwriting, pen/highlighter tools, whole-stroke and
 > area erasing, lasso, editable text, autosaved multipage notebooks, recent notebook previews, embedded PNG/JPEG
@@ -61,4 +62,7 @@ close that issue. Do not close it merely because a submission exists.
 Before submitting, run `make ci` and
 `python3 tools/test-native-features.py --all-languages`. The submission must not
 claim ReaderUI/EPUB annotations: [READER_ANNOTATIONS.md](READER_ANNOTATIONS.md) is
-a future integration plan. Release evidence is indexed in [audits](audits/README.md).
+a future integration plan. The [technical reference](README.md) describes
+verification commands and the hardware checks that still require a physical device.
+Record the actual checks in the submission; do not infer physical stylus or
+e-ink validation from offscreen tests.
