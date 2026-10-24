@@ -72,6 +72,35 @@ for _,rgb in ipairs({false,true}) do
   end
  end
 end
+-- Edge contacts on rotated buffers must own only their logical tile bytes;
+-- copying a viewport with the parent stride can copy unrelated rows/padding.
+for _,rgb in ipairs({false,true}) do
+ Screen.isColorEnabled=function() return rgb end
+ for rotation=0,3 do
+  Screen.bb=BB.new(330,270,rgb and BB.TYPE_BBRGB32 or BB.TYPE_BB8)
+  Screen.bb:setRotation(rotation);Screen.bb:fill(BB.COLOR_WHITE)
+  local width,height=Screen.bb:getWidth(),Screen.bb:getHeight()
+  local doc=Document:new(nil)
+  local c=Canvas:new{document=doc,content={x=7,y=11,w=width-14,h=height-22}}
+  c.dimen={x=0,y=0,w=width,h=height};c.highlighter_width=8;c.highlighter_color=160
+  local x,y=width-17,height-21
+  c:_beginStroke('highlighter',x-20,y-1,1);c:_extendStroke(x,y,1)
+  local bytes,logical=0,0
+  for _,tile in ipairs(c.live_ink.base.tiles) do
+   bytes=bytes+tonumber(tile.bb.stride)*tile.bb.h
+   logical=logical+tile.w*tile.h*(rgb and 4 or 1)
+  end
+  assert(bytes==logical,'ink snapshot retains framebuffer padding at rotation '..rotation)
+  c:_endStroke()
+  local actual=Screen.bb:copy();c:paintTo(Screen.bb,0,0)
+  for py=0,height-1 do for px=0,width-1 do
+   local a,b=actual:getPixel(px,py),Screen.bb:getPixel(px,py)
+   assert(a:getR()==b:getR() and a:getG()==b:getG() and a:getB()==b:getB(),
+    'edge contact left preview residue at rotation '..rotation)
+  end end
+  actual:free();Screen.bb:free()
+ end
+end
 Screen.bb=original
 assert(fast>0,'no fast feedback')
 print('native BB8/RGB32: colored pen/pencil/fountain/marker at 1x/2x match complete page exactly')

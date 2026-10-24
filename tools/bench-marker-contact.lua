@@ -21,6 +21,7 @@ local screen=Device.screen
 local original=screen.bb
 for _,zoom in ipairs({1,2}) do
  for _,width in ipairs({48,120}) do
+  for _,samples in ipairs({10,400}) do
   local w,h=1860,2480
   screen.bb=BB.new(w,h,BB.TYPE_BB8);screen.bb:fill(BB.COLOR_WHITE)
   local doc=Document:new(nil)
@@ -33,7 +34,7 @@ for _,zoom in ipairs({1,2}) do
    if zoom==1 then c:_beginStroke('highlighter',100,y,1)
    else c:_zoomStylus({id=1,x=100,y=y,pressure=4095},'highlighter') end
    starts=starts+wall()-started
-   for i=1,400 do
+   for i=1,samples do
     local x=100+i*4
     if zoom==1 then c:_extendStroke(x,y+math.sin(i/30)*2,1)
     else c:_zoomStylus({id=1,x=x,y=y+math.sin(i/30)*2,pressure=4095},'highlighter') end
@@ -43,9 +44,14 @@ for _,zoom in ipairs({1,2}) do
    lifts=lifts+wall()-lifted;total=total+wall()-started
   end
   assert(not load('safe').failed and #doc:getPage().strokes==12,'repeated marker input failed')
-  results[#results+1]={zoom=zoom,width=width,strokes=12,samples_per_stroke=401,
+  results[#results+1]={zoom=zoom,width=width,strokes=12,samples_per_stroke=samples+1,
    start_ms=starts*1000/12,lift_ms=lifts*1000/12,total_ms=total*1000/12}
+  local pixels=ffi.string(screen.bb.data,tonumber(screen.bb.stride)*screen.bb:getHeight())
+  c:paintTo(screen.bb,0,0)
+  assert(pixels==ffi.string(screen.bb.data,tonumber(screen.bb.stride)*screen.bb:getHeight()),
+   'rapid marker contacts differ from an authoritative repaint')
   c:stop();screen.bb:free()
+  end
  end
 end
 screen.bb=original
