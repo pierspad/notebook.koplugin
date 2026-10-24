@@ -2,6 +2,9 @@ package.path = "./?.lua;./spec/?.lua;" .. package.path
 local support = require("support")
 support.installStubs()
 require("uistubs").install({})
+local Blitbuffer = require("ffi/blitbuffer")
+Blitbuffer.TYPE_BB8 = 1
+Blitbuffer.new = function(w, h) return support.FakeBB.new(w, h) end
 local Device = require("device")
 local Screen = Device.screen
 Screen.scaleBySize = function(_,n) return n end
@@ -14,14 +17,14 @@ local Renderer = require("renderer")
 local doc = Document:new("/tmp/notebook-performance.scribe")
 local function ink(x)
     local stroke=Stroke:new{width=3}
-    stroke:addPoint(x,70,1); stroke:addPoint(x+20,95,1)
+    stroke:addPoint(x+12,70,1); stroke:addPoint(x+32,95,1)
     return stroke
 end
 for i=1,4 do
     if i>1 then doc:addPage() end
     for j=1,20 do doc:addStroke(ink(j*4)) end
 end
-local c=Canvas:new{document=doc,content={x=0,y=30,w=160,h=170}}
+local c=Canvas:new{document=doc,content={x=10,y=30,w=140,h=170}}
 local draw=Renderer.drawStroke
 local calls=0
 Renderer.drawStroke=function(...) calls=calls+1; return draw(...) end
@@ -41,23 +44,60 @@ local function exact()
     local expected=support.FakeBB.new(160,200)
     c:_drawTemplate(expected)
     for _,s in ipairs(doc:getPage().strokes) do draw(expected,s) end
-    for y=30,199 do for x=0,159 do
-        assert(expected:get(x,y)==Screen.bb:get(x,y),"stale cached pixels")
-    end end
+    for y=c.content.y,c.content.y+c.content.h-1 do
+      for x=c.content.x,c.content.x+c.content.w-1 do
+        assert(expected:get(x,y)==Screen.bb:get(x,y),
+            "stale cached pixels at " .. x .. "," .. y)
+      end
+    end
 end
 exact()
 doc:setPageTemplate(3,"dots")
 doc:goToPage(3); paint(); exact()
 doc:goToPage(4); local before=calls; paint()
 assert(calls==before,"adjacent page cache missed")
-c:_repaintRegion(0,30,160,170,true); exact()
+c:_repaintRegion(10,30,140,170,true); exact()
+c:_repaintRegion(30,55,35,40,true); exact()
 doc:addStroke(ink(100)); paint(); exact()
 doc:undo(); paint(); exact(); doc:redo(); paint(); exact()
 doc:beginBatch(); doc:addStroke(ink(110)); paint(); exact()
 doc:commitBatch(); paint(); exact()
+doc:setPageTemplate(4,"dots")
+c:_repaintRegion(10,30,140,170,true); exact()
+paint(); exact()
 doc:setPageTemplate(4,"blank"); paint(); exact()
 for i=1,4 do doc:goToPage(i); paint() end
 assert(#c.page_render_cache==2,"page cache grows with notebook length")
+assert(c.background_cache:getWidth()==c.content.w
+    and c.background_cache:getHeight()==c.content.h,
+    "paper snapshot includes pixels outside the drawable content")
+local cached_bytes=c.background_cache:getWidth()*c.background_cache:getHeight()
+for _,entry in ipairs(c.page_render_cache) do
+    assert(entry.bb:getWidth()==c.content.w and entry.bb:getHeight()==c.content.h,
+        "page snapshot includes pixels outside the drawable content")
+    cached_bytes=cached_bytes+entry.bb:getWidth()*entry.bb:getHeight()
+end
+local full_frame_bytes=Screen.bb:getWidth()*Screen.bb:getHeight()*3
+assert(cached_bytes==c.content.w*c.content.h*3,
+    "background and two page snapshots do not match the content-only allocation")
+assert(full_frame_bytes-cached_bytes==24600,
+    "content snapshots did not save the expected 24,600 bytes at this screen size")
+Screen.bb:paintRect(0,0,160,30,17)
+paint()
+assert(Screen.bb:get(0,0)==17,
+    "a cached content repaint overwrote pixels outside the page")
+local old_background = c.background_cache
+c.content.x, c.content.w = 11, 138
+doc:setContentOrigin(11,30)
+paint(); exact()
+assert(old_background.freed and c.background_cache_bounds.x==11
+    and c.background_cache:getWidth()==138,
+    "changing the page origin reused its old paper snapshot")
+local page_cache_count=#c.page_render_cache
+c:setZoom(2); paint()
+assert(#c.page_render_cache==page_cache_count,
+    "zoom rendering changed the unzoomed page snapshot cache")
+c:setZoom(1)
 local entries=c.page_render_cache
 c:stop()
 for _,entry in ipairs(entries) do assert(entry.bb.freed,"page bitmap leaked on close") end

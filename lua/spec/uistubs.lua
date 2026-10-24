@@ -450,6 +450,8 @@ function stubs.install(fs)
     package.loaded["ui/widget/buttondialog"] = InputContainer:extend{}
 
     package.loaded["ffi/blitbuffer"] = {
+        TYPE_BB8 = 1,
+        new = function(w,h) return require("support").FakeBB.new(w,h) end,
         COLOR_WHITE = 0xff,
         COLOR_BLACK = 0x00,
         Color8 = function(c) return c end,

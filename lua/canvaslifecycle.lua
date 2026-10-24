@@ -102,6 +102,7 @@ function Lifecycle:stop()
     require("pdfbackground").clear()
     if self.background_cache then self.background_cache:free(); self.background_cache=nil end
     self.background_cache_key=nil
+    self.background_cache_bounds=nil
     for _, entry in ipairs(self.page_render_cache or {}) do entry.bb:free() end
     self.page_render_cache=nil
     self.two_finger_tap_at, self.two_finger_tap_pos=nil,nil

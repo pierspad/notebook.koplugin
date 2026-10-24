@@ -9,6 +9,47 @@ local Template = require("template")
 local Screen = Device.screen
 local CanvasRender = {}
 
+local function bufferSize(bb)
+    return bb.getWidth and bb:getWidth() or 0,
+        bb.getHeight and bb:getHeight() or 0
+end
+
+local function bufferBPP(bb)
+    local kind = bb.getType and bb:getType()
+    return kind and Blitbuffer.TYPE_TO_BPP and Blitbuffer.TYPE_TO_BPP[kind] or 8
+end
+
+local function contentBounds(bb, content)
+    local w, h = bufferSize(bb)
+    local x, y, cw, ch = Rect.clamp(content.x, content.y, content.w, content.h,
+        { x = 0, y = 0, w = w, h = h })
+    if not x then return nil end
+    return { x = x, y = y, w = cw, h = ch }
+end
+
+local function copyBounds(bb, bounds)
+    if not bounds then return nil end
+    local kind = bb.getType and bb:getType() or Blitbuffer.TYPE_BB8
+    local copy = Blitbuffer.new(bounds.w, bounds.h, kind)
+    copy:blitFrom(bb, 0, 0, bounds.x, bounds.y, bounds.w, bounds.h)
+    return copy
+end
+
+local function sameBounds(a, b)
+    return a and b and a.x == b.x and a.y == b.y
+        and a.w == b.w and a.h == b.h
+end
+
+local function backgroundKey(self, page, bb, bpp)
+    local background = page.background
+    local content = self.content
+    local w, h = bufferSize(bb)
+    return table.concat({ tostring(page), self.document:templateFor() or "",
+        require("paperoptions").key(self.document.paper_options),
+        background and background.file or "", background and background.page or "",
+        content.x, content.y, content.w, content.h, w, h, bpp }, "|")
+end
+
 --- Repaints a region from the vector model.
 -- With `defer_refresh`, the pixels are restored but nothing is sent to the
 -- panel: the caller is about to refresh a region that covers this one anyway,
@@ -21,19 +62,30 @@ function CanvasRender:_repaintRegion(x, y, w, h, defer_refresh)
         local sx,sy=self:_viewPoint(x,y)
         return self:_repaintScreenRegion(sx,sy,w*self.zoom,h*self.zoom,defer_refresh)
     end
-    x, y, w, h = Rect.clamp(x, y, w, h, self.content)
+    local drawable = contentBounds(Screen.bb, self.content)
+    if not drawable then return end
+    x, y, w, h = Rect.clamp(x, y, w, h, drawable)
     if not x then return end
 
     local clip = { x = x, y = y, w = w, h = h }
-    if self.background_cache then
-        Screen.bb:blitFrom(self.background_cache,x,y,x,y,w,h)
+    local page = self.document:getPage()
+    local background_bounds = self.background_cache_bounds
+    local valid_background = self.background_cache
+        and self.background_cache_key == backgroundKey(self, page, Screen.bb, bufferBPP(Screen.bb))
+        and background_bounds
+        and x >= background_bounds.x and y >= background_bounds.y
+        and x + w <= background_bounds.x + background_bounds.w
+        and y + h <= background_bounds.y + background_bounds.h
+    if valid_background then
+        Screen.bb:blitFrom(self.background_cache, x, y,
+            x - background_bounds.x, y - background_bounds.y, w, h)
     else
         Screen.bb:paintRect(x, y, w, h, Blitbuffer.COLOR_WHITE)
         self:_drawTemplate(Screen.bb, clip)
     end
     -- Rejected first by bounding box, then per run of points inside the stroke:
     -- a line that merely crosses this region is not rasterised end to end.
-    for _, stroke in ipairs(self.document:getPage().strokes) do
+    for _, stroke in ipairs(page.strokes) do
         local sx, sy, sw, sh = stroke:getBounds()
         if stroke ~= self.hidden_stroke
             and not (self.shape_gesture and stroke == self.shape_gesture.original)
@@ -57,25 +109,27 @@ end
 function CanvasRender:paintTo(bb, x, y)
     if self.zoom > 1 then return self:_renderZoom(bb) end
     local page=self.document:getPage()
-    local background=page.background
-    local cache_key=table.concat({tostring(page),self.document:templateFor() or "",require("paperoptions").key(self.document.paper_options),
-        background and background.file or "",background and background.page or ""},"|")
+    local bpp = bufferBPP(bb)
+    local bounds = contentBounds(bb, self.content)
+    local cache_key = backgroundKey(self, page, bb, bpp)
     -- Two most recently rendered pages bound bitmap memory regardless of
     -- notebook length. Never cache temporary selection/preview pixels.
     local stable = not (self.hidden_stroke or self.stroke or self.transform_gesture
         or self.shape_gesture or self.text_preview or self.selected_strokes
         or self.document._batch)
     self.page_render_cache = self.page_render_cache or {}
-    local bpp = bb.getType and Blitbuffer.TYPE_TO_BPP and Blitbuffer.TYPE_TO_BPP[bb:getType()] or 8
     -- At most 12 MiB of page snapshots, also on RGB framebuffers.
-    local snapshot_bytes = self.dimen.w * self.dimen.h * bpp / 8
-    local cache_limit = math.min(2, math.floor(12 * 1024 * 1024 / snapshot_bytes))
-    stable = stable and cache_limit > 0
+    local snapshot_bytes = bounds and bounds.w * bounds.h * bpp / 8 or 0
+    local cache_limit = snapshot_bytes > 0
+        and math.min(2, math.floor(12 * 1024 * 1024 / snapshot_bytes)) or 0
+    stable = stable and bounds ~= nil and cache_limit > 0
     local key = cache_key .. "|" .. tostring(page.revision or 0)
         .. "|" .. tostring(Screen.isColorEnabled and Screen:isColorEnabled())
         .. "|" .. self.dimen.w .. "|" .. self.dimen.h .. "|" .. bpp
         .. "|" .. x .. "|" .. y .. "|" .. self.content.x .. "|" .. self.content.y
         .. "|" .. self.content.w .. "|" .. self.content.h
+        .. "|" .. (bounds and bounds.x or "") .. "|" .. (bounds and bounds.y or "")
+        .. "|" .. (bounds and bounds.w or "") .. "|" .. (bounds and bounds.h or "")
     local cached, cached_index
     if stable then
         for i, entry in ipairs(self.page_render_cache) do
@@ -87,19 +141,24 @@ function CanvasRender:paintTo(bb, x, y)
     end
     -- A page snapshot already includes its paper. Still rebuild a changed
     -- background cache: partial eraser repaints restore pixels from it.
-    if not cached or not self.background_cache or self.background_cache_key ~= cache_key then
-        if self.background_cache and self.background_cache_key==cache_key then
-            bb:blitFrom(self.background_cache,x,y,x,y,self.dimen.w,self.dimen.h)
+    if not cached or not self.background_cache or self.background_cache_key ~= cache_key
+        or not sameBounds(self.background_cache_bounds, bounds) then
+        if self.background_cache and self.background_cache_key == cache_key
+            and sameBounds(self.background_cache_bounds, bounds) then
+            bb:blitFrom(self.background_cache, bounds.x, bounds.y,
+                0, 0, bounds.w, bounds.h)
         else
             bb:paintRect(x, y, self.dimen.w, self.dimen.h, Blitbuffer.COLOR_WHITE)
             self:_drawTemplate(bb)
             if self.background_cache then self.background_cache:free() end
-            self.background_cache=bb:copy()
+            self.background_cache = copyBounds(bb, bounds)
             self.background_cache_key=cache_key
+            self.background_cache_bounds = bounds
         end
     end
     if cached then
-        bb:blitFrom(cached.bb,x,y,x,y,self.dimen.w,self.dimen.h)
+        bb:blitFrom(cached.bb, cached.bounds.x, cached.bounds.y,
+            0, 0, cached.bounds.w, cached.bounds.h)
         table.remove(self.page_render_cache,cached_index)
         table.insert(self.page_render_cache,1,cached)
         return
@@ -116,7 +175,9 @@ function CanvasRender:paintTo(bb, x, y)
         while #self.page_render_cache >= cache_limit do
             table.remove(self.page_render_cache).bb:free()
         end
-        table.insert(self.page_render_cache,1,{key=key,page=page,bb=bb:copy()})
+        table.insert(self.page_render_cache,1,{
+            key=key, page=page, bb=copyBounds(bb, bounds), bounds=bounds,
+        })
     end
     local preview=self.transform_gesture and self.transform_gesture.preview or self.stroke
     if preview then Renderer.drawStroke(bb,preview,nil,Screen.isColorEnabled and Screen:isColorEnabled()) end
