@@ -103,4 +103,5 @@ for _,rgb in ipairs({false,true}) do
 end
 Screen.bb=original
 assert(fast>0,'no fast feedback')
+if Device.input and Device.input.teardown then Device.input:teardown() end
 print('native BB8/RGB32: colored pen/pencil/fountain/marker at 1x/2x match complete page exactly')

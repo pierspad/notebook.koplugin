@@ -55,4 +55,5 @@ for _,zoom in ipairs({1,2}) do
  end
 end
 screen.bb=original
+if Device.input and Device.input.teardown then Device.input:teardown() end
 print('MARKER_BENCH_JSON='..require('json').encode(results))
