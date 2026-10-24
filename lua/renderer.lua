@@ -1,3 +1,4 @@
+local PenInk = require("penink")
 local Raster = require("raster")
 --[[--
 Stroke rasterizer.
@@ -169,7 +170,7 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
             HighlightInk.drawSegment(bb,x0,y0,r0,x1,y1,r1,color,0,1,1,
                 stroke.live_preview,exclude_start or (stroke.live_preview and dist>0))
         else
-            require("penink").draw(bb,x0,y0,r0,x1,y1,r1,color,is_rgb_ink,is_pencil,grain_x,grain_y)
+            PenInk.draw(bb,x0,y0,r0,x1,y1,r1,color,is_rgb_ink,is_pencil,grain_x,grain_y)
         end
     end
 
@@ -306,7 +307,7 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
         if stroke.tool == "highlighter" then
             HighlightInk.stamp(target,x-ox,y-oy,r,highlightColor(stroke,color_enabled))
         else
-            require("penink").draw(target,x-ox,y-oy,r,x-ox,y-oy,r,
+            PenInk.draw(target,x-ox,y-oy,r,x-ox,y-oy,r,
                 displayColor(stroke.color,color_enabled),
                 color_enabled and type(stroke.color)=="number" and stroke.color>=0x1000000,
                 stroke.pen_style=="pencil",ox+(stroke.grain_x or 0),oy+(stroke.grain_y or 0))

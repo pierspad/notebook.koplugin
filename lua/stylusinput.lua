@@ -1,3 +1,4 @@
+local PenPressure = require("penpressure")
 -- Converts KOReader stylus slots to canvas drawing gestures.
 local Device = require("device")
 local UIManager = require("ui/uimanager")
@@ -179,7 +180,7 @@ function StylusInput:onStylusEvent(slot)
     if pressure == nil and tool == "pen" and self.pen_style ~= "fineliner" and self.pressure_sensor then
         pressure=self.pressure_sensor:read()
     end
-    local p=require("penpressure").sample(tool == "pen" and self.pen_style or nil,
+    local p=PenPressure.sample(tool == "pen" and self.pen_style or nil,
         self.stroke,x,y,pressure,self.last_point_at and time.to_ms(time.now()-self.last_point_at))
 
     if self.dismiss_contact then return true end

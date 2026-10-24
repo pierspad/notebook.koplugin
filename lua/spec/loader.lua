@@ -4,7 +4,7 @@ local stale = {legacy=true}
 package.loaded._meta = stale
 package.loaded.canvas = stale
 package.loaded.document = stale
-for _,name in ipairs({'raster','textdialog','textsizepicker','notebooktoolbar','notebooksettings','galleryexport','canvasrefresh','liveink','geometryink','penpressure','polygonink','textcache','textpreview',
+for _,name in ipairs({'raster','textdialog','textsizepicker','notebooktoolbar','notebooksettings','galleryexport','canvasrefresh','liveink','geometryink','penink','penpressure','polygonink','textcache','textpreview',
     'documentstorage','documenthistory','gallerycard','galleryheader','pluginicons','pageselection','exportpagesdialog','updater','updatetransport','updatepolicy','updateinstaller',
     'documentformat','gzipwriter','xoppfiles','gallerythumbnails',
     'imagecodec','imageobject','recents','diagnostics','notebookactions','paperoptions',
@@ -36,3 +36,11 @@ assert(package.loaded.markerarea==stale and load('markerarea')~=stale)
 load('renderer').drawStroke(require('spec/support').FakeBB.new(120,60),marker)
 print("private plugin modules and production marker rendering/erasure passed")
 assert(load('releasenotes').plain('### Heading')=='Heading','release notes missing from private loader')
+
+local pen=load('stroke'):new{tool='pen',width=5,color=90,pen_style='fineliner'}
+pen:addPoint(10,10,1);pen:addPoint(60,10,1)
+local pixels=require('spec/support').FakeBB.new(80,30)
+load('renderer').drawStroke(pixels,pen)
+assert(pixels:get(30,10)==90 and package.loaded.penink==stale,
+    'eager brush dependency escaped the private loader')
+assert(load('penpressure').sample('fineliner',nil,0,0,4095)==1 and package.loaded.penpressure==stale)

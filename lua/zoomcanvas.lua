@@ -1,3 +1,4 @@
+local PenPressure = require("penpressure")
 -- Zoomed viewport, cache, pan refresh and stylus interaction.
 -- Installed on Canvas so existing gesture and drawing call sites keep their API.
 local Device = require("device")
@@ -156,7 +157,7 @@ function ZoomCanvas:_zoomStylus(slot, tool)
     if raw_pressure == nil and tool == "pen" and self.pen_style ~= "fineliner" and self.pressure_sensor then
         raw_pressure=self.pressure_sensor:read()
     end
-    local pressure=require("penpressure").sample(tool == "pen" and self.pen_style or nil,
+    local pressure=PenPressure.sample(tool == "pen" and self.pen_style or nil,
         self.zoom_stroke,px,py,raw_pressure,self.zoom_point_at and time.to_ms(time.now()-self.zoom_point_at))
     if not self.zoom_stroke then
         self.zoom_stroke = Stroke:new{tool=tool, pen_style=tool == "pen" and self.pen_style or nil, width=self:widthFor(tool),
