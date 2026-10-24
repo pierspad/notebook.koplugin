@@ -182,6 +182,7 @@ function ZoomCanvas:_zoomStylus(slot, tool)
         live_preview=brush.live_preview, width=brush.width * self.zoom}
     local x0, y0 = (lx - self.zoom_x) * self.zoom, (ly - self.zoom_y) * self.zoom
     local x1, y1 = (px - self.zoom_x) * self.zoom, (py - self.zoom_y) * self.zoom
+    self:_captureLiveInk(c.x+x0,c.y+y0,c.x+x1,c.y+y1,scaled.width)
     local rx, ry, rw, rh = Renderer.drawSegment(view, scaled, x0, y0, lp,
         x1, y1, pressure, {x=0,y=0,w=c.w,h=c.h},
         Screen.isColorEnabled and Screen:isColorEnabled(),

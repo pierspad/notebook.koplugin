@@ -438,6 +438,7 @@ function Canvas:_beginStroke(tool, x, y, p)
 
 
     -- Put down the initial dot so a tap leaves a mark rather than nothing.
+    self:_captureLiveInk(x,y,x,y,self.stroke.width)
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self:_liveBrush(self.stroke),
         x, y, p, x, y, p, nil, Screen.isColorEnabled and Screen:isColorEnabled())
     self:_trackLiveInk(rx, ry, rw, rh)
@@ -487,6 +488,7 @@ function Canvas:_extendStroke(x, y, p)
     local jdy = y - self.last_y
     if jdx * jdx + jdy * jdy < Tuning.jitter_floor_sq then return end
 
+    self:_captureLiveInk(self.last_x,self.last_y,x,y,self.stroke.width)
     local rx, ry, rw, rh = Renderer.drawSegment(Screen.bb, self:_liveBrush(self.stroke),
         self.last_x, self.last_y, self.last_p, x, y, p, nil,
         Screen.isColorEnabled and Screen:isColorEnabled())

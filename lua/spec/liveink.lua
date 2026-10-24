@@ -62,3 +62,19 @@ for _,zoom in ipairs({1,2}) do
 end
 assert(fast>0,'binary preview never refreshed')
 print('live ink: exact final pixels, preserved brushes, deferred color and freed snapshots at 1x/2x')
+-- A small contact must not clone a full framebuffer before the first dot.
+Screen.bb=support.FakeBB.new(600,800)
+local small=Canvas:new{document=Document:new(nil),content={x=0,y=50,w=600,h=750}}
+small.highlighter_width=14;small.highlighter_color=160
+local copy=support.FakeBB.copy
+local copied=0
+support.FakeBB.copy=function(self)
+ copied=copied+self:getWidth()*self:getHeight()
+ return copy(self)
+end
+small:_beginStroke('highlighter',100,150,1)
+small:_extendStroke(150,151,1)
+support.FakeBB.copy=copy
+assert(copied<600*800/4,'short marker contact copied a full framebuffer')
+small:_endStroke()
+print('live ink: short contacts snapshot only touched framebuffer tiles')
