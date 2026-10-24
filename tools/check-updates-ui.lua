@@ -46,6 +46,28 @@ assert(shown.action_rows[1].row.icon_widget.text=="☑","checked option lacks ch
 shown.actions[1].callback();assert(not shown.actions[1].selected())
 shown:_refreshRows();assert(shown.action_rows[1].row.icon_widget.text=="☐")
 shown.actions[1].callback();assert(shown.actions[1].selected())
+-- Render the actual release offer with native Markdown conversion and HTML fonts.
+local policy=load("updatepolicy")
+local original_release=policy.release
+policy.release=function() return {tag="v99.0.0",notes="## Release notes\n\n### Improvements\n\n* **Drawing** and updates\n* [Details](https://example.org)"} end
+local transport=load("updatetransport")
+local original_fetch=transport.fetch
+transport.fetch=function(_,_,_,_,callback)
+    local path=tmp.."/release.json"
+    local file=assert(io.open(path,"w"));file:write("{}");file:close()
+    callback(path)
+end
+local network=require("ui/network/manager")
+local original_online=network.runWhenOnline
+network.runWhenOnline=function(_,callback) callback() end
+load("updater").check(true)
+assert(shown.text_format=="html" and shown.text:find("font-family: sans-serif",1,true))
+shown:paintTo(bb,0,0)
+bb:writePNG(tmp.."/release-notes.png")
+shown:onCloseWidget()
+network.runWhenOnline=original_online
+transport.fetch=original_fetch
+policy.release=original_release
 local document=load("document"):new(nil)
 for i=1,100 do
     if i>1 then document:addPage() end
