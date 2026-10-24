@@ -63,7 +63,7 @@ end
 
 function ZoomCache:_drawZoomPaper(bb, area)
     local background=self.document:getPage().background
-    if background then require("pdfbackground").draw(bb,background,area)
+    if background then require("pdfbackground").drawPreview(bb,background,area)
     else Template.draw(bb,self.document:templateFor(),area,self.zoom,nil,self.document.paper_options) end
 end
 

@@ -83,7 +83,11 @@ local notebook=require("notebook"):new{document=Document:new("/tmp/notebook-zoom
 notebook.canvas.content={x=0,y=0,w=400,h=600}
 notebook.document:getPage().background={file="test.pdf",page=1}
 local pdf_draws=0
-package.loaded["pdfbackground"]={draw=function() pdf_draws=pdf_draws+1 end,clear=function() end}
+package.loaded["pdfbackground"]={
+    draw=function() pdf_draws=pdf_draws+1 end,
+    drawPreview=function() pdf_draws=pdf_draws+1;return true end,
+    clear=function() end,
+}
 notebook.zoom_button.callback()
 assert(notebook.canvas.zoom==2 and notebook.zoom_button.icon=="notebook.zoom-out")
 notebook.canvas:_renderZoom(Device.screen.bb)

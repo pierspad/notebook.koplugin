@@ -2,8 +2,14 @@
 -- annotations restores it without rerendering the PDF on every pen sample.
 local PDF = {}
 local lfs = require("libs/libkoreader-lfs")
+local Blitbuffer = require("ffi/blitbuffer")
+local logger = require("logger")
+local Raster = require("raster")
 local entries, cache_bytes = {}, 0
 local MAX_BYTES, MAX_ENTRIES = 12 * 1024 * 1024, 2
+local preview_warnings = {}
+local preview_warning_order = {}
+local MAX_PREVIEW_WARNINGS = 32
 local function evict(index)
     local entry = table.remove(entries, index)
     cache_bytes = cache_bytes - entry.bytes
@@ -12,6 +18,8 @@ end
 
 function PDF.clear()
     while #entries > 0 do evict(#entries) end
+    preview_warnings = {}
+    preview_warning_order = {}
 end
 
 function PDF.count(path)
@@ -84,30 +92,110 @@ function PDF.draw(bb, background, area, clip)
         -- large zoom rasters. MuPDF uses its default grayscale raster (one byte/pixel).
         local estimate = w * h
         while #entries > 0 and (#entries >= MAX_ENTRIES or cache_bytes + estimate > MAX_BYTES) do evict(#entries) end
-        local doc,page
-        local ok,result=pcall(function()
+        local doc,page,result
+        local rendered,render_error=pcall(function()
             doc=require("ffi/mupdf").openDocument(background.file)
             page=doc:openPage(background.page)
             local dc=require("ffi/drawcontext").new()
             local pw,ph=page:getSize(dc)
+            assert(type(pw)=="number" and type(ph)=="number"
+                and pw>0 and ph>0 and pw<math.huge and ph<math.huge,"Invalid PDF page dimensions")
             local zoom=math.min(w/pw,h/ph)
             dc:setZoom(zoom)
-            return page:draw_new(dc,w,h,-math.floor((w-pw*zoom)/2),-math.floor((h-ph*zoom)/2))
+            result=page:draw_new(dc,w,h,-math.floor((w-pw*zoom)/2),-math.floor((h-ph*zoom)/2))
         end)
-        if page then page:close() end
-        if doc then doc:close() end
-        if not ok then error(result) end
-        local bytes = tonumber(result.stride) * result:getHeight()
-        while #entries > 0 and cache_bytes + bytes > MAX_BYTES do evict(#entries) end
-        cache = {file=background.file, page=background.page, stamp=stamp, w=w, h=h, bb=result, bytes=bytes}
-        table.insert(entries, 1, cache)
-        cache_bytes = cache_bytes + bytes
+        local page_closed,page_error=true,nil
+        if page then page_closed,page_error=pcall(page.close,page) end
+        local doc_closed,doc_error=true,nil
+        if doc then doc_closed,doc_error=pcall(doc.close,doc) end
+        if not rendered or not page_closed or not doc_closed then
+            if result and result.free then pcall(result.free,result) end
+            if not rendered then error(render_error,0) end
+            if not page_closed then error(page_error,0) end
+            error(doc_error,0)
+        end
+
+        local cached,cached_or_error=pcall(function()
+            assert(result,"MuPDF returned no PDF raster")
+            local stride=tonumber(result.stride)
+            local height=result:getHeight()
+            assert(stride and stride>0 and height and height>0,"Invalid PDF raster dimensions")
+            local bytes=stride*height
+            while #entries > 0 and cache_bytes + bytes > MAX_BYTES do evict(#entries) end
+            local entry={file=background.file,page=background.page,stamp=stamp,
+                w=w,h=h,bb=result,bytes=bytes}
+            table.insert(entries,1,entry)
+            cache_bytes=cache_bytes+bytes
+            return entry
+        end)
+        if not cached then
+            if result and result.free then pcall(result.free,result) end
+            error(cached_or_error,0)
+        end
+        cache=cached_or_error
     end
     local x,y=math.floor(area.x),math.floor(area.y)
     local bounds=clip or {x=0,y=0,w=bb:getWidth(),h=bb:getHeight()}
     local x0,y0=math.max(0,x,bounds.x),math.max(0,y,bounds.y)
     local x1,y1=math.min(bb:getWidth(),x+w,bounds.x+bounds.w),math.min(bb:getHeight(),y+h,bounds.y+bounds.h)
     if x1>x0 and y1>y0 then bb:blitFrom(cache.bb,x0,y0,x0-x,y0-y,x1-x0,y1-y0) end
+end
+
+local function drawErrorPaper(bb,area,clip)
+    local x,y,w,h=math.floor(area.x),math.floor(area.y),math.floor(area.w),math.floor(area.h)
+    if w<=0 or h<=0 then return end
+    local bounds=clip or {x=0,y=0,w=bb:getWidth(),h=bb:getHeight()}
+    local x0,y0=math.max(0,x,bounds.x),math.max(0,y,bounds.y)
+    local x1,y1=math.min(bb:getWidth(),x+w,bounds.x+bounds.w),math.min(bb:getHeight(),y+h,bounds.y+bounds.h)
+    if x1<=x0 or y1<=y0 then return end
+    Raster.rect(bb,x0,y0,x1-x0,y1-y0,Blitbuffer.COLOR_WHITE)
+
+    local cx,cy=x+math.floor(w/2),y+math.floor(h/2)
+    local radius=math.max(1,math.min(5,math.floor(math.min(w,h)/8)))
+    local function crossPixel(px,py)
+        if px>=x0 and px<x1 and py>=y0 and py<y1 then
+            Raster.rect(bb,px,py,1,1,Blitbuffer.COLOR_BLACK)
+        end
+    end
+    for offset=-radius,radius do
+        crossPixel(cx+offset,cy+offset)
+        crossPixel(cx+offset,cy-offset)
+    end
+end
+
+local function removePreviewWarning(key)
+    preview_warnings[key] = nil
+    for i = #preview_warning_order, 1, -1 do
+        if preview_warning_order[i] == key then table.remove(preview_warning_order, i) end
+    end
+end
+
+local function addPreviewWarning(key)
+    if preview_warnings[key] then return false end
+    if #preview_warning_order >= MAX_PREVIEW_WARNINGS then
+        local oldest = table.remove(preview_warning_order, 1)
+        preview_warnings[oldest] = nil
+    end
+    preview_warnings[key] = true
+    preview_warning_order[#preview_warning_order + 1] = key
+    return true
+end
+
+--- Draws a PDF background for a live preview without propagating PDF faults.
+--- Returns true on success, or false and the error after painting clean paper
+--- with a small cross in the affected area.
+function PDF.drawPreview(bb,background,area,clip)
+    local ok,err=pcall(PDF.draw,bb,background,area,clip)
+    local key=tostring(background and background.file)..":"..tostring(background and background.page)
+    if ok then
+        removePreviewWarning(key)
+        return true
+    end
+    if addPreviewWarning(key) then
+        pcall(logger.warn,"Notebook: PDF preview failed:",background and background.file,err)
+    end
+    pcall(drawErrorPaper,bb,area,clip)
+    return false,tostring(err)
 end
 
 return PDF

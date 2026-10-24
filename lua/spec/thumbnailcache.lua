@@ -195,6 +195,7 @@ end
 package.loaded.template.draw = function(_, id) template_drawn = id end
 package.loaded.pdfbackground = {
     draw = function(_, background) pdf_drawn = background.file end,
+    drawPreview = function(_, background) pdf_drawn = background.file; return true end,
 }
 assert(real_thumbnail.get(production_path, 40, 50, 100, 200))
 assert(deserialized == 2, "thumbnail load materialized strokes outside the selected page")
@@ -216,6 +217,24 @@ deserialized, rendered, template_drawn, pdf_drawn = 0, 0, nil, nil
 assert(real_thumbnail.get(current_path, 40, 50, 100, 200))
 assert(deserialized == 1 and rendered == 1 and template_drawn == "grid",
     "thumbnail did not prefer and render the current page")
+
+local failed_preview_path = "/data/notebook/failed-preview.scribe"
+fs[failed_preview_path] = {
+    mode = "file", dev = 1, ino = 34, size = 100, modification = 415, change = 415,
+}
+store[failed_preview_path] = {
+    version = 1, current_page = 1,
+    pages = {{ strokes = { serializedStroke(14) },
+        background = { file = "/broken.pdf", page = 1, size = { w = 100, h = 200 } } }},
+}
+local failed_png = real_thumbnail.pathFor(failed_preview_path)
+package.loaded.pdfbackground.drawPreview = function() return false, "injected PDF preview failure" end
+assert(real_thumbnail.get(failed_preview_path, 40, 50, 100, 200) == nil)
+assert(not fs[failed_png], "thumbnail persisted a failed PDF preview")
+package.loaded.pdfbackground.drawPreview = function(_, background)
+    pdf_drawn = background.file
+    return true
+end
 
 -- A corrupt unselected page still invalidates the whole notebook, and no
 -- partially validated page is deserialized or rendered.

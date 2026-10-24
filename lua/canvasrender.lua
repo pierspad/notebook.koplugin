@@ -194,7 +194,7 @@ out a word written across a ruled line leaves the line untouched.
 --]]
 function CanvasRender:_drawTemplate(bb, clip)
     local background=self.document:getPage().background
-    if background then require("pdfbackground").draw(bb,background,self.content,clip)
+    if background then require("pdfbackground").drawPreview(bb,background,self.content,clip)
     else Template.draw(bb, self.document:templateFor(), self.content, 1, clip, self.document.paper_options) end
 end
 
