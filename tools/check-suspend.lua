@@ -38,7 +38,7 @@ snapshot:free();UI:close(nb.page_panel);assert(not nb.page_panel)
 for _,zoom in ipairs({1,2}) do
     if c.zoom~=zoom then c:setZoom(zoom) end
     UI:forceRePaint()
-    c:onStylusEvent({id=1,x=200,y=c.content.y+150,tool=Device.input.TOOL_TYPE_PEN})
+    c:onStylusEvent({id=1,x=200,y=c.content.y+150,tool=Device.input.TOOL_TYPE_PEN,slot=Device.input.pen_slot})
     local active=zoom==2 and c.zoom_stroke or c.stroke
     assert(active,'native input did not start stroke')
     local count=#nb.document:getPage().strokes
