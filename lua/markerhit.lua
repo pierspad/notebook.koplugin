@@ -37,12 +37,13 @@ local function touches(poly,path,r)
     end
     return false
 end
-function M.path(stroke,path,r)
+function M.path(stroke,path,r,bounds)
     if stroke.n==0 or #path<2 then return false end
-    local x0,y0,x1,y1=math.huge,math.huge,-math.huge,-math.huge
-    for i=1,#path-1,2 do
-        x0,y0=math.min(x0,path[i]-r),math.min(y0,path[i+1]-r)
-        x1,y1=math.max(x1,path[i]+r),math.max(y1,path[i+1]+r)
+    local x0,y0,x1,y1
+    if bounds then
+        x0,y0,x1,y1=bounds[1],bounds[2],bounds[3],bounds[4]
+    else
+        x0,y0,x1,y1=require("stroke").pathBounds(path,r)
     end
     local bx,by,bw,bh=stroke:getBounds()
     if bx>x1 or by>y1 or bx+bw<x0 or by+bh<y0 then return false end
@@ -79,8 +80,15 @@ function M.path(stroke,path,r)
     local chunks=stroke:chunkIndex()
     if chunks then
         local pad=stroke.width/2
+        if stroke:prepareChunkGroups(chunks) then
+            return stroke:queryChunks(x0-pad,y0-pad,x1+pad,y1+pad,function(chunk)
+                for i=chunk[1],chunk[2]-1 do if segment(i,i+1) then return true end end
+                return false
+            end) or false
+        end
         for _,chunk in ipairs(chunks) do
-            if chunk[3]-pad<=x1 and chunk[5]+pad>=x0 and chunk[4]-pad<=y1 and chunk[6]+pad>=y0 then
+            if chunk[3]-pad<=x1 and chunk[5]+pad>=x0
+                and chunk[4]-pad<=y1 and chunk[6]+pad>=y0 then
                 for i=chunk[1],chunk[2]-1 do if segment(i,i+1) then return true end end
             end
         end

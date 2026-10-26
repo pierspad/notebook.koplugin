@@ -32,6 +32,9 @@ rubber is actually over. Small enough that a run's box is tight; large enough
 that the index costs a fraction of the points it covers.
 --]]
 local CHUNK = 24
+local CHUNK_GROUP_SIZE = 16
+local CHUNK_GROUP_MIN = 64
+local CHUNK_GROUP_QUERY_THRESHOLD = 4
 
 -- Below this many points a stroke is walked whole; see chunkIndex.
 local INDEX_MIN = 3 * CHUNK
@@ -81,6 +84,8 @@ function Stroke:addPoint(x, y, pressure)
     self.pts[i + 3] = pressure or 1
     self.n = self.n + 1
     self.chunks = nil
+    self.chunk_groups = nil
+    self.chunk_group_queries = nil
     self.contour_bounds = nil
 
     if x < self.x_min then self.x_min = x end
@@ -116,6 +121,8 @@ function Stroke:appendRange(src, from, to)
     self.n = self.n + (to - from + 1)
     self.x_min, self.y_min, self.x_max, self.y_max = x_min, y_min, x_max, y_max
     self.chunks = nil
+    self.chunk_groups = nil
+    self.chunk_group_queries = nil
     self.contour_bounds = nil
 end
 
@@ -162,6 +169,87 @@ function Stroke:chunkIndex()
     return chunks
 end
 
+-- Groups consecutive chunk boxes to reduce repeated scans without retaining a
+-- second per-node tree. The compact group index is only built after repeated
+-- queries; a one-off hit pays no index allocation.
+local function buildChunkGroups(chunks)
+    local bounds, count = {}, 0
+    for first = 1, #chunks, CHUNK_GROUP_SIZE do
+        local last = math.min(first + CHUNK_GROUP_SIZE - 1, #chunks)
+        local x0, y0, x1, y1 = math.huge, math.huge, -math.huge, -math.huge
+        for i = first, last do
+            local chunk = chunks[i]
+            x0, y0 = math.min(x0, chunk[3]), math.min(y0, chunk[4])
+            x1, y1 = math.max(x1, chunk[5]), math.max(y1, chunk[6])
+        end
+        local offset = count * 6
+        bounds[offset + 1], bounds[offset + 2] = first, last
+        bounds[offset + 3], bounds[offset + 4] = x0, y0
+        bounds[offset + 5], bounds[offset + 6] = x1, y1
+        count = count + 1
+    end
+    return { bounds = bounds, count = count }
+end
+
+-- Count actual query operations, but allocate the second-level index only for
+-- long strokes that keep being searched. Short strokes retain their old direct
+-- loops below, avoiding callback and temporary-table costs on ordinary ink.
+function Stroke:prepareChunkGroups(chunks)
+    chunks = chunks or self:chunkIndex()
+    if not chunks or #chunks < CHUNK_GROUP_MIN then return nil end
+    if self.chunk_groups then return self.chunk_groups end
+    self.chunk_group_queries = (self.chunk_group_queries or 0) + 1
+    if self.chunk_group_queries >= CHUNK_GROUP_QUERY_THRESHOLD then
+        self.chunk_groups = buildChunkGroups(chunks)
+    end
+    return self.chunk_groups
+end
+
+--- Visits only chunks whose point bounds overlap a rectangle.
+-- Returns nil when this stroke is too short to have a chunk index, otherwise
+-- the callback's result when it stops early, or false after all candidates.
+function Stroke:queryChunks(x0, y0, x1, y1, callback, a, b, c, d)
+    local chunks = self:chunkIndex()
+    if not chunks then return nil end
+    if #chunks < CHUNK_GROUP_MIN then
+        for _, chunk in ipairs(chunks) do
+            if chunk[3] <= x1 and chunk[5] >= x0 and chunk[4] <= y1 and chunk[6] >= y0 then
+                local result = callback(chunk, a, b, c, d)
+                if result then return result end
+            end
+        end
+        return false
+    end
+
+    local groups = self:prepareChunkGroups(chunks)
+    if not groups then
+        for _, chunk in ipairs(chunks) do
+            if chunk[3] <= x1 and chunk[5] >= x0 and chunk[4] <= y1 and chunk[6] >= y0 then
+                local result = callback(chunk, a, b, c, d)
+                if result then return result end
+            end
+        end
+        return false
+    end
+
+    local bounds = groups.bounds
+    for i = 1, groups.count do
+        local offset = (i - 1) * 6
+        if bounds[offset + 3] <= x1 and bounds[offset + 5] >= x0
+            and bounds[offset + 4] <= y1 and bounds[offset + 6] >= y0 then
+            for k = bounds[offset + 1], bounds[offset + 2] do
+                local chunk = chunks[k]
+                if chunk[3] <= x1 and chunk[5] >= x0
+                    and chunk[4] <= y1 and chunk[6] >= y0 then
+                    local result = callback(chunk, a, b, c, d)
+                    if result then return result end
+                end
+            end
+        end
+    end
+    return false
+end
+
 --- Returns the point at 1-based index i as x, y, pressure.
 function Stroke:getPoint(i)
     local o = (i - 1) * STRIDE
@@ -176,6 +264,8 @@ function Stroke:setPoint(i, x, y, pressure)
     self.pts[o + 2] = y
     if pressure then self.pts[o + 3] = pressure end
     self.chunks = nil
+    self.chunk_groups = nil
+    self.chunk_group_queries = nil
     self.contour_bounds = nil
 end
 
@@ -201,6 +291,8 @@ function Stroke:translate(dx, dy)
             chunk[4], chunk[6] = chunk[4] + dy, chunk[6] + dy
         end
     end
+    self.chunk_groups = nil
+    self.chunk_group_queries = nil
 end
 
 --[[--
@@ -275,6 +367,8 @@ local function distToSegmentSq(px, py, x0, y0, x1, y1)
     return ex * ex + ey * ey
 end
 
+local hitTestChunk
+
 --[[--
 Returns true if any part of this stroke falls within radius r of (px, py).
 
@@ -320,20 +414,15 @@ function Stroke:hitTest(px, py, r)
         return false
     end
 
-    for k = 1, #chunks do
-        local c = chunks[k]
-        if px >= c[3] - r and px <= c[5] + r
-           and py >= c[4] - r and py <= c[6] + r then
-            local o = (c[1] - 1) * STRIDE
-            local x0, y0 = pts[o + 1], pts[o + 2]
-            for i = c[1] + 1, c[2] do
-                o = (i - 1) * STRIDE
-                local x1, y1 = pts[o + 1], pts[o + 2]
-                if distToSegmentSq(px, py, x0, y0, x1, y1) <= r2 then
-                    return true
-                end
-                x0, y0 = x1, y1
-            end
+    local groups = self:prepareChunkGroups(chunks)
+    if groups then
+        return self:queryChunks(px - r, py - r, px + r, py + r,
+            hitTestChunk, pts, px, py, r2) or false
+    end
+    for _, c in ipairs(chunks) do
+        if c[3] <= px + r and c[5] >= px - r and c[4] <= py + r and c[6] >= py - r
+            and hitTestChunk(c, pts, px, py, r2) then
+            return true
         end
     end
     return false
@@ -386,8 +475,28 @@ local function distToPathSq(px, py, path)
     return best
 end
 
+hitTestChunk = function(c, pts, px, py, r2)
+    local o = (c[1] - 1) * STRIDE
+    local x0, y0 = pts[o + 1], pts[o + 2]
+    for i = c[1] + 1, c[2] do
+        o = (i - 1) * STRIDE
+        local x1, y1 = pts[o + 1], pts[o + 2]
+        if distToSegmentSq(px, py, x0, y0, x1, y1) <= r2 then return true end
+        x0, y0 = x1, y1
+    end
+    return false
+end
+
+local function firstPointChunk(c, pts, path, r2)
+    for i = c[1], c[2] do
+        local o = (i - 1) * STRIDE
+        if distToPathSq(pts[o + 1], pts[o + 2], path) <= r2 then return i end
+    end
+    return false
+end
+
 --- The bounding box of a path, grown by r.
-local function pathBounds(path, r)
+function Stroke.pathBounds(path, r)
     local x0, y0 = math.huge, math.huge
     local x1, y1 = -math.huge, -math.huge
     for i = 1, #path - 1, 2 do
@@ -399,6 +508,7 @@ local function pathBounds(path, r)
     end
     return x0 - r, y0 - r, x1 + r, y1 + r
 end
+local pathBounds = Stroke.pathBounds
 
 --[[--
 The first point of this stroke within r of the path, or nil.
@@ -408,8 +518,13 @@ so for the strokes a single sample of a moving rubber does not touch, which is
 nearly all of them on a written page, the answer is reached without measuring a
 single distance, and without allocating anything.
 --]]
-function Stroke:_firstPointOnPath(path, r)
-    local px0, py0, px1, py1 = pathBounds(path, r)
+function Stroke:_firstPointOnPath(path, r, bounds)
+    local px0, py0, px1, py1
+    if bounds then
+        px0, py0, px1, py1 = bounds[1], bounds[2], bounds[3], bounds[4]
+    else
+        px0, py0, px1, py1 = pathBounds(path, r)
+    end
     local bx, by, bw, bh = self:getBounds()
     if px1 < bx or px0 > bx + bw or py1 < by or py0 > by + bh then
         return nil
@@ -428,12 +543,15 @@ function Stroke:_firstPointOnPath(path, r)
         return nil
     end
 
-    for k = 1, #chunks do
-        local c = chunks[k]
-        if px1 >= c[3] and px0 <= c[5] and py1 >= c[4] and py0 <= c[6] then
-            for i = c[1], c[2] do
-                local o = (i - 1) * STRIDE
-                if distToPathSq(pts[o + 1], pts[o + 2], path) <= r2 then return i end
+    local groups = self:prepareChunkGroups(chunks)
+    if groups then
+        return self:queryChunks(px0, py0, px1, py1,
+            firstPointChunk, pts, path, r2) or nil
+    else
+        for _, c in ipairs(chunks) do
+            if c[3] <= px1 and c[5] >= px0 and c[4] <= py1 and c[6] >= py0 then
+                local first_point = firstPointChunk(c, pts, path, r2)
+                if first_point then return first_point end
             end
         end
     end
@@ -441,18 +559,23 @@ function Stroke:_firstPointOnPath(path, r)
 end
 
 --- True if this stroke comes within r of anywhere on the path.
-function Stroke:hitTestPath(path, r)
+function Stroke:hitTestPath(path, r, bounds)
     if #path < 2 then return false end
-    if self.tool == "highlighter" then return require("markerhit").path(self,path,r) end
+    if self.tool == "highlighter" then return require("markerhit").path(self,path,r,bounds) end
     if self.text or self.image_data then
-        local x0,y0,x1,y1=pathBounds(path,r)
+        local x0,y0,x1,y1
+        if bounds then
+            x0,y0,x1,y1=bounds[1],bounds[2],bounds[3],bounds[4]
+        else
+            x0,y0,x1,y1=pathBounds(path,r)
+        end
         return x1>=self.x_min and x0<=self.x_max and y1>=self.y_min and y0<=self.y_max
     end
 
     -- Two tests, because either shape can pass close to the other without any
     -- of its own recorded points being near: a long stroke crossing a short
     -- eraser path, and the reverse.
-    if self:_firstPointOnPath(path, r) then return true end
+    if self:_firstPointOnPath(path, r, bounds) then return true end
 
     for i = 1, #path - 1, 2 do
         if self:hitTest(path[i], path[i + 1], r) then return true end
