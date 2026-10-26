@@ -69,6 +69,15 @@ name collisions.
   direct framebuffer writers before a cover or suspend; finalize pending ink
   once after returning. Input wrappers must restore only hooks they own and
   preserve the device stylus slot.
+- **Keep floating selection controls nonmodal.** The lasso menu explicitly
+  lists its notebook owner in `active_widgets`, so KOReader can forward
+  unconsumed gestures to the page and toolbar. Do not mark the notebook globally
+  always active: ordinary dialogs must retain their input isolation. Accepted
+  toolbar actions end selection even during the stylus pen-up grace period.
+- **Cache text by effective layout inputs.** Match the integer pixel width used
+  by the text widget, with a tiny rounding tolerance for translated coordinates.
+  Fractional movement must not rebuild layout or change wrapping; real width,
+  scale, font, style, color, or content changes still invalidate the cache.
 - **Keep plugin failures contained.** `safe.lua` protects widget and scheduled
   entry points and restores temporary input hooks on failure. Avoid unbounded
   work and zero-delay self-rescheduling in the UI loop.
@@ -173,6 +182,15 @@ or personal device data.
   production eraser controller with generated long/crowded pages. It checks
   miss pixels, removal, undo, and redo. Run it from a compiled runtime with the
   plugin Lua directory; set emulator dimensions to match the target device.
+- `tools/check-selection-toolbar.lua`, included in the native feature suite,
+  sends gestures through the real UIManager window stack. Direct calls to
+  notebook or button handlers do not test routing under the floating menu.
+- `tools/bench-text-drag.lua` exercises the production selection drag with a
+  generated crowded page, 125 Hz samples, integer/fractional coordinates,
+  layout allocation counts, native glyph parity, and undo. From a disposable
+  KOReader runtime run `./luajit /path/to/tools/bench-text-drag.lua /path/to/lua 26 fractional`;
+  repeat with `72` and `integer`. CPU time and intercepted refresh counts do
+  not measure physical panel latency; integer drags may show no speedup.
 - `tools/bench-*.lua` and `tools/benchmark.py` measure selected offscreen
   workloads; a benchmark is not a physical-device latency result.
 - [Contribution workflow](CONTRIB.md) and
