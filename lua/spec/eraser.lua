@@ -96,6 +96,62 @@ test("a sweep that misses everything reports nothing", function()
     assertEq(#doc.pages[1].strokes, 1, "strokes left")
 end)
 
+test("page-level bounds skip hit tests for strokes outside the eraser path", function()
+    local near, far = lineStroke(300, 100, 500), lineStroke(900, 100, 500)
+    local calls = 0
+    local near_hit, far_hit = near.hitTestPath, far.hitTestPath
+    near.hitTestPath = function(self, ...) calls = calls + 1; return near_hit(self, ...) end
+    far.hitTestPath = function(self, ...) calls = calls + 1; return far_hit(self, ...) end
+    local doc = docWith(near, far)
+    doc:eraseAlongPath({300, 100, 300, 500}, R)
+    assertEq(calls, 1, "unrelated stroke reached detailed hit testing")
+end)
+
+test("repeated long-stroke misses use an invalidated compact chunk index", function()
+    local stroke = Stroke:new{width=3,pen_style="fineliner"}
+    local rows, per_row = 32, 250
+    for row=0,rows-1 do
+        local y=row%2==0 and 100 or 300
+        for j=0,per_row-1 do
+            local x=(row%2==0 and j or per_row-1-j)*600/(per_row-1)
+            stroke:addPoint(x,y,1)
+        end
+    end
+    local path={298,200,302,200}
+    for _=1,6 do assertTrue(not stroke:hitTestPath(path,3),"empty band hit the snake stroke") end
+    assertTrue(stroke.chunk_groups~=nil,"repeated long-stroke misses did not build the index")
+
+    local middle=16*per_row+125
+    stroke:setPoint(middle,300,200,1)
+    assertTrue(stroke.chunk_groups==nil,"point mutation retained stale chunk groups")
+    assertTrue(stroke:hitTestPath(path,3),"rebuilt index missed a newly moved point")
+    stroke:translate(100,0)
+    assertTrue(stroke.chunk_groups==nil,"translation retained stale chunk groups")
+    assertTrue(not stroke:hitTestPath(path,3),"translated geometry still hit the old location")
+end)
+
+test("direct hit testing uses grouped chunks for segment interiors", function()
+    local stroke=Stroke:new{width=3,pen_style="fineliner"}
+    local rows, per_row = 32, 250
+    for row=0,rows-1 do
+        local y=row%2==0 and 100 or 300
+        for j=0,per_row-1 do
+            local x=(row%2==0 and j or per_row-1-j)*600/(per_row-1)
+            stroke:addPoint(x,y,1)
+        end
+    end
+    for _=1,6 do assertTrue(not stroke:hitTest(300,200,1),"empty band hit the snake stroke") end
+    assertTrue(stroke.chunk_groups~=nil,"direct misses did not build grouped chunks")
+
+    local x0=124*600/(per_row-1)
+    local x1=125*600/(per_row-1)
+    local midpoint=(x0+x1)/2
+    assertTrue(math.abs(midpoint-x0)>1 and math.abs(midpoint-x1)>1,
+        "hit must lie in the segment interior, away from recorded samples")
+    assertTrue(stroke:hitTest(midpoint,100,0.1),"segment interior was missed after groups were built")
+    assertTrue(not stroke:hitTest(midpoint,200,0.1),"nearby empty band reported a hit")
+end)
+
 test("one sweep is one thing to undo, however far it travelled", function()
     local doc = docWith(lineStroke(300, 100, 500), lineStroke(320, 100, 500))
     doc:beginBatch()

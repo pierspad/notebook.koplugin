@@ -77,6 +77,24 @@ function CanvasTextDialog:init()
         end
         hideSeparators(self.button_table.container)
     end
+    self:updateFormatButtons()
+end
+
+function CanvasTextDialog:updateFormatButtons()
+    local buttons = self.button_table and self.button_table.button_by_id
+    if not buttons then return end
+    for _, row in ipairs(self.buttons or {}) do
+        for _, entry in ipairs(row) do
+            local button = entry.selected_func and buttons[entry.id]
+            if button and button.frame and button.label_widget then
+                local selected = entry.selected_func()
+                button.background = selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
+                button.frame.background = button.background
+                button.label_widget.fgcolor = selected and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
+            end
+        end
+    end
+    require("ui/uimanager"):setDirty(self, "ui")
 end
 
 function CanvasTextDialog:onCloseWidget()

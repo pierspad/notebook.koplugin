@@ -80,13 +80,24 @@ local function offer(release,owner)
     -- TextViewer is resolved through KOReader, never through a new plugin file.
     local TextViewer=require("ui/widget/textviewer")
     local markdown=TextViewer.html_text_formats and TextViewer.html_text_formats.md
+        and TextViewer.html_text_formats.html
     local notes=release.notes or ""
     if not markdown then notes=require("releasenotes").plain(notes) end
+    local text=version.." → "..release.tag.."\n\n"..notes
+    if markdown then
+        -- Use native Markdown conversion with a scoped font: the HTML
+        -- viewer otherwise defaults to serif, unlike KOReader's interface.
+        local html=require("apps/filemanager/filemanagerconverter"):mdToHtml(text,"")
+        -- TextViewer embeds an HTML body, so a nested document's head/style
+        -- can be discarded by the HTML parser. Scope the font on the body fragment.
+        text='<div style="font-family: sans-serif;">'
+            ..(html:match("<body[^>]*>(.*)</body>") or html)..'</div>'
+    end
     local dialog
     dialog=TextViewer:new{
         title=_("Notebook update available"),
-        text=version.." → "..release.tag.."\n\n"..notes,
-        text_format=markdown and "md" or nil,
+        text=text,
+        text_format=markdown and "html" or nil,
         add_default_buttons=false,
         buttons_table={{
             {text=_("Later"),callback=function() UIManager:close(dialog) end},

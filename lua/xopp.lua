@@ -68,16 +68,9 @@ local function documentXML(doc,write)
             write(string.format('<background type="solid" color="#ffffffff" style="%s"/>',templateStyle(doc:templateFor(index))))
         end
         write('<layer>')
-        local export_strokes={}
-        for _,original in ipairs(page.strokes) do
-            if original.marker_parts then
-                for first,last in require("markerarea").parts(original) do
-                    export_strokes[#export_strokes+1]=setmetatable({n=last-first+1,
-                        getPoint=function(_,i) return original:getPoint(first+i-1) end}, {__index=original})
-                end
-            else export_strokes[#export_strokes+1]=original end
-        end
-        for _,stroke in ipairs(export_strokes) do
+        -- Emit each contour directly. Keeping a wrapper for every contour in
+        -- a page-sized list needlessly retained them all until the page ended.
+        local function emitStroke(stroke,first,last)
             if stroke.image_data then
                 write(string.format('<image left="%.3f" top="%.3f" right="%.3f" bottom="%.3f">',
                     (stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,(stroke.x_max+dx)*scale,(stroke.y_max+dy)*scale))
@@ -88,15 +81,15 @@ local function documentXML(doc,write)
                     or (stroke.font_family=="mono" and "Monospace" or "Sans")
                 write(string.format('<text font="%s" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
                     family,(stroke.font_size or 24)*scale,(stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,xml(stroke.text)))
-            elseif stroke.n>0 then
+            elseif last>=first then
                 local points={}
                 local pressure=0
-                for i=1,stroke.n do
+                for i=first,last do
                     local x,y,p=stroke:getPoint(i); pressure=pressure+(p or 1)
                     points[#points+1]=string.format("%.3f %.3f",(x+dx)*scale,(y+dy)*scale)
                 end
                 local gray=stroke.tool=="highlighter" and markerColor(stroke.tint) or "#000000ff"
-                local width=stroke.width*(.35+.65*pressure/stroke.n)*scale
+                local width=stroke.width*(.35+.65*pressure/(last-first+1))*scale
                 local fill=""
                 if stroke.tool=="highlighter" and stroke.filled then
                     -- Xournal++ fill is an alpha byte; the closed polygon is
@@ -108,6 +101,11 @@ local function documentXML(doc,write)
                 write(string.format('<stroke tool="%s" color="%s" width="%.3f"%s>%s</stroke>',
                     stroke.tool=="highlighter" and "highlighter" or "pen",gray,width,fill,table.concat(points," ")))
             end
+        end
+        for _,stroke in ipairs(page.strokes) do
+            if stroke.marker_parts then
+                for first,last in require("markerarea").parts(stroke) do emitStroke(stroke,first,last) end
+            else emitStroke(stroke,1,stroke.n) end
         end
         write('</layer></page>')
     end

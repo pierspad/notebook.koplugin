@@ -205,16 +205,21 @@ local rawNotes='## [9.9.9](https://example.org/compare)\n\n### Fixes\n\n* **Fast
 private('updatepolicy').release=function() return {tag='v9.9.9',notes=rawNotes} end
 package.loaded.json={decode=function() return {} end}
 local viewer
-package.loaded['ui/widget/textviewer']={html_text_formats={md=true},new=function(_,options)
+package.loaded['ui/widget/textviewer']={html_text_formats={md=true,html=true},new=function(_,options)
  viewer=options;return options
 end}
 privateTransport.fetch=function(_,_,_,_,callback)
  local path=os.tmpname();local file=assert(io.open(path,'w'));file:write('{}');file:close()
  callback(path)
 end
+local converted
+package.loaded['apps/filemanager/filemanagerconverter']={mdToHtml=function(_,text)
+ converted={text=text};return '<html><head></head><body><p>Release notes</p></body></html>'
+end}
 privateUpdater.check(true)
-assert(viewer and viewer.text_format=='md','update offer does not enable native Markdown')
-assert(viewer.text:find(rawNotes,1,true),'Markdown source must reach native renderer intact')
+assert(viewer and viewer.text_format=='html','update offer does not enable native Markdown')
+assert(converted.text:find(rawNotes,1,true),'Markdown source must reach native renderer intact')
+assert(viewer.text:find('font-family: sans-serif',1,true),'release notes must use a sans-serif font')
 package.loaded['ui/widget/textviewer'].html_text_formats=nil
 viewer=nil
 privateUpdater.check(true)

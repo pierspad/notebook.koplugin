@@ -119,6 +119,19 @@ local function populate(self, decoded, pages, current)
     self.dirty = false
 end
 
+-- Legacy persisted text data can omit font_size; SVG and Xournal++ exports
+-- already treat that value as 24 points. Normalize only while creating
+-- the in-memory stroke, after the entire notebook has passed validation.
+local function deserializeStroke(data)
+    if data.text ~= nil and data.font_size == nil then
+        local normalized = {}
+        for key, value in pairs(data) do normalized[key] = value end
+        normalized.font_size = 24
+        data = normalized
+    end
+    return Stroke:deserialize(data)
+end
+
 function Document:load()
     local decoded = readValidated(self.path)
     if not decoded then return false end
@@ -126,7 +139,7 @@ function Document:load()
     for i, page in ipairs(decoded.pages) do
         local strokes = {}
         for j, stroke in ipairs(page.strokes) do
-            strokes[j] = Stroke:deserialize(stroke)
+            strokes[j] = deserializeStroke(stroke)
         end
         pages[i] = { strokes = strokes, template = page.template, background = page.background }
     end
@@ -150,7 +163,7 @@ function Document:loadForThumbnail()
     local source = decoded.pages[selected]
     local strokes = {}
     for i, stroke in ipairs(source.strokes) do
-        strokes[i] = Stroke:deserialize(stroke)
+        strokes[i] = deserializeStroke(stroke)
     end
     -- A thumbnail only needs the selected page and its style. Keeping its
     -- original index is unnecessary once selection has been resolved.

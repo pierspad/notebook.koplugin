@@ -215,10 +215,10 @@ assert(#editor.buttons==2 and #editor.buttons[1]==5 and #editor.buttons[2]==5 an
 local anchor=editor.movable.anchor()
 assert(math.abs(anchor.x-120)<=2 and math.abs(anchor.y-220)<=2 and anchor.w>0 and anchor.h>0,
     'compact controls are not anchored to avoid the edited text')
-assert(styles.B.checked_func() and not styles.I.checked_func()
-    and not styles['U̲'].checked_func(),'text style selection is not shown')
+assert(styles.B.selected_func() and not styles.I.selected_func()
+    and not styles['U̲'].selected_func(),'text style selection is not shown')
 styles.I.callback()
-assert(styles.I.checked_func(),'toggled text style did not remain selected')
+assert(styles.I.selected_func(),'toggled text style did not remain selected')
 editor.input='Live on page'; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='Live on page','typed text is not previewed on the page')
 styles.bg_toggle.callback()
@@ -320,3 +320,24 @@ assert(debug_canvas:_resolveDebugLogPath() ~= nil, '_debug_.scribe notebook acti
 local debug_canvas_upper = Canvas:new{document=Document:new('/tmp/_DEBUG_.scribe')}
 assert(debug_canvas_upper:_resolveDebugLogPath() ~= nil, 'case-insensitive _DEBUG_.scribe activates debug log')
 print('tools passed: pen menus, raw selection, shape creation/resize/undo, eraser, freehand, debug path resolution')
+
+-- Accepted toolbar actions finish selection even during stylus palm grace.
+do
+ local toolbar_nb=require('notebook'):new{document=Document:new('/tmp/toolbar-selection.scribe')}
+ local canvas=toolbar_nb.canvas
+ local shape=Shape.create('rectangle',200,400,500,700,2,0,false)
+ canvas.document:addStroke(shape)
+ local calls=0
+ local action=toolbar_nb:_actionButton{icon='view-refresh',icon_size=20,width=40,
+  callback=function()
+   assert(not canvas.selected_strokes and not canvas.lasso_menu,'toolbar action kept selection')
+   calls=calls+1
+  end}
+ canvas:_showLassoMenu({shape})
+ assert(canvas.lasso_menu.active_widgets and canvas.lasso_menu.active_widgets[1]==toolbar_nb,
+  'floating selection menu did not expose the notebook event target')
+ canvas.pen_left_at=require('ui/time').now()
+ action.callback()
+ assert(calls==1,'toolbar action was swallowed')
+end
+print('toolbar selection: accepted actions dismiss during pen grace')

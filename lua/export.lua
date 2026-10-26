@@ -179,8 +179,13 @@ function Export.beginPDF(doc,out_path,opts)
     local file
     file,err=io.open(temporary,"wb")
     if not file then return nil,"cannot open output file: "..tostring(err) end
-    local bb=Blitbuffer.new(cfg.width,cfg.height,Blitbuffer.TYPE_BB8)
-    if not bb then file:close(); os.remove(temporary); return nil,"failed to allocate blitbuffer" end
+    -- Native allocation can raise as well as return nil. Release the already
+    -- opened file on either path before handing control back to the caller.
+    local allocated,bb=pcall(Blitbuffer.new,cfg.width,cfg.height,Blitbuffer.TYPE_BB8)
+    if not allocated or not bb then
+        file:close();os.remove(temporary)
+        return nil,"failed to allocate blitbuffer"..(not allocated and (": "..tostring(bb)) or "")
+    end
 
     local job={page=1,phase=1,total=cfg.page_count*3,completed=0,cancelled=false,
         page_count=cfg.page_count,out_path=out_path}

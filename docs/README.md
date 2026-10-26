@@ -41,6 +41,11 @@ name collisions.
 - **Keep the vector document authoritative.** Page and zoom bitmaps are caches.
   Invalidate them when page content, paper, dimensions, PDF background, or
   display mode changes. Do not serialize transient previews or framebuffer data.
+- **Keep eraser indexes derived and bounded by geometry.** Whole-stroke erasing
+  computes one path rectangle and rejects unrelated strokes before detailed
+  hit testing. Long strokes may lazily group 16 existing point chunks per box
+  after repeated queries; point edits, append, and translation invalidate the
+  groups. These caches do not enter serialization or change undo geometry.
 - **Use page coordinates consistently.** `content_origin` records the screen
   offset between the page and drawing area so thumbnails and exports align ink
   with paper. Clip direct raster writes and refresh rectangles to their owning
@@ -64,6 +69,15 @@ name collisions.
   direct framebuffer writers before a cover or suspend; finalize pending ink
   once after returning. Input wrappers must restore only hooks they own and
   preserve the device stylus slot.
+- **Keep floating selection controls nonmodal.** The lasso menu explicitly
+  lists its notebook owner in `active_widgets`, so KOReader can forward
+  unconsumed gestures to the page and toolbar. Do not mark the notebook globally
+  always active: ordinary dialogs must retain their input isolation. Accepted
+  toolbar actions end selection even during the stylus pen-up grace period.
+- **Cache text by effective layout inputs.** Match the integer pixel width used
+  by the text widget, with a tiny rounding tolerance for translated coordinates.
+  Fractional movement must not rebuild layout or change wrapping; real width,
+  scale, font, style, color, or content changes still invalidate the cache.
 - **Keep plugin failures contained.** `safe.lua` protects widget and scheduled
   entry points and restores temporary input hooks on failure. Avoid unbounded
   work and zero-delay self-rescheduling in the UI loop.
@@ -86,10 +100,21 @@ validation is centralized in `documentformat.lua` and
 only the page it will render.
 
 PDF export rasterizes pages and preserves the visible page appearance; it is
-not an editable vector PDF. SVG and Xournal++ exports have their own support
+not an editable vector PDF. PDF setup also cleans up its temporary file if
+native buffer allocation raises an error. SVG and Xournal++ exports have their own support
 limits. The Xournal++ file and its companion background PDF must stay together
 when the notebook uses PDF pages. Check the user guide for the user-facing
 export details.
+
+Xournal++ writes marker contours directly in their original order, without a
+page-wide array of temporary stroke wrappers. Gzip framing and checksums remain
+byte-compatible with the portable writer. CRC32 uses KOReader's existing zlib
+binding when available and falls back to Lua otherwise. Native function
+closures must retain the library handle across garbage collection.
+
+For text loaded without a persisted font size, the storage layer supplies the
+same 24-point default used by SVG/Xournal++ exports, after full validation.
+Loading does not rewrite the source file or cap valid sizes to the UI picker.
 
 ## Development and verification
 
@@ -106,7 +131,9 @@ make ci                     # verify plus package validation
 The suite list is explicit in the Makefile. Each suite runs in its own LuaJIT
 process through `tools/test.sh`; `TEST_JOBS=1 make test` is useful when
 debugging interleaved test output. A focused suite can be run from `lua/` as
-shown above.
+shown above. The benchmark suite records nine samples, their median and maximum,
+and an interpolated empirical p95. Nine samples give a noisy tail estimate:
+use paired repeated runs and raw samples before asserting a regression or gain.
 
 Native offscreen feature checks use a compiled KOReader runtime and temporary
 user data. They exercise UI layout, raster output, and export fixtures without
@@ -135,6 +162,35 @@ or personal device data.
 - `tools/device-smoke.lua` checks plugin startup and native UI components.
 - `tools/check-ink-reconcile.lua` checks native refresh routing without
   submitting a panel ioctl.
+- `tools/trace-refresh-regions.lua` drives synthetic 125 Hz marker contacts and
+  records regional refresh requests, rectangle areas, and whether contact was
+  active. Run it from a compiled KOReader runtime with the plugin Lua directory
+  and a disposable settings directory. It models REAGL capability and replaces
+  refresh methods: request counts/areas do not measure panel time or energy.
+- `tools/check-gzipwriter.lua` compares native and portable gzip bytes,
+  including chunk boundaries and native-library lifetime across GC.
+- `tools/bench-xopp-contours.lua` compares export CPU time and Lua allocations
+  against a preserved baseline, using generated multipart markers. Run it from
+  a compiled KOReader runtime with current/baseline Lua paths and a disposable
+  output directory. Timing uses normal GC; allocation totals are measured
+  separately with GC paused and do not represent peak RSS.
+- `tools/bench-shape-fill.lua` and `tools/check-shape-fill.lua` compare filled
+  polygon rendering against a preserved baseline. Run from a compiled runtime
+  with baseline/current Lua directories. The byte comparison covers full and
+  clipped renders, transformed shapes, point winding, color, and 2× output.
+- `tools/bench-eraser-whole.lua` measures whole-stroke hit testing and the
+  production eraser controller with generated long/crowded pages. It checks
+  miss pixels, removal, undo, and redo. Run it from a compiled runtime with the
+  plugin Lua directory; set emulator dimensions to match the target device.
+- `tools/check-selection-toolbar.lua`, included in the native feature suite,
+  sends gestures through the real UIManager window stack. Direct calls to
+  notebook or button handlers do not test routing under the floating menu.
+- `tools/bench-text-drag.lua` exercises the production selection drag with a
+  generated crowded page, 125 Hz samples, integer/fractional coordinates,
+  layout allocation counts, native glyph parity, and undo. From a disposable
+  KOReader runtime run `./luajit /path/to/tools/bench-text-drag.lua /path/to/lua 26 fractional`;
+  repeat with `72` and `integer`. CPU time and intercepted refresh counts do
+  not measure physical panel latency; integer drags may show no speedup.
 - `tools/bench-*.lua` and `tools/benchmark.py` measure selected offscreen
   workloads; a benchmark is not a physical-device latency result.
 - [Contribution workflow](CONTRIB.md) and

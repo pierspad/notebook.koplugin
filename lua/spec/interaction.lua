@@ -169,3 +169,38 @@ transform_canvas:_endShapeTransform()
 assert(transform_doc:getPage().strokes[1].x_max==100,'painted transform endpoint lost at release')
 transform_doc:undo();assert(transform_doc:getPage().strokes[1]==original_shape,'transform undo lost original')
 print('shape transform release: painted endpoint commits once and undo restores original')
+
+-- A deliberate outside tap dismisses image selection without stealing toolbar taps.
+do
+ local image=require('stroke'):new{tool='image',shape_kind='image',image_data='fixture',width=1,color=0}
+ image:addPoint(100,200);image:addPoint(200,300)
+ local screen=require('notebook'):new{document=Document:new('/tmp/image-dismiss.scribe')}
+ local canvas=screen.canvas
+ canvas.content={x=0,y=0,w=600,h=800}
+ local forwarded=0
+ screen[1]={handleEvent=function() forwarded=forwarded+1;return true end}
+ screen[2]=nil
+ for _,zoom in ipairs({1,2}) do
+  canvas.zoom=zoom;canvas.zoom_x=0;canvas.zoom_y=0
+  local function select()
+   canvas.selected_strokes={image};canvas.selection_bbox={x=100,y=200,w=100,h=100}
+  end
+  select()
+  local hx,hy=canvas:_viewPoint(200,250)
+  assert(canvas:_shapeHandleAt(image,200+Screen:scaleBySize(21)/zoom,250)~=nil,'resize target is too small')
+  screen:propagateEvent{handler='onGesture',args={{ges='tap',pos={x=hx,y=hy}}}}
+  assert(canvas.selected_strokes,'handle tap dismissed selection')
+  local x,y=canvas:_viewPoint(150,250)
+  screen:propagateEvent{handler='onGesture',args={{ges='tap',pos={x=x,y=y}}}}
+  assert(canvas.selected_strokes,'inside tap dismissed selection')
+  canvas.pen_down=true
+  screen:propagateEvent{handler='onGesture',args={{ges='tap',pos={x=20,y=20}}}}
+  assert(canvas.selected_strokes,'palm dismissed selection')
+  canvas.pen_down=false;canvas.pen_left_at=nil;canvas.touch_rejected=false
+  local before=forwarded
+  screen:propagateEvent{handler='onGesture',args={{ges='tap',pos={x=20,y=20}}}}
+  assert(not canvas.selected_strokes,'outside tap left image selected')
+  assert(forwarded==before+1,'outside tap did not reach toolbar')
+ end
+end
+print('image selection: larger targets, outside dismissal, toolbar forwarding and palm protection passed')

@@ -66,4 +66,21 @@ for _, scale in ipairs({1,2}) do
     assert(bb:get(40*scale,20*scale)==70, "marker shape erased darker ruling")
     assert(bb:get(40*scale,21*scale)==160, "marker shape became opaque pen ink")
 end
+-- A rotated filled figure takes the polygon scanline path. Its clipped
+-- repaint must match the same pixels from a full repaint inside the clip.
+local filled = Shape.create("rectangle", 24, 20, 112, 88, 5, 0, true)
+filled = Shape.transform(filled, "rotate", 106, 74, 110, 54)
+local whole = FakeBB.new(160, 140)
+Renderer.drawStroke(whole, filled)
+local clipped = FakeBB.new(160, 140)
+local fill_clip = {x=48, y=42, w=58, h=52}
+Renderer.drawStroke(clipped, filled, fill_clip)
+local clip_pixels = 0
+for y=fill_clip.y,fill_clip.y+fill_clip.h-1 do
+    for x=fill_clip.x,fill_clip.x+fill_clip.w-1 do
+        assert(clipped:get(x,y)==whole:get(x,y), "rotated filled figure changed under clipping")
+        if whole:get(x,y) ~= 255 then clip_pixels=clip_pixels+1 end
+    end
+end
+assert(clip_pixels > 0, "filled polygon clip did not cover the figure")
 print("geometric figures retain primitive rasterization at 2x")

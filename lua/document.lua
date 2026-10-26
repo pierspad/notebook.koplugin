@@ -14,6 +14,7 @@ resize, delete) participate in the same undo system without reworking it.
 
 local Template = require("template")
 local History = require("documenthistory")
+local Stroke = require("stroke")
 
 local MAX_HISTORY = 200
 
@@ -319,6 +320,9 @@ every stroke on the page. Passing the path down instead means one walk, and a
 continuous swept shape rather than a row of circles with gaps between them.
 --]]
 function Document:eraseAlongPath(path, r, shapes)
+    if #path < 2 then return nil end
+    local path_bounds = { Stroke.pathBounds(path, r) }
+    local px0, py0, px1, py1 = path_bounds[1], path_bounds[2], path_bounds[3], path_bounds[4]
     local page = self:getPage()
     local removed = {}
     local bx0, by0, bx1, by1 = math.huge, math.huge, -math.huge, -math.huge
@@ -327,7 +331,13 @@ function Document:eraseAlongPath(path, r, shapes)
     local count = #strokes
     for i = 1, count do
         local stroke = strokes[i]
-        local hit = stroke:hitTestPath(path, r)
+        local hit = false
+        if not stroke.image_data then
+            local sx, sy, sw, sh = stroke:getBounds()
+            if sx <= px1 and sx + sw >= px0 and sy <= py1 and sy + sh >= py0 then
+                hit = stroke:hitTestPath(path, r, path_bounds)
+            end
+        end
         if stroke.image_data or shapes and stroke.shape_kind
             and stroke.shape_kind ~= "line" and stroke.shape_kind ~= "arrow" then
             if not stroke.image_data and hit then shapes[stroke] = true end

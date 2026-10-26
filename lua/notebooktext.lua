@@ -117,7 +117,11 @@ function NotebookText:_editText(original, x, y)
     end
 
     local function currentText() return dialog and dialog:getInputText() or (original and original.text or "") end
-    local function restyle(fn) fn(); redraw(currentText()) end
+    local function restyle(fn)
+        fn()
+        if dialog then dialog:updateFormatButtons() end
+        redraw(currentText())
+    end
     local families={"sans","serif","mono"}
     local function cleanup()
         if closed then return end
@@ -180,14 +184,14 @@ function NotebookText:_editText(original, x, y)
                     local at=1; for i,v in ipairs(families) do if v==style.font_family then at=i end end
                     style.font_family=families[at%#families+1]
                 end) end},
-                {text="B", font_bold=true,
-                    checked_func=function() return style.text_bold end,
+                {id="bold_toggle", text="B", font_bold=true,
+                    selected_func=function() return style.text_bold end,
                     callback=function() restyle(function() style.text_bold=not style.text_bold end) end},
-                {text="I", font_face="NotoSans-Italic.ttf", font_bold=false,
-                    checked_func=function() return style.text_italic end,
+                {id="italic_toggle", text="I", font_face="NotoSans-Italic.ttf", font_bold=false,
+                    selected_func=function() return style.text_italic end,
                     callback=function() restyle(function() style.text_italic=not style.text_italic end) end},
-                {text="U̲", font_bold=false,
-                    checked_func=function() return style.text_underline end,
+                {id="underline_toggle", text="U̲", font_bold=false,
+                    selected_func=function() return style.text_underline end,
                     callback=function() restyle(function() style.text_underline=not style.text_underline end) end},
             },
             {

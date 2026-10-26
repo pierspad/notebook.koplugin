@@ -32,8 +32,12 @@ function PolygonInk.draw(bb, stroke, clip, color, color_enabled)
                 prev=p
             end
             for i=#intersections,count+1,-1 do intersections[i]=nil end
-            table.sort(intersections)
-            for i=1,count-1,2 do span(y,intersections[i],intersections[i+1]) end
+            if count==2 then
+                span(y,math.min(intersections[1],intersections[2]),math.max(intersections[1],intersections[2]))
+            elseif count>2 then
+                table.sort(intersections)
+                for i=1,count-1,2 do span(y,intersections[i],intersections[i+1]) end
+            end
         end
     end
     local points = {}

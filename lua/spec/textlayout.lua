@@ -9,6 +9,24 @@ local widget=s._text_widget;local key=s._text_cache_key
 assert(type(key)=='table' and key.text==s.text,'cache copies the label into a string key')
 for _=1,10 do Text.draw(Screen.bb,s,1,0,0,{x=0,y=0,w=100,h=80}) end
 assert(s._text_widget==widget and s._text_cache_key==key,'unchanged layout was reallocated')
+for _,scale in ipairs({1,2}) do
+    local moved=Text.create('translated layout',10,20,300,24)
+    if scale==2 then Text.draw(Screen.bb,moved,scale,0,0,{x=0,y=0,w=100,h=80}) end
+    local cached=moved._text_widget
+    for _=1,40 do
+        moved:translate(0.1,0.05)
+        Text.draw(Screen.bb,moved,scale,0,0,{x=0,y=0,w=100,h=80})
+        assert(moved._text_widget==cached,
+            'fractional translation invalidated the same pixel-width layout at scale '..scale)
+    end
+    moved:translate(10000,5000)
+    for _=1,40 do
+        moved:translate(0.1,0.05)
+        Text.draw(Screen.bb,moved,scale,0,0,{x=0,y=0,w=100,h=80})
+        assert(moved._text_widget==cached,
+            'fractional translation at a large page offset invalidated layout at scale '..scale)
+    end
+end
 s.text_background=true;s.text_underline=true;s.cursor_pos=2
 Text.draw(Screen.bb,s)
 assert(s._text_widget==widget,'decoration change invalidated glyphs')
@@ -18,6 +36,17 @@ for _,change in ipairs({function() s.font_size=28 end,function() s.text='changed
     local old=s._text_widget;change();Text.draw(Screen.bb,s)
     assert(s._text_widget~=old and old.freed,'layout input did not invalidate/free cache')
 end
+local boundary=Text.create('width boundary',10,100,300,24)
+local original=boundary._text_widget
+boundary.x_max=boundary.x_min+299.9
+Text.draw(Screen.bb,boundary)
+assert(boundary._text_widget~=original and boundary._text_widget.width==299,
+    'real resize below an integer pixel boundary did not invalidate layout')
+local narrower=boundary._text_widget
+boundary.x_max=boundary.x_min+300
+Text.draw(Screen.bb,boundary)
+assert(boundary._text_widget~=narrower and boundary._text_widget.width==300,
+    'real resize above an integer pixel boundary did not invalidate layout')
 assert(not s:serialize()._text_cache_key,'cache metadata was serialized')
 require('textcache').clear()
 
