@@ -90,5 +90,23 @@ test('cancelling an incremental export removes only its temporary file', functio
     assert(io.open(out .. '.tmp','rb') == nil, 'partial export was left behind')
     os.remove(out)
 end)
+test('allocation errors close the temporary file and preserve the destination', function()
+    local BB=require('ffi/blitbuffer')
+    local allocate,open=BB.new,io.open
+    local destination=assert(open(path,'wb'));destination:write('existing');destination:close()
+    local temporary
+    io.open=function(name,mode)
+        local file,err=open(name,mode)
+        if name==path..'.tmp' and mode=='wb' then temporary=file end
+        return file,err
+    end
+    BB.new=function() error('allocation failure') end
+    local ok,job,err=pcall(Export.beginPDF,doc,path,{width=10,height=12})
+    BB.new,io.open=allocate,open
+    assert(ok and not job and tostring(err):find('allocation',1,true),'allocation error escaped')
+    assert(temporary and io.type(temporary)=='closed file','temporary handle leaked')
+    assert(not io.open(path..'.tmp','rb'),'temporary export leaked')
+    assert(read(path)=='existing','allocation failure changed destination')
+end)
 os.remove(path)
 assert(failures==0, failures .. ' export regression(s)')
