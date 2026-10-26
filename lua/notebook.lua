@@ -366,6 +366,25 @@ end
 -- An existing zoom contact belongs to the canvas through its release, even
 -- over a toolbar button (which otherwise consumes hold_release first).
 function Notebook:propagateEvent(event)
+    local canvas = self.canvas
+    local ges = event.handler == "onGesture" and event.args and event.args[1]
+    local selected = canvas and canvas.selected_strokes
+    if ges and ges.ges == "tap" and ges.pos and selected and #selected == 1
+        and selected[1].image_data and not canvas.touch_rejected
+        and not canvas:_touchIsPalm() and not canvas.transform_gesture
+        and not canvas.dragging_selection then
+        local x, y = ges.pos.x, ges.pos.y
+        local px, py = canvas:_viewPoint(selected[1].x_min, selected[1].y_min)
+        local right, bottom = canvas:_viewPoint(selected[1].x_max, selected[1].y_max)
+        -- Keep the selected object and its handles interactive. An outside tap
+        -- also reaches the toolbar, so switching actions takes a single tap.
+        local page_x = selected[1].x_min + (x-px)/canvas.zoom
+        local page_y = selected[1].y_min + (y-py)/canvas.zoom
+        if not (x >= px and x <= right and y >= py and y <= bottom)
+            and not canvas:_shapeHandleAt(selected[1], page_x, page_y) then
+            canvas:_deselectLasso()
+        end
+    end
     if event.handler == "onGesture" and self.canvas and self.canvas.zoom > 1
         and self.canvas.zoom_touch_active and self.canvas:handleEvent(event) then
         return true
