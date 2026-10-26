@@ -41,6 +41,11 @@ name collisions.
 - **Keep the vector document authoritative.** Page and zoom bitmaps are caches.
   Invalidate them when page content, paper, dimensions, PDF background, or
   display mode changes. Do not serialize transient previews or framebuffer data.
+- **Keep eraser indexes derived and bounded by geometry.** Whole-stroke erasing
+  computes one path rectangle and rejects unrelated strokes before detailed
+  hit testing. Long strokes may lazily group 16 existing point chunks per box
+  after repeated queries; point edits, append, and translation invalidate the
+  groups. These caches do not enter serialization or change undo geometry.
 - **Use page coordinates consistently.** `content_origin` records the screen
   offset between the page and drawing area so thumbnails and exports align ink
   with paper. Clip direct raster writes and refresh rectangles to their owning
@@ -148,6 +153,11 @@ or personal device data.
 - `tools/device-smoke.lua` checks plugin startup and native UI components.
 - `tools/check-ink-reconcile.lua` checks native refresh routing without
   submitting a panel ioctl.
+- `tools/trace-refresh-regions.lua` drives synthetic 125 Hz marker contacts and
+  records regional refresh requests, rectangle areas, and whether contact was
+  active. Run it from a compiled KOReader runtime with the plugin Lua directory
+  and a disposable settings directory. It models REAGL capability and replaces
+  refresh methods: request counts/areas do not measure panel time or energy.
 - `tools/check-gzipwriter.lua` compares native and portable gzip bytes,
   including chunk boundaries and native-library lifetime across GC.
 - `tools/bench-xopp-contours.lua` compares export CPU time and Lua allocations
@@ -155,6 +165,14 @@ or personal device data.
   a compiled KOReader runtime with current/baseline Lua paths and a disposable
   output directory. Timing uses normal GC; allocation totals are measured
   separately with GC paused and do not represent peak RSS.
+- `tools/bench-shape-fill.lua` and `tools/check-shape-fill.lua` compare filled
+  polygon rendering against a preserved baseline. Run from a compiled runtime
+  with baseline/current Lua directories. The byte comparison covers full and
+  clipped renders, transformed shapes, point winding, color, and 2× output.
+- `tools/bench-eraser-whole.lua` measures whole-stroke hit testing and the
+  production eraser controller with generated long/crowded pages. It checks
+  miss pixels, removal, undo, and redo. Run it from a compiled runtime with the
+  plugin Lua directory; set emulator dimensions to match the target device.
 - `tools/bench-*.lua` and `tools/benchmark.py` measure selected offscreen
   workloads; a benchmark is not a physical-device latency result.
 - [Contribution workflow](CONTRIB.md) and
