@@ -203,6 +203,10 @@ function Canvas:_showLassoMenu(selected)
     end
 
     self.lasso_menu = LassoMenu:new{
+        -- Floating controls share the page with the notebook toolbar. KOReader
+        -- only forwards unconsumed events to explicitly active widgets below
+        -- the top window; ordinary modal dialogs must keep their isolation.
+        active_widgets = self.owner and {self.owner} or nil,
         on_dismiss=function(area)
             self:_repaintScreenRegion(area.x,area.y,area.w,area.h)
             self:_scheduleCleanScreen()

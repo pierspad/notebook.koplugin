@@ -115,6 +115,15 @@ function ToolButton:onTap()
     return true
 end
 
+-- An accepted toolbar action ends selection independently of palm filtering:
+-- a stylus tap reaches the gesture engine during the pen-up grace period.
+function Toolbar:_toolbarAction(callback)
+    return function(...)
+        if self.canvas and self.canvas.selected_strokes then self:_finishInteraction() end
+        if callback then return callback(...) end
+    end
+end
+
 function Toolbar:_actionButton(opts)
     return Button:new{
         text = opts.text,
@@ -123,7 +132,7 @@ function Toolbar:_actionButton(opts)
         icon_height = opts.icon_size,
         width = opts.width,
         enabled_func = opts.enabled_func,
-        callback = opts.callback,
+        callback = self:_toolbarAction(opts.callback),
         bordersize = Size.border.thin,
         margin = 0,
         -- Rounded to match the tool selector, so the row reads as one control
@@ -219,8 +228,8 @@ function Toolbar:_buildToolbar()
             size = unit,
             icon_size = icon_size,
             selected = i == 1,
-            callback = function() self:_selectTool(i) end,
-            hold_callback = function() self:_openToolOptions(i) end,
+            callback = self:_toolbarAction(function() self:_selectTool(i) end),
+            hold_callback = self:_toolbarAction(function() self:_openToolOptions(i) end),
         }
         self.tool_buttons[i] = btn
         table.insert(tool_group, btn)
@@ -259,7 +268,7 @@ function Toolbar:_buildToolbar()
 
     self.settings_button = ToolButton:new{
         icon = "appbar.settings", icon_size = icon_size, size = unit,
-        callback = function() self:_showSettings() end,
+        callback = self:_toolbarAction(function() self:_showSettings() end),
     }
 
     local spacers = {}
