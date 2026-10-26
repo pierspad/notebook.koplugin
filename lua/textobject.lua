@@ -25,13 +25,22 @@ local function faceName(stroke)
     return stroke.text_italic and family.italic or family.regular
 end
 
+local function layoutWidth(stroke, scale)
+    -- The widget lays out to an integer pixel width. Translation repeatedly
+    -- adds the same fractional offset to both bounds, so subtracting them can
+    -- drift a few ulps below an integer and otherwise evict an unchanged
+    -- layout (and, without the same tolerance in widget creation, make it one pixel
+    -- narrower).
+    return math.max(1,math.floor((stroke.x_max-stroke.x_min)*scale+1e-7))
+end
+
 function Text.widget(stroke,scale)
     scale=scale or 1
     return require("ui/widget/textboxwidget"):new{
         text=stroke.text,
         face=require("ui/font"):getFace(faceName(stroke),math.max(5,stroke.font_size*scale)),
         bold=stroke.text_bold or false,
-        width=math.max(1,math.floor((stroke.x_max-stroke.x_min)*scale)),
+        width=layoutWidth(stroke,scale),
         fgcolor=require("ffi/blitbuffer").Color8(stroke.color or 0),
     }
 end
@@ -42,14 +51,14 @@ end
 local function cacheKey(stroke, scale)
     return {text=stroke.text, family=stroke.font_family, size=stroke.font_size,
         scale=scale, bold=stroke.text_bold, italic=stroke.text_italic,
-        color=stroke.color, width=stroke.x_max-stroke.x_min}
+        color=stroke.color, width=layoutWidth(stroke,scale)}
 end
 
 local function cacheMatches(key, stroke, scale)
     return key and key.text == stroke.text and key.family == stroke.font_family
         and key.size == stroke.font_size and key.scale == scale
         and key.bold == stroke.text_bold and key.italic == stroke.text_italic
-        and key.color == stroke.color and key.width == stroke.x_max-stroke.x_min
+        and key.color == stroke.color and key.width == layoutWidth(stroke,scale)
 end
 
 function Text.freeCache(stroke)
