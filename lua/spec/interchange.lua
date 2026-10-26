@@ -35,6 +35,11 @@ assert(xml:find('tool="highlighter"',1,true) and xml:find('width="0.001" fill="2
     'erased marker exported as a thick polygon outline')
 local _,filled_count=xml:gsub('fill="255"','')
 assert(filled_count==2,'XOPP joined marker contours or lost one of them')
+local first_contour='2.400 4.800 12.000 4.800 12.000 9.600 2.400 9.600 2.400 4.800'
+local second_contour='19.200 19.200 24.000 19.200 24.000 24.000 19.200 24.000 19.200 19.200'
+local first_at=assert(xml:find(first_contour,1,true),'first marker contour changed')
+local second_at=assert(xml:find(second_contour,1,true),'second marker contour changed')
+assert(first_at<second_at,'marker contour order changed')
 os.remove(path)
 -- Selected marker colors must survive editable export.
 for _,case in ipairs({
