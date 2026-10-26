@@ -166,7 +166,7 @@ function Canvas:_showLassoMenu(selected)
 
     if #selected == 1 and selected[1].shape_kind then
         local shape = selected[1]
-        local size = math.max(6, Screen:scaleBySize(12))
+        local size = math.max(8, Screen:scaleBySize(16))
         local dirty
         for _, handle in ipairs(self:shapeHandles(shape)) do
             local hx,hy=self:_viewPoint(handle[2],handle[3])

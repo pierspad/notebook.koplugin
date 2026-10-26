@@ -161,7 +161,7 @@ end
 
 function ShapeCanvas:_shapeHandleAt(shape, x, y)
     if not shape or not shape.shape_kind then return nil end
-    local radius = Screen:scaleBySize(18)/self.zoom
+    local radius = Screen:scaleBySize(22)/self.zoom
     for _, handle in ipairs(shapeHandles(shape,self.zoom)) do
         if math.abs(x-handle[2]) <= radius and math.abs(y-handle[3]) <= radius then
             return handle[1]
