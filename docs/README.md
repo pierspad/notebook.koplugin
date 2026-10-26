@@ -86,10 +86,21 @@ validation is centralized in `documentformat.lua` and
 only the page it will render.
 
 PDF export rasterizes pages and preserves the visible page appearance; it is
-not an editable vector PDF. SVG and Xournal++ exports have their own support
+not an editable vector PDF. PDF setup also cleans up its temporary file if
+native buffer allocation raises an error. SVG and Xournal++ exports have their own support
 limits. The Xournal++ file and its companion background PDF must stay together
 when the notebook uses PDF pages. Check the user guide for the user-facing
 export details.
+
+Xournal++ writes marker contours directly in their original order, without a
+page-wide array of temporary stroke wrappers. Gzip framing and checksums remain
+byte-compatible with the portable writer. CRC32 uses KOReader's existing zlib
+binding when available and falls back to Lua otherwise. Native function
+closures must retain the library handle across garbage collection.
+
+For text loaded without a persisted font size, the storage layer supplies the
+same 24-point default used by SVG/Xournal++ exports, after full validation.
+Loading does not rewrite the source file or cap valid sizes to the UI picker.
 
 ## Development and verification
 
@@ -106,7 +117,9 @@ make ci                     # verify plus package validation
 The suite list is explicit in the Makefile. Each suite runs in its own LuaJIT
 process through `tools/test.sh`; `TEST_JOBS=1 make test` is useful when
 debugging interleaved test output. A focused suite can be run from `lua/` as
-shown above.
+shown above. The benchmark suite records nine samples, their median and maximum,
+and an interpolated empirical p95. Nine samples give a noisy tail estimate:
+use paired repeated runs and raw samples before asserting a regression or gain.
 
 Native offscreen feature checks use a compiled KOReader runtime and temporary
 user data. They exercise UI layout, raster output, and export fixtures without
@@ -135,6 +148,13 @@ or personal device data.
 - `tools/device-smoke.lua` checks plugin startup and native UI components.
 - `tools/check-ink-reconcile.lua` checks native refresh routing without
   submitting a panel ioctl.
+- `tools/check-gzipwriter.lua` compares native and portable gzip bytes,
+  including chunk boundaries and native-library lifetime across GC.
+- `tools/bench-xopp-contours.lua` compares export CPU time and Lua allocations
+  against a preserved baseline, using generated multipart markers. Run it from
+  a compiled KOReader runtime with current/baseline Lua paths and a disposable
+  output directory. Timing uses normal GC; allocation totals are measured
+  separately with GC paused and do not represent peak RSS.
 - `tools/bench-*.lua` and `tools/benchmark.py` measure selected offscreen
   workloads; a benchmark is not a physical-device latency result.
 - [Contribution workflow](CONTRIB.md) and
