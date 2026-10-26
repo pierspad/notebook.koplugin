@@ -215,10 +215,10 @@ assert(#editor.buttons==2 and #editor.buttons[1]==5 and #editor.buttons[2]==5 an
 local anchor=editor.movable.anchor()
 assert(math.abs(anchor.x-120)<=2 and math.abs(anchor.y-220)<=2 and anchor.w>0 and anchor.h>0,
     'compact controls are not anchored to avoid the edited text')
-assert(styles.B.checked_func() and not styles.I.checked_func()
-    and not styles['U̲'].checked_func(),'text style selection is not shown')
+assert(styles.B.selected_func() and not styles.I.selected_func()
+    and not styles['U̲'].selected_func(),'text style selection is not shown')
 styles.I.callback()
-assert(styles.I.checked_func(),'toggled text style did not remain selected')
+assert(styles.I.selected_func(),'toggled text style did not remain selected')
 editor.input='Live on page'; editor.strike_callback()
 assert(nb.canvas.text_preview.text=='Live on page','typed text is not previewed on the page')
 styles.bg_toggle.callback()

@@ -14,7 +14,7 @@ local Screen=Device.screen;Screen.refreshFast=function() end;Screen.refreshUI=fu
 local nb=load('notebook'):new{document=load('document'):new('/tmp/text-menu.scribe')}
 nb:paintTo(Screen.bb,0,0)
 local menu;local UI=require('ui/uimanager');UI.show=function(_,w) menu=w end
-for _,index in ipairs({1,2,5,6}) do
+for _,index in ipairs(arg[4]=="editor-only" and {} or {1,2,5,6}) do
  nb:paintTo(Screen.bb,0,0)
  nb:_showToolOptions(index)
  menu:paintTo(Screen.bb,0,0)
@@ -55,6 +55,7 @@ for _,index in ipairs({1,2,5,6}) do
 end
 nb:paintTo(Screen.bb,0,0)
 local paper=Screen.bb:copy()
+nb.canvas.text_bold=true;nb.canvas.text_italic=true;nb.canvas.text_underline=true
 nb:_editText(nil,20,180)
 local dialog=menu;dialog._input_widget:addChars('Testo à 日本語')
 local preview=nb.canvas.text_preview;local widget=preview._text_widget
@@ -78,6 +79,25 @@ for py=0,Screen:getHeight()-1 do for px=0,Screen:getWidth()-1 do
     assert(narrow:getPixel(px,py):getColor8().a==wanted,'narrow text clip painted outside its region')
 end end
 narrow:free();reference:free();paper:free();actual:free()
+dialog:paintTo(Screen.bb,0,0)
+-- Persistent selected colors must survive Button's native tap feedback.
+for _, entry in ipairs({{"bold_toggle","text_bold"},{"italic_toggle","text_italic"},
+    {"underline_toggle","text_underline"}}) do
+    local button=assert(dialog.button_table.button_by_id[entry[1]])
+    assert(not button.checked_func,'format button still appends a checkmark')
+    for _=1,2 do
+        button:onTapSelectButton()
+        preview=nb.canvas.text_preview
+        local selected=preview[entry[2]]
+        local expected=selected and 0 or 255
+        assert(button.frame.background:getColor8().a==expected,'format background lost selection')
+        assert(button.label_widget.fgcolor:getColor8().a==255-expected,'format symbol not inverted')
+    end
+end
+widget=preview._text_widget
+Screen.bb:fill(require('ffi/blitbuffer').COLOR_WHITE)
+dialog:paintTo(Screen.bb,0,0)
+Screen.bb:writePNG(out..'/text-editor-selected-'..Screen:getWidth()..'.png')
 local underlined=preview.text_underline
 dialog.buttons[1][5].callback()
 assert(preview._text_widget==widget and preview.text_underline~=underlined,'underline rebuilt glyphs')

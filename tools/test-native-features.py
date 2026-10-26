@@ -69,6 +69,12 @@ with tempfile.TemporaryDirectory(prefix='notebook-native-') as directory:
                             'EMULATE_READER_W': str(width), 'EMULATE_READER_H': str(height),
                             'EMULATE_READER_DPI': str(dpi)})
 
+        subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/check-text-menu.lua'),
+                        str(ROOT / 'lua'), str(output), language, 'editor-only'], cwd=stage, check=True, timeout=30,
+                       env={**os.environ, 'SDL_VIDEODRIVER': 'dummy', 'KO_HOME': str(output),
+                            'EMULATE_READER_W': str(width), 'EMULATE_READER_H': str(height),
+                            'EMULATE_READER_DPI': str(dpi)})
+
         svg = ET.parse(output / 'image.svg')
         images = svg.findall('.//{http://www.w3.org/2000/svg}image')
         assert len(images) == 2, 'SVG lost image objects'
