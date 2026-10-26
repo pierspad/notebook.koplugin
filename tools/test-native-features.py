@@ -25,6 +25,8 @@ with tempfile.TemporaryDirectory(prefix='notebook-native-') as directory:
             source.suffix == '.lua' and not source.name.startswith(('settings.', 'defaults.custom'))
         ):
             (stage / source.name).symlink_to(source.resolve(), target_is_directory=source.is_dir())
+    subprocess.run([str(stage / 'luajit'), str(ROOT / 'tools/check-gzipwriter.lua'), str(ROOT / 'lua')],
+                   cwd=stage, check=True, timeout=30, env={**os.environ, 'SDL_VIDEODRIVER': 'dummy'})
     profiles = [(600, 800, 96, 'en'), (800, 600, 96, 'it'), (1860, 2480, 300, 'it')]
     if args.all_languages:
         profiles.extend((600, 800, 96, catalog.stem) for catalog in sorted((ROOT / 'lua/locale').glob('*.po')))
