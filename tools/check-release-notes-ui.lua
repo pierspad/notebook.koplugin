@@ -28,7 +28,7 @@ load("updatetransport").fetch=function(_,_,_,_,callback)
     callback(path)
 end
 load("updater").check(true)
-assert(offered and offered.text_format=="md" and not offered.is_txt,"offer is still plain text")
+assert(offered and offered.text_format=="html" and not offered.is_txt,"offer is not using native HTML rendering")
 local html=offered.scroll_widget.html_body
 assert(html and html:find("<h2",1,true) and html:find("<h3",1,true),"headings not rendered")
 assert(html:find("<strong>",1,true) and html:find("<li>",1,true),"inline/list formatting lost")

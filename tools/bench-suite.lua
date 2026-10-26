@@ -51,7 +51,14 @@ local function measure(name,fn,iterations,counters)
     local function summary(values)
         local sorted={};for i,value in ipairs(values) do sorted[i]=value end
         table.sort(sorted)
-        return {median=sorted[5],p95=sorted[9],min=sorted[1],max=sorted[9],raw=values}
+        -- Linear empirical quantile (type 7): for nine samples p95 lies
+        -- between the eighth and ninth order statistics, rather than being
+        -- mislabeled as the maximum.
+        local index=1+(#sorted-1)*0.95
+        local lower=math.floor(index)
+        local upper=math.ceil(index)
+        local p95=sorted[lower]+(sorted[upper]-sorted[lower])*(index-lower)
+        return {median=sorted[5],p95=p95,min=sorted[1],max=sorted[#sorted],raw=values}
     end
     results[#results+1]={name=name,iterations=iterations or 1,warmups=1,cpu_ms=summary(cpu),wall_ms=summary(elapsed),
         heap_delta_kib=summary(heap),retained_kib=summary(retained),rss_delta_kib=summary(resident),explicit_gc_ms=summary(gc),cpu_frequency_khz=frequency,
@@ -78,8 +85,10 @@ measure("save/one-page-edit",function() doc:addStroke(ink(1));assert(doc:save())
 measure("load/full-notebook",function() local d=Document:new(doc.path);assert(d:load());assert(d:pageCount()==4) end,1,ioCounts)
 measure("load/thumbnail-preview",function()
     local d=Document:new(doc.path)
-    if d.loadPreview then assert(d:loadPreview()) else assert(d:load()) end
-end,1,function() return {materialized_pages=Document.loadPreview and 1 or 4,strokes_per_page=count} end)
+    if d.loadForThumbnail then assert(d:loadForThumbnail()) else assert(d:load()) end
+end,1,function()
+    return {materialized_pages=Document.loadForThumbnail and 1 or 4,strokes_per_page=count}
+end)
 local polygon={}
 for i=1,200 do local a=i*2*math.pi/200;polygon[i]={x=900+200*math.cos(a),y=1200+200*math.sin(a)} end
 measure("lasso/200-vertices",function() Lasso.findSelectedStrokes(doc:getPage().strokes,polygon) end,10)
