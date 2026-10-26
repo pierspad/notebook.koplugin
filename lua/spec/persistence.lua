@@ -64,6 +64,33 @@ for _, case in ipairs{
     end)
 end
 
+test("legacy text without a font size uses the export-compatible default", function()
+    store["/legacy-text"] = {version=1,pages={{strokes={{tool="text",n=2,
+        pts={1,2,1,30,40,1},text="legacy label"}}}}}
+    local doc=Document:new("/legacy-text")
+    assert(doc:load(),"legacy text notebook was rejected")
+    local stroke=doc:getPage().strokes[1]
+    assert(stroke.font_size==24,"legacy text did not receive the 24-point default")
+    assert(store["/legacy-text"].pages[1].strokes[1].font_size==nil,"loading mutated persisted data")
+    local preview=Document:new("/legacy-text")
+    assert(preview:loadForThumbnail() and preview:getPage().strokes[1].font_size==24,
+        "legacy text thumbnail did not receive the same default")
+    local old_font,old_textbox=package.loaded["ui/font"],package.loaded["ui/widget/textboxwidget"]
+    package.loaded["ui/font"]={getFace=function() return {} end}
+    package.loaded["ui/widget/textboxwidget"]={new=function(_,options) return options end}
+    local ok,widget=pcall(require("textobject").widget,stroke,1)
+    package.loaded["ui/font"],package.loaded["ui/widget/textboxwidget"]=old_font,old_textbox
+    assert(ok and widget,"legacy text could not be rendered: "..tostring(widget))
+end)
+
+test("text size above the current UI limit remains loadable", function()
+    store["/large-text-size"] = {version=1,pages={{strokes={{tool="text",n=2,
+        pts={1,2,1,30,40,1},text="large label",font_size=128}}}}}
+    local doc=Document:new("/large-text-size")
+    assert(doc:load(),"valid large text size was rejected")
+    assert(doc:getPage().strokes[1].font_size==128,"valid large text size changed")
+end)
+
 test("nonfinite content origin cannot poison loaded coordinates", function()
     store["/origin"] = { version = 1, pages = {}, content_origin = { x = math.huge, y = 0/0 } }
     local doc = Document:new("/origin")
