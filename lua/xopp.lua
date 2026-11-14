@@ -1,6 +1,7 @@
 -- Editable Xournal++ interchange. XOPP is gzip-compressed XML; this writer
 -- uses uncompressed DEFLATE blocks so it needs no external process or binding.
 local Xopp = {}
+local MarkerAreaMod, ImageCodecMod, PdfBgMod, DocFormatMod, GzipWriterMod, XoppFilesMod
 
 function Xopp.backgroundPath(path)
     return path .. ".bg.pdf"
@@ -35,8 +36,9 @@ local function pageLayout(doc,page,size)
     end
     local native=page.background.size
     if not native then
+        if not PdfBgMod then PdfBgMod = require("pdfbackground") end
         local ok,w,h=pcall(function()
-            return require("pdfbackground").size(page.background.file,page.background.page)
+            return PdfBgMod.size(page.background.file,page.background.page)
         end)
         if ok then native={w=w,h=h} end
     end
@@ -51,9 +53,53 @@ local function pageLayout(doc,page,size)
     return native.w,native.h,1/zoom,-ox-left,-oy-top
 end
 
+local function emitStroke(stroke,first,last,scale,dx,dy,write)
+    if stroke.image_data then
+        write(string.format('<image left="%.3f" top="%.3f" right="%.3f" bottom="%.3f">',
+            (stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,(stroke.x_max+dx)*scale,(stroke.y_max+dy)*scale))
+        if not ImageCodecMod then ImageCodecMod=require("imagecodec") end
+        ImageCodecMod.base64(stroke.image_data,write)
+        write('</image>')
+    elseif stroke.text then
+        local family=stroke.font_family=="serif" and "Serif"
+            or (stroke.font_family=="mono" and "Monospace" or "Sans")
+        write(string.format('<text font="%s" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
+            family,(stroke.font_size or 24)*scale,(stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,xml(stroke.text)))
+    elseif last>=first then
+        local pressure=0
+        for i=first,last do
+            local _,_,p=stroke:getPoint(i); pressure=pressure+(p or 1)
+        end
+        local gray=stroke.tool=="highlighter" and markerColor(stroke.tint) or "#000000ff"
+        local width=stroke.width*(.35+.65*pressure/(last-first+1))*scale
+        local fill=""
+        local closed=false
+        if stroke.tool=="highlighter" and stroke.filled then
+            -- Xournal++ fill is an alpha byte; the closed polygon is
+            -- the remaining area, not a path to retrace with the nib.
+            width=0.001
+            fill=' fill="255"'
+            closed=true
+        end
+        write(string.format('<stroke tool="%s" color="%s" width="%.3f"%s>',
+            stroke.tool=="highlighter" and "highlighter" or "pen",gray,width,fill))
+        local fx,fy=stroke:getPoint(first)
+        write(string.format("%.3f %.3f",(fx+dx)*scale,(fy+dy)*scale))
+        for i=first+1,last do
+            local x,y=stroke:getPoint(i)
+            write(string.format(" %.3f %.3f",(x+dx)*scale,(y+dy)*scale))
+        end
+        if closed then
+            write(string.format(" %.3f %.3f",(fx+dx)*scale,(fy+dy)*scale))
+        end
+        write('</stroke>')
+    end
+end
+
 local function documentXML(doc,write)
     local size=doc.page_size or {w=1860,h=2480}
-    assert(require("documentformat").dimensions(size),"Invalid page dimensions")
+    if not DocFormatMod then DocFormatMod=require("documentformat") end
+    assert(DocFormatMod.dimensions(size),"Invalid page dimensions")
     write('<?xml version="1.0" standalone="no"?>\n')
     write('<xournal creator="Notebook for KOReader" fileversion="4">\n')
     write('<title>Xournal++ document - see https://github.com/xournalpp/xournalpp</title>\n')
@@ -68,44 +114,13 @@ local function documentXML(doc,write)
             write(string.format('<background type="solid" color="#ffffffff" style="%s"/>',templateStyle(doc:templateFor(index))))
         end
         write('<layer>')
-        -- Emit each contour directly. Keeping a wrapper for every contour in
-        -- a page-sized list needlessly retained them all until the page ended.
-        local function emitStroke(stroke,first,last)
-            if stroke.image_data then
-                write(string.format('<image left="%.3f" top="%.3f" right="%.3f" bottom="%.3f">',
-                    (stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,(stroke.x_max+dx)*scale,(stroke.y_max+dy)*scale))
-                require("imagecodec").base64(stroke.image_data,write)
-                write('</image>')
-            elseif stroke.text then
-                local family=stroke.font_family=="serif" and "Serif"
-                    or (stroke.font_family=="mono" and "Monospace" or "Sans")
-                write(string.format('<text font="%s" size="%.3f" x="%.3f" y="%.3f" color="#000000ff">%s</text>',
-                    family,(stroke.font_size or 24)*scale,(stroke.x_min+dx)*scale,(stroke.y_min+dy)*scale,xml(stroke.text)))
-            elseif last>=first then
-                local points={}
-                local pressure=0
-                for i=first,last do
-                    local x,y,p=stroke:getPoint(i); pressure=pressure+(p or 1)
-                    points[#points+1]=string.format("%.3f %.3f",(x+dx)*scale,(y+dy)*scale)
-                end
-                local gray=stroke.tool=="highlighter" and markerColor(stroke.tint) or "#000000ff"
-                local width=stroke.width*(.35+.65*pressure/(last-first+1))*scale
-                local fill=""
-                if stroke.tool=="highlighter" and stroke.filled then
-                    -- Xournal++ fill is an alpha byte; the closed polygon is
-                    -- the remaining area, not a path to retrace with the nib.
-                    points[#points+1]=points[1]
-                    width=0.001
-                    fill=' fill="255"'
-                end
-                write(string.format('<stroke tool="%s" color="%s" width="%.3f"%s>%s</stroke>',
-                    stroke.tool=="highlighter" and "highlighter" or "pen",gray,width,fill,table.concat(points," ")))
-            end
-        end
-        for _,stroke in ipairs(page.strokes) do
+        local strokes=page.strokes
+        for si=1,#strokes do
+            local stroke=strokes[si]
             if stroke.marker_parts then
-                for first,last in require("markerarea").parts(stroke) do emitStroke(stroke,first,last) end
-            else emitStroke(stroke,1,stroke.n) end
+                if not MarkerAreaMod then MarkerAreaMod=require("markerarea") end
+                for first,last in MarkerAreaMod.parts(stroke) do emitStroke(stroke,first,last,scale,dx,dy,write) end
+            else emitStroke(stroke,1,stroke.n,scale,dx,dy,write) end
         end
         write('</layer></page>')
     end
@@ -120,13 +135,28 @@ function Xopp.toXOPP(doc,path)
     local file,err=io.open(temporary,"wb")
     if not file then return false,err end
     local ok,pdf_source=pcall(function()
-        local stream=require("gzipwriter").new(function(data) assert(file:write(data)) end)
-        local source=documentXML(doc,function(data) stream:write(data) end)
+        if not GzipWriterMod then GzipWriterMod=require("gzipwriter") end
+        local stream=GzipWriterMod.new(function(data) assert(file:write(data)) end)
+        local buf,n={},0
+        local function flush()
+            if n>0 then
+                stream:write(table.concat(buf))
+                for k=1,n do buf[k]=nil end
+                n=0
+            end
+        end
+        local function write(data)
+            n=n+1; buf[n]=data
+            if n>=256 then flush() end
+        end
+        local source=documentXML(doc,write)
+        flush()
         stream:finish()
         return source
     end)
     local closed,close_err=file:close()
     if not ok or not closed then os.remove(temporary);return false,not ok and pdf_source or close_err end
-    return require("xoppfiles").commit(path,pdf_source)
+    if not XoppFilesMod then XoppFilesMod=require("xoppfiles") end
+    return XoppFilesMod.commit(path,pdf_source)
 end
 return Xopp

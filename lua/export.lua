@@ -21,6 +21,17 @@ local ffi = require("ffi")
 local Renderer = require("renderer")
 local Template = require("template")
 
+local has_libc_alloc = pcall(ffi.cdef, "void *malloc(size_t); void free(void *);")
+local function allocScratch(size)
+    if has_libc_alloc then
+        local raw = ffi.C.malloc(size)
+        if raw ~= nil then
+            return ffi.cast("uint8_t*", raw), raw
+        end
+    end
+    return ffi.new("uint8_t[?]", size), nil
+end
+
 local Export = {}
 
 -- Kindle Scribe screen dimensions used as default target page size.
@@ -54,42 +65,58 @@ PDF specification for RunLengthDecode:
 - 129 to 255: (257 - n) followed by 1 byte repeated n times (2 to 128 bytes).
 - 128: End of Data (EOD) marker.
 --]]
-function Export.encodeRLE(data)
-    local out = {}
-    local len = #data
-    local i = 1
-    local bytes = ffi.cast("const uint8_t*", data)
+local function encodeRLEBytes(bytes, len)
+    -- Worst-case PDF RLE overhead: 1 header byte per 128 literal bytes + EOD.
+    local cap = len + math.floor((len + 127) / 128) + 2
+    local out, raw_ptr = allocScratch(cap)
+    local out_len = 0
+    local i = 0
 
-    while i <= len do
-        local b = bytes[i - 1]
+    while i < len do
+        local b = bytes[i]
         -- Peak lookahead is capped at 128 to match PDF RLE maximum chunk length.
+        local limit = len - i
+        if limit > 128 then limit = 128 end
         local run_len = 1
-        while i + run_len <= len and bytes[i + run_len - 1] == b and run_len < 128 do
+        while run_len < limit and bytes[i + run_len] == b do
             run_len = run_len + 1
         end
 
         if run_len >= 2 then
-            out[#out + 1] = string.char(257 - run_len, b)
+            out[out_len] = 257 - run_len
+            out[out_len + 1] = b
+            out_len = out_len + 2
             i = i + run_len
         else
-            -- Find the whole literal span and copy it as one substring. The
-            -- previous implementation allocated one Lua string per literal
-            -- pixel; a dense Scribe page can contain millions of them.
+            -- Copy each literal run with one C-level memcpy into the output buffer
+            -- instead of allocating per-run Lua strings and table fragments.
             local first = i
             i = i + 1
-            while i <= len and i - first < 128 do
-                if i < len and bytes[i - 1] == bytes[i] then break end
+            local lit_end = first + 128
+            if lit_end > len then lit_end = len end
+            while i < lit_end do
+                if i + 1 < len and bytes[i] == bytes[i + 1] then break end
                 i = i + 1
             end
             local count = i - first
-            out[#out + 1] = string.char(count - 1)
-            out[#out + 1] = data:sub(first, i - 1)
+            out[out_len] = count - 1
+            out_len = out_len + 1
+            ffi.copy(out + out_len, bytes + first, count)
+            out_len = out_len + count
         end
     end
 
     -- PDF RunLengthDecode filter requires byte 128 as the explicit EOD marker.
-    out[#out + 1] = string.char(128)
-    return table.concat(out)
+    out[out_len] = 128
+    local ok, encoded = pcall(ffi.string, out, out_len + 1)
+    if raw_ptr ~= nil then ffi.C.free(raw_ptr) end
+    if not ok then error(encoded) end
+    return encoded
+end
+
+function Export.encodeRLE(data)
+    local len = #data
+    return encodeRLEBytes(ffi.cast("const uint8_t*", data), len)
 end
 
 --[[--
@@ -108,33 +135,32 @@ One byte per pixel also means rows land on byte boundaries by construction, so
 there is no padding to get wrong.
 --]]
 function Export.packPage(bb, w, h)
-    local rows = {}
-
-    --[[
-    A page is 4.6 million pixels, and getPixel does two ffi.casts plus a
-    coordinate transform on every one of them -- far too slow on device.
-    getPixelP hands back a pointer to the start of a row, so the cast is paid
-    once per row instead of twice per pixel.
-
-    It works in physical coordinates and ignores the inverse flag, so it is only
-    safe on an unrotated, uninverted buffer -- which is what the exporter
-    allocates for itself. Anything else falls back to the honest slow path,
-    which is also what the test doubles use.
-    ]]
+    if w <= 0 or h <= 0 then return "" end
     local fast = bb.getPixelP and bb.getType and bb:getType() == Blitbuffer.TYPE_BB8
         and bb.getRotation and bb:getRotation() == 0
         and bb.getInverse and bb:getInverse() == 0
-    for y = 0, h - 1 do
-        if fast then
-            -- Copy only visible bytes: a native row may include stride padding.
-            rows[y + 1] = ffi.string(bb:getPixelP(0, y), w)
-        else
-            local row = {}
-            for x = 0, w - 1 do
-                row[x + 1] = string.char(getGray(bb:getPixel(x, y)))
-            end
-            rows[y + 1] = table.concat(row)
+    if fast then
+        local p0 = ffi.cast("const uint8_t*", bb:getPixelP(0, 0))
+        local stride = h > 1 and tonumber(ffi.cast("const uint8_t*", bb:getPixelP(0, 1)) - p0) or w
+        if stride == w then
+            return ffi.string(p0, w * h)
         end
+        local buf = ffi.new("uint8_t[?]", w * h)
+        local dst = buf
+        for y = 0, h - 1 do
+            ffi.copy(dst, p0 + y * stride, w)
+            dst = dst + w
+        end
+        return ffi.string(buf, w * h)
+    end
+
+    local rows = {}
+    for y = 0, h - 1 do
+        local row = {}
+        for x = 0, w - 1 do
+            row[x + 1] = string.char(getGray(bb:getPixel(x, y)))
+        end
+        rows[y + 1] = table.concat(row)
     end
 
     return table.concat(rows)
