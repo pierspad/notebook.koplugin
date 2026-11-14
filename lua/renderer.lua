@@ -18,8 +18,30 @@ the rectangle I dirtied. Callers use that rectangle to drive a partial refresh.
 local Blitbuffer = require("ffi/blitbuffer")
 local HighlightInk = require("highlightink")
 local GeometryInk = require("geometryink")
+local ImageObject, TextObject, MarkerArea
 
 local Renderer = {}
+
+local function clipAxis(origin, delta, low, high, first_t, last_t)
+    if delta == 0 then
+        return origin >= low and origin <= high, first_t, last_t
+    end
+    local a, b = (low - origin) / delta, (high - origin) / delta
+    if a > b then a, b = b, a end
+    if a > first_t then first_t = a end
+    if b < last_t then last_t = b end
+    return first_t <= last_t, first_t, last_t
+end
+
+local ScaledStroke = {}
+function ScaledStroke:count()
+    return self._src:count()
+end
+function ScaledStroke:getPoint(i)
+    local x, y, p = self._src:getPoint(i)
+    return x * self._scale + self._ox, y * self._scale + self._oy, p
+end
+local ScaledStroke_mt = { __index = ScaledStroke }
 
 -- Pressure below this is treated as a resting touch rather than intent, and
 -- still produces a visible line. Without a floor, the start of every stroke
@@ -33,26 +55,22 @@ local HIGHLIGHT_TINT = 160
 local COLOR_BLACK = Blitbuffer.Color8(0)
 local COLOR_HIGHLIGHT_YELLOW = 0x1FFFF66
 
-local function rgbColor(value)
-    if type(value) ~= "number" or value < 0x1000000 or value > 0x1FFFFFF then return nil end
-    return Blitbuffer.ColorRGB32(math.floor(value / 0x10000) % 0x100,
-        math.floor(value / 0x100) % 0x100, value % 0x100, 0xFF)
-end
-
-local function grayOfRGB(color)
-    return math.floor((4898 * color:getR() + 9618 * color:getG()
-        + 1869 * color:getB()) / 16384 + 0.5)
+local function rgbComponents(value)
+    local r = math.floor(value / 0x10000) % 0x100
+    local g = math.floor(value / 0x100) % 0x100
+    local b = value % 0x100
+    return r, g, b
 end
 
 local function displayColor(value, color_enabled)
-    local color = rgbColor(value)
-    if not color_enabled or not color then
-        if type(value) == "number" and value > 0xFFFFFF then
-            return Blitbuffer.Color8(grayOfRGB(color or rgbColor(value)))
+    if type(value) == "number" and value >= 0x1000000 and value <= 0x1FFFFFF then
+        local r, g, b = rgbComponents(value)
+        if color_enabled then
+            return Blitbuffer.ColorRGB32(r, g, b, 0xFF)
         end
-        return Blitbuffer.Color8(value or 0)
+        return Blitbuffer.Color8(math.floor((4898 * r + 9618 * g + 1869 * b) / 16384 + 0.5))
     end
-    return color
+    return Blitbuffer.Color8(value or 0)
 end
 
 local function highlightColor(stroke,color_enabled)
@@ -111,7 +129,7 @@ Paints the segment between two points and returns the dirtied rectangle.
 @tparam number x1,y1,p1 end point and its pressure
 @treturn number,number,number,number x, y, w, h of the dirtied area
 --]]
-function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled, grain_x, grain_y, exclude_start)
+function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_enabled, grain_x, grain_y, exclude_start, pre_color, pre_rgb)
     local dx, dy = x1 - x0, y1 - y0
     local r0 = Renderer.radiusFor(stroke, p0, dx, dy)
     local r1 = Renderer.radiusFor(stroke, p1, dx, dy)
@@ -124,27 +142,26 @@ function Renderer.drawSegment(bb, stroke, x0, y0, p0, x1, y1, p1, clip, color_en
     local first_t, last_t = 0, 1
     if clip then
         local pad = math.ceil(math.max(r0, r1)) + 2
-        local function axis(origin, delta, low, high)
-            if delta == 0 then return origin >= low and origin <= high end
-            local a, b = (low - origin) / delta, (high - origin) / delta
-            if a > b then a, b = b, a end
-            first_t, last_t = math.max(first_t, a), math.min(last_t, b)
-            return first_t <= last_t
-        end
-        if not axis(x0, dx, -pad, clip.w + pad)
-            or not axis(y0, dy, -pad, clip.h + pad) then
-            return
-        end
+        local ok
+        ok, first_t, last_t = clipAxis(x0, dx, -pad, clip.w + pad, first_t, last_t)
+        if not ok then return end
+        ok, first_t, last_t = clipAxis(y0, dy, -pad, clip.h + pad, first_t, last_t)
+        if not ok then return end
     end
 
     local is_highlight = stroke.tool == "highlighter"
-    local color = displayColor(stroke.color, color_enabled)
-    local is_rgb_ink = color_enabled and type(stroke.color) == "number"
-        and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF
-    if is_highlight then
-        color = highlightColor(stroke,color_enabled)
-    elseif stroke.color and stroke.color ~= 0 then
-        color = displayColor(stroke.color, color_enabled)
+    local is_rgb_ink = pre_rgb
+    local color = pre_color
+    if not color then
+        local sc = stroke.color
+        is_rgb_ink = color_enabled and type(sc) == "number"
+            and sc >= 0x1000000 and sc <= 0x1FFFFFF
+        color = is_highlight and highlightColor(stroke, color_enabled)
+            or displayColor(sc, color_enabled)
+    elseif is_rgb_ink == nil then
+        local sc = stroke.color
+        is_rgb_ink = color_enabled and type(sc) == "number"
+            and sc >= 0x1000000 and sc <= 0x1FFFFFF
     end
 
     local is_lasso = stroke.tool == "lasso"
@@ -243,15 +260,22 @@ length rasterised, and stamping is expensive enough that the difference is the
 difference between a rub that keeps up with the hand and one that does not.
 --]]
 function Renderer.drawStroke(bb, stroke, clip, color_enabled)
-    if stroke.image_data then return require("imageobject").draw(bb,stroke,1,0,0,clip) end
-    if stroke.text then return require("textobject").draw(bb,stroke,1,0,0,clip) end
+    if stroke.image_data then
+        ImageObject = ImageObject or require("imageobject")
+        return ImageObject.draw(bb,stroke,1,0,0,clip)
+    end
+    if stroke.text then
+        TextObject = TextObject or require("textobject")
+        return TextObject.draw(bb,stroke,1,0,0,clip)
+    end
     local n = stroke:count()
     if n == 0 then return end
 
     if stroke.tool == "highlighter" and stroke.filled then
         local color=highlightColor(stroke,color_enabled)
-        for _,contour in ipairs(require("markerarea").contours(stroke)) do
-            local first,last,x0,y0,x1,y1=unpack(contour)
+        MarkerArea = MarkerArea or require("markerarea")
+        for _,contour in ipairs(MarkerArea.contours(stroke)) do
+            local first,last,x0,y0,x1,y1=contour[1],contour[2],contour[3],contour[4],contour[5],contour[6]
             if not clip or (x1+1e-8>=clip.x and y1+1e-8>=clip.y
                 and x0-1e-8<clip.x+clip.w and y0-1e-8<clip.y+clip.h) then
                 local points={}
@@ -265,20 +289,24 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
         displayColor(stroke.color or 0, color_enabled), color_enabled) then return end
     local ox, oy = 0, 0
     local target = bb
+    local bounds
     if clip then
         ox, oy = math.max(0, math.floor(clip.x)), math.max(0, math.floor(clip.y))
         local w = math.min(bb:getWidth(), math.ceil(clip.x + clip.w)) - ox
         local h = math.min(bb:getHeight(), math.ceil(clip.y + clip.h)) - oy
         if w <= 0 or h <= 0 then return end
         target = bb:viewport(ox, oy, w, h)
+        bounds = { w = target:getWidth(), h = target:getHeight() }
     end
-    local bounds = clip and { w = target:getWidth(), h = target:getHeight() }
+    local gx = ox + (stroke.grain_x or 0)
+    local gy = oy + (stroke.grain_y or 0)
+    local is_hl = stroke.tool == "highlighter"
+    local sc = stroke.color
+    local pre_rgb = color_enabled and type(sc) == "number"
+        and sc >= 0x1000000 and sc <= 0x1FFFFFF
+    local pre_color = is_hl and highlightColor(stroke, color_enabled)
+        or displayColor(sc, color_enabled)
     local marker_started = false
-    local function segment(x0, y0, p0, x1, y1, p1)
-        Renderer.drawSegment(target, stroke, x0 - ox, y0 - oy, p0,
-            x1 - ox, y1 - oy, p1, bounds, color_enabled, ox + (stroke.grain_x or 0), oy + (stroke.grain_y or 0), marker_started)
-        marker_started = stroke.tool == "highlighter"
-    end
 
     -- Short strokes have no index and are drawn whole: their bounding box has
     -- already said they are near the region, and there is nothing left to skip.
@@ -293,7 +321,9 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
                 local px, py, pp = stroke:getPoint(c[1])
                 for i = c[1] + 1, c[2] do
                     local x, y, p = stroke:getPoint(i)
-                    segment(px, py, pp, x, y, p)
+                    Renderer.drawSegment(target, stroke, px - ox, py - oy, pp,
+                        x - ox, y - oy, p, bounds, color_enabled, gx, gy, marker_started, pre_color, pre_rgb)
+                    marker_started = is_hl
                     px, py, pp = x, y, p
                 end
             end
@@ -304,13 +334,11 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
     if n == 1 then
         local x, y, p = stroke:getPoint(1)
         local r = Renderer.radiusFor(stroke, p)
-        if stroke.tool == "highlighter" then
-            HighlightInk.stamp(target,x-ox,y-oy,r,highlightColor(stroke,color_enabled))
+        if is_hl then
+            HighlightInk.stamp(target,x-ox,y-oy,r,pre_color)
         else
             PenInk.draw(target,x-ox,y-oy,r,x-ox,y-oy,r,
-                displayColor(stroke.color,color_enabled),
-                color_enabled and type(stroke.color)=="number" and stroke.color>=0x1000000,
-                stroke.pen_style=="pencil",ox+(stroke.grain_x or 0),oy+(stroke.grain_y or 0))
+                pre_color,pre_rgb,stroke.pen_style=="pencil",gx,gy)
         end
         return
     end
@@ -318,7 +346,9 @@ function Renderer.drawStroke(bb, stroke, clip, color_enabled)
     local px, py, pp = stroke:getPoint(1)
     for i = 2, n do
         local x, y, p = stroke:getPoint(i)
-        segment(px, py, pp, x, y, p)
+        Renderer.drawSegment(target, stroke, px - ox, py - oy, pp,
+            x - ox, y - oy, p, bounds, color_enabled, gx, gy, marker_started, pre_color, pre_rgb)
+        marker_started = is_hl
         px, py, pp = x, y, p
     end
 end
@@ -332,45 +362,53 @@ touching a few thousand pixels and four and a half million -- which matters when
 a gallery has to produce one of these per notebook.
 --]]
 function Renderer.drawPage(bb, page, scale, ox, oy, color_enabled)
-    if #page.strokes == 0 then return end
+    local strokes = page.strokes
+    if #strokes == 0 then return end
     ox, oy = ox or 0, oy or 0
     if (not scale or scale == 1) and ox == 0 and oy == 0 then
-        for _, stroke in ipairs(page.strokes) do
-            Renderer.drawStroke(bb, stroke, nil, color_enabled)
+        for i = 1, #strokes do
+            Renderer.drawStroke(bb, strokes[i], nil, color_enabled)
         end
         return
     end
     scale = scale or 1
 
-    local clip = {x=0, y=0, w=bb:getWidth(), h=bb:getHeight()}
-    for _, stroke in ipairs(page.strokes) do
+    local w, h = bb:getWidth(), bb:getHeight()
+    local clip = {x=0, y=0, w=w, h=h}
+    local scaled = setmetatable({ _scale = scale, _ox = ox, _oy = oy, grain_x = -ox, grain_y = -oy }, ScaledStroke_mt)
+    for i = 1, #strokes do
+        local stroke = strokes[i]
         local pad = math.ceil(stroke.width * scale) + 2
-        if stroke.x_max*scale+ox+pad >= 0 and stroke.y_max*scale+oy+pad >= 0
-            and stroke.x_min*scale+ox-pad < clip.w and stroke.y_min*scale+oy-pad < clip.h then
+        local x_min = stroke.x_min * scale + ox
+        local y_min = stroke.y_min * scale + oy
+        local x_max = stroke.x_max * scale + ox
+        local y_max = stroke.y_max * scale + oy
+        if x_max+pad >= 0 and y_max+pad >= 0 and x_min-pad < w and y_min-pad < h then
             if stroke.image_data then
-                require("imageobject").draw(bb,stroke,scale,ox,oy,clip)
+                ImageObject = ImageObject or require("imageobject")
+                ImageObject.draw(bb,stroke,scale,ox,oy,clip)
             elseif stroke.text then
-                require("textobject").draw(bb, stroke, scale, ox, oy, clip)
+                TextObject = TextObject or require("textobject")
+                TextObject.draw(bb, stroke, scale, ox, oy, clip)
             else
-                local scaled = {
-                    shape_kind=stroke.shape_kind, filled=stroke.filled, marker_parts=stroke.marker_parts,
-                    pen_style=stroke.pen_style, tool=stroke.tool,
-                    color=stroke.color, tint=stroke.tint,
-                    grain_x=-ox, grain_y=-oy,
-                    width=math.max(1, stroke.width*scale),
-                    x_min=stroke.x_min*scale+ox, y_min=stroke.y_min*scale+oy,
-                    x_max=stroke.x_max*scale+ox, y_max=stroke.y_max*scale+oy,
-                    count=function() return stroke:count() end,
-                    getPoint=function(_, i)
-                        local x, y, p = stroke:getPoint(i)
-                        return x*scale+ox, y*scale+oy, p
-                    end,
-                }
+                scaled._src = stroke
+                scaled.shape_kind = stroke.shape_kind
+                scaled.filled = stroke.filled
+                scaled.marker_parts = stroke.marker_parts
+                scaled.pen_style = stroke.pen_style
+                scaled.tool = stroke.tool
+                scaled.color = stroke.color
+                scaled.tint = stroke.tint
+                scaled.width = math.max(1, stroke.width * scale)
+                scaled.x_min, scaled.y_min = x_min, y_min
+                scaled.x_max, scaled.y_max = x_max, y_max
+                scaled.accum_len = nil
+                scaled.contour_bounds = nil
                 -- A stroke wholly inside the target needs no translated viewport
                 -- or per-segment clipping closures. Keep the conservative brush
                 -- margin so edge strokes retain the original clipping path.
-                local contained = scaled.x_min-pad >= 0 and scaled.y_min-pad >= 0
-                    and scaled.x_max+pad < clip.w and scaled.y_max+pad < clip.h
+                local contained = x_min-pad >= 0 and y_min-pad >= 0
+                    and x_max+pad < w and y_max+pad < h
                 Renderer.drawStroke(bb, scaled, not contained and clip or nil, color_enabled)
             end
         end

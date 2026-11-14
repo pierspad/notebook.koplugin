@@ -2,12 +2,14 @@
 -- Owns full-page rendering and the shared region repaint path.
 local Blitbuffer = require("ffi/blitbuffer")
 local Device = require("device")
+local PaperOptions = require("paperoptions")
 local Rect = require("rect")
 local Renderer = require("renderer")
 local Template = require("template")
 
 local Screen = Device.screen
 local CanvasRender = {}
+local PdfBackground
 
 local function bufferSize(bb)
     return bb.getWidth and bb:getWidth() or 0,
@@ -45,7 +47,7 @@ local function backgroundKey(self, page, bb, bpp)
     local content = self.content
     local w, h = bufferSize(bb)
     return table.concat({ tostring(page), self.document:templateFor() or "",
-        require("paperoptions").key(self.document.paper_options),
+        PaperOptions.key(self.document.paper_options),
         background and background.file or "", background and background.page or "",
         content.x, content.y, content.w, content.h, w, h, bpp }, "|")
 end
@@ -71,11 +73,11 @@ function CanvasRender:_repaintRegion(x, y, w, h, defer_refresh)
     local page = self.document:getPage()
     local background_bounds = self.background_cache_bounds
     local valid_background = self.background_cache
-        and self.background_cache_key == backgroundKey(self, page, Screen.bb, bufferBPP(Screen.bb))
         and background_bounds
         and x >= background_bounds.x and y >= background_bounds.y
         and x + w <= background_bounds.x + background_bounds.w
         and y + h <= background_bounds.y + background_bounds.h
+        and self.background_cache_key == backgroundKey(self, page, Screen.bb, bufferBPP(Screen.bb))
     if valid_background then
         Screen.bb:blitFrom(self.background_cache, x, y,
             x - background_bounds.x, y - background_bounds.y, w, h)
@@ -85,19 +87,25 @@ function CanvasRender:_repaintRegion(x, y, w, h, defer_refresh)
     end
     -- Rejected first by bounding box, then per run of points inside the stroke:
     -- a line that merely crosses this region is not rasterised end to end.
-    for _, stroke in ipairs(page.strokes) do
-        local sx, sy, sw, sh = stroke:getBounds()
-        if stroke ~= self.hidden_stroke
-            and not (self.shape_gesture and stroke == self.shape_gesture.original)
-            and not (self.transform_gesture and stroke == self.transform_gesture.original)
-            and sx < x + w and sx + sw > x and sy < y + h and sy + sh > y then
-            Renderer.drawStroke(Screen.bb, stroke, clip, Screen.isColorEnabled and Screen:isColorEnabled())
+    local color_enabled = Screen.isColorEnabled and Screen:isColorEnabled() or false
+    local x2, y2 = x + w, y + h
+    local hidden = self.hidden_stroke
+    local shape_orig = self.shape_gesture and self.shape_gesture.original
+    local transform_orig = self.transform_gesture and self.transform_gesture.original
+    local strokes = page.strokes
+    for i = 1, #strokes do
+        local stroke = strokes[i]
+        if stroke ~= hidden and stroke ~= shape_orig and stroke ~= transform_orig then
+            local sx, sy, sw, sh = stroke:getBounds()
+            if sx < x2 and sx + sw > x and sy < y2 and sy + sh > y then
+                Renderer.drawStroke(Screen.bb, stroke, clip, color_enabled)
+            end
         end
     end
     if self.text_preview then
         local sx,sy,sw,sh=self.text_preview:getBounds()
-        if sx < x+w and sx+sw > x and sy < y+h and sy+sh > y then
-            Renderer.drawStroke(Screen.bb,self.text_preview,clip, Screen.isColorEnabled and Screen:isColorEnabled())
+        if sx < x2 and sx+sw > x and sy < y2 and sy+sh > y then
+            Renderer.drawStroke(Screen.bb,self.text_preview,clip, color_enabled)
         end
     end
     if not defer_refresh then
@@ -163,8 +171,12 @@ function CanvasRender:paintTo(bb, x, y)
         table.insert(self.page_render_cache,1,cached)
         return
     end
-    for _,stroke in ipairs(self:_visiblePage().strokes) do
-        if stroke ~= self.hidden_stroke then Renderer.drawStroke(bb,stroke,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
+    local color_enabled = Screen.isColorEnabled and Screen:isColorEnabled() or false
+    local visible_strokes = self:_visiblePage().strokes
+    local hidden = self.hidden_stroke
+    for i = 1, #visible_strokes do
+        local stroke = visible_strokes[i]
+        if stroke ~= hidden then Renderer.drawStroke(bb, stroke, nil, color_enabled) end
     end
     if stable then
         for i = #self.page_render_cache, 1, -1 do
@@ -180,8 +192,8 @@ function CanvasRender:paintTo(bb, x, y)
         })
     end
     local preview=self.transform_gesture and self.transform_gesture.preview or self.stroke
-    if preview then Renderer.drawStroke(bb,preview,nil,Screen.isColorEnabled and Screen:isColorEnabled()) end
-    if self.text_preview then Renderer.drawStroke(bb,self.text_preview,nil, Screen.isColorEnabled and Screen:isColorEnabled()) end
+    if preview then Renderer.drawStroke(bb,preview,nil,color_enabled) end
+    if self.text_preview then Renderer.drawStroke(bb,self.text_preview,nil,color_enabled) end
 end
 
 --[[--
@@ -194,7 +206,9 @@ out a word written across a ruled line leaves the line untouched.
 --]]
 function CanvasRender:_drawTemplate(bb, clip)
     local background=self.document:getPage().background
-    if background then require("pdfbackground").drawPreview(bb,background,self.content,clip)
+    if background then
+        if not PdfBackground then PdfBackground=require("pdfbackground") end
+        PdfBackground.drawPreview(bb,background,self.content,clip)
     else Template.draw(bb, self.document:templateFor(), self.content, 1, clip, self.document.paper_options) end
 end
 
