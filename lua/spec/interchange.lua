@@ -25,7 +25,8 @@ assert(clone.text==text.text and clone.font_size==26 and clone.font_family=='mon
 local doc={pages={{strokes={text,ink,marker}}},page_size={w=1000,h=1400},templateFor=function() return 'grid' end}
 local path=temporary()
 assert(Xopp.toXOPP(doc,path))
-assert(os.execute('gzip -t '..path)==0,'XOPP is not valid gzip')
+local gz_ok=os.execute('gzip -t '..path)
+assert(gz_ok==0 or gz_ok==true,'XOPP is not valid gzip')
 local pipe=assert(io.popen('gzip -dc '..path,'r')); local xml=pipe:read('*a'); pipe:close()
 assert(xml:match('<xournal') and xml:match('<stroke') and xml:match('<text'),'XOPP objects missing')
 assert(xml:match('font="Monospace"'),'XOPP text family missing')
@@ -111,7 +112,8 @@ for i=1,#payload do
 end
 assert(compressed:sub(at)==u32(bit.bnot(crc))..u32(#payload),'CRC32/ISIZE changed')
 assert(payload:find('Caffè &lt; &amp; &gt; &quot;',1,true),'large Unicode text changed')
-assert(os.execute('gzip -t '..large_path)==0,'large XOPP is not valid gzip')
+local gz_large_ok=os.execute('gzip -t '..large_path)
+assert(gz_large_ok==0 or gz_large_ok==true,'large XOPP is not valid gzip')
 os.remove(large_path)
 assert(shifts<=#payload+4096,'CRC checksum repeats eight bit steps for every byte')
 print('interchange XOPP and editable text: metadata, PDF coordinates, large gzip blocks and CRC32 passed')

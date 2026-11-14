@@ -1471,7 +1471,8 @@ test("sharing an identically named notebook and PDFs preserves every file", func
     local stagingDir, cachedExport, beginPDF = Share.stagingDir, Share.cachedExport, Export.beginPDF
     local dir = os.tmpname()
     os.remove(dir)
-    assert(os.execute(string.format("mkdir %q", dir)) == 0)
+    local mk = os.execute(string.format("mkdir %q", dir))
+    assert(mk == 0 or mk == true)
     local outputs = {}
     local source, other = dir .. "/original.pdf", dir .. "/other.pdf"
     local function write(path, bytes)
@@ -1518,7 +1519,8 @@ test("sharing XOPP files protects companion PDFs and case-folded output names", 
     local stagingDir = Share.stagingDir
     local dir = os.tmpname()
     os.remove(dir)
-    assert(os.execute(string.format("mkdir %q", dir)) == 0)
+    local mk = os.execute(string.format("mkdir %q", dir))
+    assert(mk == 0 or mk == true)
     local source, pdf, other = dir .. "/source.xopp", dir .. "/source.pdf", dir .. "/other.xopp"
     local function write(path, bytes)
         local f = assert(io.open(path, "wb")); assert(f:write(bytes)); assert(f:close())
