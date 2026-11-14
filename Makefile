@@ -25,7 +25,7 @@ ZIP     := $(BUILD)/$(PLUGIN)-$(VERSION).zip
 # glob would run those as though they were tests.
 SUITES := emulatorstartup inputchain mousedrawing svg run pages eraser eraserinteraction palm safe i18n gallery shape shapesnap highlightink markerarea geometryink lasso lassoedit migration tuning tuningdock tuninggate export_polish gallery_polish loader tools interchange zoom zoomrefresh zoompan suspend bridge_lifecycle launcher notebookactions paperoptions images imagecodec diagnostics regressions interaction liveink refreshpolicy bulkdelete textlayout raster templateclip performance zoomhistory storage persistence thumbnailcache gallerysharing sharecache xoppstorage gzipwriter updater renderfast pageselection pdfcache
 
-.PHONY: all test lint verify translations-check package check-package ci clean install-hooks deploy version translations
+.PHONY: all test lint verify translations-check package check-package ci clean install-hooks deploy version translations jit-hygiene
 
 all: verify package
 
@@ -52,7 +52,11 @@ translations-check:
 	@command -v msgfmt >/dev/null 2>&1 || { echo "msgfmt is required to check translations" >&2; exit 1; }
 	@for catalogue in lua/locale/*.po; do msgfmt --check -o /dev/null "$$catalogue" || exit 1; done
 
-verify: lint test translations-check benchmark-tests
+verify: lint test translations-check benchmark-tests jit-hygiene
+
+.PHONY: jit-hygiene
+jit-hygiene:
+	@luajit tools/check-jit-hygiene.lua lua
 
 .PHONY: test-native-features
 test-native-features:
