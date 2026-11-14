@@ -8,17 +8,63 @@ local Rect = require("rect")
 local Tuning = require("tuning")
 
 local Lasso = {}
+local MarkerArea
 
-local function polygonBounds(poly_pts)
+local function getMarkerArea()
+    if not MarkerArea then MarkerArea = require("markerarea") end
+    return MarkerArea
+end
+
+-- Module-level proxy methods avoid creating per-contour closures (which emit
+-- LuaJIT UCLO bytecodes and force interpreter fallbacks across the module).
+local MarkerContour = {}
+function MarkerContour:count()
+    return self._count
+end
+function MarkerContour:getPoint(i)
+    return self._stroke:getPoint(i == self._count and self._first or self._first + i - 1)
+end
+local MarkerContour_mt = {
+    __index = function(self, k)
+        return MarkerContour[k] or self._stroke[k]
+    end
+}
+
+local function compilePolygon(poly_pts)
+    local n = #poly_pts
+    local vx, vy = {}, {}
     local lx0, ly0 = math.huge, math.huge
     local lx1, ly1 = -math.huge, -math.huge
-    for _, p in ipairs(poly_pts) do
-        if p.x < lx0 then lx0 = p.x end
-        if p.y < ly0 then ly0 = p.y end
-        if p.x > lx1 then lx1 = p.x end
-        if p.y > ly1 then ly1 = p.y end
+    for i = 1, n do
+        local p = poly_pts[i]
+        local x, y = p.x, p.y
+        vx[i], vy[i] = x, y
+        if x < lx0 then lx0 = x end
+        if y < ly0 then ly0 = y end
+        if x > lx1 then lx1 = x end
+        if y > ly1 then ly1 = y end
     end
-    return { lx0, ly0, lx1, ly1 }
+    return { n = n, vx = vx, vy = vy, lx0 = lx0, ly0 = ly0, lx1 = lx1, ly1 = ly1 }
+end
+
+local function pointInFlatPolygon(px, py, poly)
+    local n = poly.n
+    if n < 3 then return false end
+    if px < poly.lx0 or px > poly.lx1 or py < poly.ly0 or py > poly.ly1 then
+        return false
+    end
+    local vx, vy = poly.vx, poly.vy
+    local inside = false
+    local xj, yj = vx[n], vy[n]
+    for i = 1, n do
+        local xi, yi = vx[i], vy[i]
+        if ((yi > py) ~= (yj > py)) and
+           (px < (xj - xi) * (py - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        xj, yj = xi, yi
+    end
+    return inside
 end
 
 --- Point-in-polygon ray-casting test.
@@ -51,7 +97,7 @@ concave -- an L, an arc, a large circle, a long diagonal -- it lies in the empty
 space the stroke encloses rather than on the ink. A small loop drawn in the gap
 inside an L therefore selected the L without ever having touched it.
 --]]
-local function strokeSelected(stroke, poly_pts, bounds)
+local function strokeSelected(stroke, poly_pts, poly)
     if not stroke or stroke:count() == 0 then return false end
 
     --[[
@@ -63,36 +109,38 @@ local function strokeSelected(stroke, poly_pts, bounds)
     strokes the loop is nowhere near, which on a written page is nearly all of
     them, without measuring anything.
     ]]
-    bounds = bounds or polygonBounds(poly_pts)
-    local lx0, ly0, lx1, ly1 = unpack(bounds)
+    poly = poly or compilePolygon(poly_pts)
+    local lx0, ly0, lx1, ly1 = poly.lx0, poly.ly0, poly.lx1, poly.ly1
     local bx, by, bw, bh = stroke:getBounds()
     if lx1 < bx or lx0 > bx + bw or ly1 < by or ly0 > by + bh then
         return false
     end
 
     if stroke.image_data then
-        for _,point in ipairs(poly_pts) do
-            if point.x>=stroke.x_min and point.x<=stroke.x_max
-                and point.y>=stroke.y_min and point.y<=stroke.y_max then return true end
+        local vx, vy, pn = poly.vx, poly.vy, poly.n
+        for i = 1, pn do
+            local x, y = vx[i], vy[i]
+            if x >= stroke.x_min and x <= stroke.x_max
+                and y >= stroke.y_min and y <= stroke.y_max then return true end
         end
     end
     if stroke.tool == "highlighter" and stroke.filled then
-        for _,point in ipairs(poly_pts) do
-            if stroke:hitTest(point.x,point.y,0) then return true end
+        local vx, vy, pn = poly.vx, poly.vy, poly.n
+        for i = 1, pn do
+            if stroke:hitTest(vx[i], vy[i], 0) then return true end
         end
-        for first,last in require("markerarea").parts(stroke) do
-            local count=last-first+2
-            local contour=setmetatable({tool="pen",count=function() return count end,
-                getPoint=function(_,i) return stroke:getPoint(i==count and first or first+i-1) end},
-                {__index=stroke})
-            if strokeSelected(contour,poly_pts,bounds) then return true end
+        local contour = setmetatable({ tool = "pen", _stroke = stroke, _first = 1, _count = 0 }, MarkerContour_mt)
+        for first, last in getMarkerArea().parts(stroke) do
+            contour._first = first
+            contour._count = last - first + 2
+            if strokeSelected(contour, poly_pts, poly) then return true end
         end
         return false
     end
     local spacing = Tuning.lasso_sample_spacing
     local count = stroke:count()
     local px, py = stroke:getPoint(1)
-    if Lasso.pointInPolygon(px, py, poly_pts) then return true end
+    if pointInFlatPolygon(px, py, poly) then return true end
 
     --[[
     Walked along the ink, not from one recorded point to the next.
@@ -115,13 +163,19 @@ local function strokeSelected(stroke, poly_pts, bounds)
         local dx, dy = x - px, y - py
         local len = math.sqrt(dx * dx + dy * dy)
         if len > 0 then
-            local at = spacing - since
-            while at <= len do
-                local t = at / len
-                if Lasso.pointInPolygon(px + dx * t, py + dy * t, poly_pts) then
-                    return true
+            local sx0 = px < x and px or x
+            local sx1 = px > x and px or x
+            local sy0 = py < y and py or y
+            local sy1 = py > y and py or y
+            if sx1 >= lx0 and sx0 <= lx1 and sy1 >= ly0 and sy0 <= ly1 then
+                local at = spacing - since
+                while at <= len do
+                    local t = at / len
+                    if pointInFlatPolygon(px + dx * t, py + dy * t, poly) then
+                        return true
+                    end
+                    at = at + spacing
                 end
-                at = at + spacing
             end
             since = (since + len) % spacing
         end
@@ -129,7 +183,7 @@ local function strokeSelected(stroke, poly_pts, bounds)
     end
 
     -- The far end always counts, however short the last step to it was.
-    return Lasso.pointInPolygon(px, py, poly_pts)
+    return pointInFlatPolygon(px, py, poly)
 end
 
 function Lasso.isStrokeSelected(stroke, poly_pts)
@@ -141,10 +195,10 @@ function Lasso.findSelectedStrokes(page_strokes, lasso_pts)
     local selected = {}
     if #page_strokes == 0 then return selected end
     -- One immutable loop serves the whole query; sampling stays identical.
-    local bounds = polygonBounds(lasso_pts)
+    local poly = compilePolygon(lasso_pts)
     for _, stroke in ipairs(page_strokes) do
-        if strokeSelected(stroke, lasso_pts, bounds) then
-            table.insert(selected, stroke)
+        if strokeSelected(stroke, lasso_pts, poly) then
+            selected[#selected + 1] = stroke
         end
     end
     return selected

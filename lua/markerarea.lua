@@ -2,15 +2,21 @@
 -- existing filled-stroke representation: storage, cloning and undo need no
 -- raster masks or new file format. Coordinates remain in page space.
 local Area = {}
+local StrokeMod, RendererMod
 
 local function cross(a,b,c)
     return (b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1])
 end
 
+local function hullCmp(a,b)
+    return a[1]<b[1] or (a[1]==b[1] and a[2]<b[2])
+end
+
 local function hull(points)
-    table.sort(points,function(a,b) return a[1]<b[1] or (a[1]==b[1] and a[2]<b[2]) end)
+    table.sort(points,hullCmp)
     local out={}
-    for _,p in ipairs(points) do
+    for i=1,#points do
+        local p=points[i]
         while #out>=2 and cross(out[#out-1],out[#out],p)<=0 do out[#out]=nil end
         out[#out+1]=p
     end
@@ -25,27 +31,31 @@ local function hull(points)
 end
 
 function Area.sweep(x0,y0,r0,x1,y1,r1)
-    local points={}
-    for _,v in ipairs({{x0,y0,r0},{x1,y1,r1}}) do
-        for _,dx in ipairs({-1,1}) do for _,dy in ipairs({-1,1}) do
-            points[#points+1]={v[1]+dx*v[3],v[2]+dy*v[3]}
-        end end
-    end
-    return hull(points)
+    return hull({
+        {x0-r0,y0-r0},{x0-r0,y0+r0},{x0+r0,y0-r0},{x0+r0,y0+r0},
+        {x1-r1,y1-r1},{x1-r1,y1+r1},{x1+r1,y1-r1},{x1+r1,y1+r1},
+    })
 end
 
 local subtract=require("markerclip").subtract
 
+-- Circumscribed 24-gon unit directions: no un-erased slivers inside the
+-- circular nib. Maximum overcut is r*(sec(pi/24)-1), under 0.35 px at r=40.
+local CAP_SCALE = 1 / math.cos(math.pi / 24)
+local CAP_COS, CAP_SIN = {}, {}
+for i = 0, 23 do
+    local a = (i + 0.5) * math.pi / 12
+    CAP_COS[i + 1] = math.cos(a)
+    CAP_SIN[i + 1] = math.sin(a)
+end
+
 local function capsule(x0,y0,x1,y1,r)
     local points={}
-    -- Circumscribed 24-gon: no un-erased slivers inside the circular nib.
-    -- Maximum overcut is r*(sec(pi/24)-1), under 0.35 px at r=40.
-    local radius=r/math.cos(math.pi/24)
-    for _,v in ipairs({{x0,y0},{x1,y1}}) do
-        for i=0,23 do
-            local a=(i+.5)*math.pi/12
-            points[#points+1]={v[1]+radius*math.cos(a),v[2]+radius*math.sin(a)}
-        end
+    local radius=r*CAP_SCALE
+    for i=1,24 do
+        local dx,dy=radius*CAP_COS[i],radius*CAP_SIN[i]
+        points[i]={x0+dx,y0+dy}
+        points[24+i]={x1+dx,y1+dy}
     end
     return hull(points)
 end
@@ -83,6 +93,62 @@ function Area.contours(stroke)
     return contours
 end
 
+local function keepRange(st,first,last)
+    local Stroke=StrokeMod
+    local stroke=st.stroke
+    local untouched=st.untouched
+    if not untouched then
+        st.area_fragment=nil
+        untouched=Stroke:new{tool=stroke.tool,width=stroke.width,color=stroke.color,tint=stroke.tint,
+            pen_style=stroke.pen_style}
+        untouched:appendRange(stroke,first,first)
+        st.untouched=untouched
+        st.fragments[#st.fragments+1]=untouched
+    end
+    if last>first then untouched:appendRange(stroke,first+1,last) end
+end
+
+local function cutPolygon(st,cutters,points,first,last,force_area)
+    local Stroke=StrokeMod
+    local stroke=st.stroke
+    local polygons={points}
+    local hit=false
+    for ci=1,#cutters do
+        local cutter=cutters[ci]
+        local next_polygons={}
+        for pi=1,#polygons do
+            local pieces,touched=subtract(polygons[pi],cutter)
+            hit=hit or touched
+            for ki=1,#pieces do next_polygons[#next_polygons+1]=pieces[ki] end
+        end
+        polygons=next_polygons
+    end
+    if not hit and not stroke.filled and not force_area then
+        -- Preserve untouched runs as compact original centreline strokes.
+        -- A small dab must not turn a thousand-point marker into a
+        -- thousand independent polygon objects.
+        keepRange(st,first,last)
+        return
+    end
+    st.changed=st.changed or hit
+    st.untouched=nil
+    local area_fragment=st.area_fragment
+    for pi=1,#polygons do
+        local polygon=polygons[pi]
+        if not area_fragment then
+            area_fragment=Stroke:new{tool="highlighter",width=stroke.width,
+                color=stroke.color,tint=stroke.tint,filled=true,marker_parts={}}
+            st.area_fragment=area_fragment
+            st.fragments[#st.fragments+1]=area_fragment
+        end
+        for ki=1,#polygon do
+            local p=polygon[ki]
+            area_fragment:addPoint(p[1],p[2],1)
+        end
+        area_fragment.marker_parts[#area_fragment.marker_parts+1]=area_fragment.n
+    end
+end
+
 function Area.erase(stroke,path,r,context)
     if #path<2 or r<=0 or stroke.n==0 then return nil end
     local x0,y0,x1,y1=stroke:getBounds()
@@ -93,7 +159,7 @@ function Area.erase(stroke,path,r,context)
         px1,py1=math.max(px1,path[i]+r),math.max(py1,path[i+1]+r)
     end
     if px1<x0 or px0>x1 or py1<y0 or py0>y1 then return nil end
-    local extra=r*(1/math.cos(math.pi/24)-1)
+    local extra=r*(CAP_SCALE-1)
     -- Cutters are immutable during clipping. All markers in this display
     -- batch share them, instead of rebuilding the same 24-gon per stroke.
     local cutters=context and context.cutters
@@ -104,69 +170,30 @@ function Area.erase(stroke,path,r,context)
         end
         if context then context.cutters=cutters end
     end
-    local Stroke=require("stroke")
-    local Renderer=require("renderer")
-    local changed=false
-    local fragments={}
-    local untouched,area_fragment
-    local function keep(first,last)
-        if not untouched then
-            area_fragment=nil
-            untouched=Stroke:new{tool=stroke.tool,width=stroke.width,color=stroke.color,tint=stroke.tint,
-                pen_style=stroke.pen_style}
-            untouched:appendRange(stroke,first,first)
-            fragments[#fragments+1]=untouched
-        end
-        if last>first then untouched:appendRange(stroke,first+1,last) end
-    end
-    local function cut(points,first,last,force_area)
-        local polygons={points}
-        local hit=false
-        for _,cutter in ipairs(cutters) do
-            local next_polygons={}
-            for _,polygon in ipairs(polygons) do
-                local pieces,touched=subtract(polygon,cutter)
-                hit=hit or touched
-                for _,piece in ipairs(pieces) do next_polygons[#next_polygons+1]=piece end
-            end
-            polygons=next_polygons
-        end
-        if not hit and not stroke.filled and not force_area then
-            -- Preserve untouched runs as compact original centreline strokes.
-            -- A small dab must not turn a thousand-point marker into a
-            -- thousand independent polygon objects.
-            keep(first,last)
-            return
-        end
-        changed=changed or hit
-        untouched=nil
-        for _,polygon in ipairs(polygons) do
-            if not area_fragment then
-                area_fragment=Stroke:new{tool="highlighter",width=stroke.width,
-                    color=stroke.color,tint=stroke.tint,filled=true,marker_parts={}}
-                fragments[#fragments+1]=area_fragment
-            end
-            for _,p in ipairs(polygon) do area_fragment:addPoint(p[1],p[2],1) end
-            area_fragment.marker_parts[#area_fragment.marker_parts+1]=area_fragment.n
-        end
-    end
+    if not StrokeMod then StrokeMod=require("stroke") end
+    if not RendererMod then RendererMod=require("renderer") end
+    local Renderer=RendererMod
+    local st={stroke=stroke,changed=false,fragments={},untouched=nil,area_fragment=nil}
     if stroke.filled then
-        for _,contour in ipairs(Area.contours(stroke)) do
-            local first,last,minx,miny,maxx,maxy=unpack(contour)
+        local contours=Area.contours(stroke)
+        for ci=1,#contours do
+            local first,last,minx,miny,maxx,maxy=unpack(contours[ci])
             if maxx<px0-extra or minx>px1+extra or maxy<py0-extra or miny>py1+extra then
                 -- Copy distant contours directly from the flat point array.
                 -- Avoid polygon tables and clipping for every prior cut.
+                local area_fragment=st.area_fragment
                 if not area_fragment then
-                    area_fragment=Stroke:new{tool="highlighter",width=stroke.width,
+                    area_fragment=StrokeMod:new{tool="highlighter",width=stroke.width,
                         color=stroke.color,tint=stroke.tint,filled=true,marker_parts={}}
-                    fragments[#fragments+1]=area_fragment
+                    st.area_fragment=area_fragment
+                    st.fragments[#st.fragments+1]=area_fragment
                 end
                 area_fragment:appendRange(stroke,first,last)
                 area_fragment.marker_parts[#area_fragment.marker_parts+1]=area_fragment.n
             else
                 local points={}
                 for i=first,last do local x,y=stroke:getPoint(i);points[#points+1]={x,y} end
-                cut(points)
+                cutPolygon(st,cutters,points)
             end
         end
     else
@@ -182,7 +209,7 @@ function Area.erase(stroke,path,r,context)
             if chunk and first==chunk[1] and
                 (chunk[5]+pad<px0 or chunk[3]-pad>px1 or chunk[6]+pad<py0 or chunk[4]-pad>py1) then
                 -- Copy an untouched run once instead of evaluating every nib.
-                keep(first,chunk[2])
+                keepRange(st,first,chunk[2])
                 first=chunk[2]
             else
                 local last=math.min(first+1,stroke.n)
@@ -206,7 +233,7 @@ function Area.erase(stroke,path,r,context)
                 -- here to preserve exactly the clipping geometry at nib edges.
                 if math.max(ax,bx)+radius<px0-extra or math.min(ax,bx)-radius>px1+extra
                     or math.max(ay,by)+radius<py0-extra or math.min(ay,by)-radius>py1+extra then
-                    keep(first,last)
+                    keepRange(st,first,last)
                 else
                     local surface=Area.sweep(ax,ay,ar,bx,by,br)
                     if first>1 then
@@ -219,9 +246,9 @@ function Area.erase(stroke,path,r,context)
                         local cr=Renderer.radiusFor(stroke,cp,ax-cx,ay-cy)
                         local pr=Renderer.radiusFor(stroke,ap,ax-cx,ay-cy)
                         local exposed=subtract(surface,Area.sweep(cx,cy,cr,ax,ay,pr))
-                        for _,part in ipairs(exposed) do cut(part,first,last,true) end
+                        for ei=1,#exposed do cutPolygon(st,cutters,exposed[ei],first,last,true) end
                     else
-                        cut(surface,first,last)
+                        cutPolygon(st,cutters,surface,first,last)
                     end
                 end
                 if last==stroke.n then break end
@@ -229,12 +256,12 @@ function Area.erase(stroke,path,r,context)
             end
         end
     end
-    if not changed then return nil end
+    if not st.changed then return nil end
     -- Geometry changes only within the swept nib (plus polygon approximation).
     local pad=extra+2
     local left,top=math.max(x0,px0-pad),math.max(y0,py0-pad)
     local right,bottom=math.min(x1,px1+pad),math.min(y1,py1+pad)
-    return fragments,left,top,right-left,bottom-top
+    return st.fragments,left,top,right-left,bottom-top
 end
 
 return Area

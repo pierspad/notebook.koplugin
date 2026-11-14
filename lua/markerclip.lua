@@ -1,7 +1,4 @@
 -- Convex polygon subtraction. Coordinates and shared vertices are immutable.
-local function cross(a,b,c)
-    return (b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1])
-end
 local function bounds(points)
     if points.bounds then return unpack(points.bounds) end
     local x0,y0,x1,y1=math.huge,math.huge,-math.huge,-math.huge
@@ -15,23 +12,28 @@ end
 
 -- Split both half-planes in one traversal. Shared vertices are immutable.
 local function split(points,a,b)
+    local ax,ay=a[1],a[2]
+    local dx,dy=b[1]-ax,b[2]-ay
     local low,high=math.huge,-math.huge
-    for _,point in ipairs(points) do
-        local d=cross(a,b,point)
+    for i=1,#points do
+        local point=points[i]
+        local d=dx*(point[2]-ay)-dy*(point[1]-ax)
         if d<low then low=d end
         if d>high then high=d end
         if low<0 and high>0 then break end
     end
     -- Most cutter edges contain the whole remaining polygon on one side.
-    -- Reuse its immutable vertices instead of allocating two copies per edge.
-    if low>=0 then return points,{} end
-    if high<=0 then return {},points end
+    -- Reuse its immutable vertices and return nil for the empty side.
+    if low>=0 then return points,nil end
+    if high<=0 then return nil,points end
     local inside,outside={},{}
-    local prev=points[#points]
+    local np=#points
+    local prev=points[np]
     if not prev then return inside,outside end
-    local pd=cross(a,b,prev)
-    for _,p in ipairs(points) do
-        local d=cross(a,b,p)
+    local pd=dx*(prev[2]-ay)-dy*(prev[1]-ax)
+    for i=1,np do
+        local p=points[i]
+        local d=dx*(p[2]-ay)-dy*(p[1]-ax)
         if (pd>=0)~=(d>=0) or (pd<=0)~=(d<=0) then
             local t=pd/(pd-d)
             local q={prev[1]+(p[1]-prev[1])*t,prev[2]+(p[2]-prev[2])*t}
@@ -46,10 +48,13 @@ local function split(points,a,b)
 end
 
 local function nonempty(points)
-    if #points<3 then return false end
+    if not points then return false end
+    local np=#points
+    if np<3 then return false end
     local area=0
-    local prev=points[#points]
-    for _,p in ipairs(points) do
+    local prev=points[np]
+    for i=1,np do
+        local p=points[i]
         area=area+prev[1]*p[2]-p[1]*prev[2];prev=p
     end
     return math.abs(area)>1e-7
@@ -62,10 +67,12 @@ local function subtract(points,cutter)
     -- Keep the original polygon on a miss. Computing both pieces together
     -- avoids clipping the intersection once, then clipping it twice again.
     local result,remaining={},points
-    local prev=cutter[#cutter]
-    for _,p in ipairs(cutter) do
+    local nc=#cutter
+    local prev=cutter[nc]
+    for i=1,nc do
+        local p=cutter[i]
         local inside,outside=split(remaining,prev,p)
-        if nonempty(outside) then result[#result+1]=outside end
+        if outside and nonempty(outside) then result[#result+1]=outside end
         remaining=inside;prev=p
         if not nonempty(remaining) then return {points},false end
     end
