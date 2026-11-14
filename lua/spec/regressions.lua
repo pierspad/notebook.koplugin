@@ -119,4 +119,20 @@ for i=1,40 do labels[i]=Text.create('Label '..i,0,0,200,24,{}) end
 assert(labels[1]._text_widget==nil and labels[40]._text_widget,'native text cache is unbounded')
 require('textcache').clear()
 assert(not labels[40]._text_widget,'text cache was not released')
+-- Multiple filled markers rendered at scale != 1 must not reuse stale contour_bounds.
+do
+    local Document = require('document')
+    local mdoc = Document:new(nil)
+    local m1 = Stroke:new{tool='highlighter', width=40, tint=160}
+    m1:addPoint(40, 40, 1); m1:addPoint(160, 40, 1)
+    local m2 = Stroke:new{tool='highlighter', width=40, tint=160}
+    m2:addPoint(40, 140, 1); m2:addPoint(160, 140, 1)
+    mdoc:addStroke(m1); mdoc:addStroke(m2)
+    mdoc:eraseAreaAlongPath({40, 40, 40, 40}, 4)
+    mdoc:eraseAreaAlongPath({40, 140, 40, 140}, 4)
+    local mbb = BB.new(120, 120)
+    Renderer.drawPage(mbb, mdoc:getPage(), 0.5)
+    assert(mbb:get(60, 20) == 160, 'first scaled filled marker disappeared')
+    assert(mbb:get(60, 70) == 160, 'second scaled filled marker clipped by stale bounds')
+end
 print('regressions: filled transforms, scaled brushes, clipped grain, blank text, undo and bounded cache passed')

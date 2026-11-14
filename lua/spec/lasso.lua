@@ -336,5 +336,26 @@ test("batch selection agrees with individual queries across irregular loops", fu
     end
 end)
 
+test("preserves distance sampling phase across offscreen segments and selects filled contours", function()
+    local line = Stroke:new{ tool = "pen", width = 3 }
+    line:addPoint(0, 0, 1)
+    line:addPoint(500, 0, 1)
+    line:addPoint(500, 200, 1)
+    local loop = {
+        { x = 490, y = 100 }, { x = 510, y = 100 },
+        { x = 510, y = 120 }, { x = 490, y = 120 },
+    }
+    assertTrue(Lasso.isStrokeSelected(line, loop), "segment crossing loop after offscreen prefix")
+
+    local filled = Stroke:new{ tool = "highlighter", width = 20, filled = true, marker_parts = { 4, 8 } }
+    for _, pt in ipairs({ {10,10}, {30,10}, {30,30}, {10,30}, {495,105}, {505,105}, {505,115}, {495,115} }) do
+        filled:addPoint(pt[1], pt[2], 1)
+    end
+    assertTrue(Lasso.isStrokeSelected(filled, loop), "second contour inside filled marker")
+    assertTrue(not Lasso.isStrokeSelected(filled, {
+        { x = 800, y = 800 }, { x = 840, y = 800 }, { x = 840, y = 840 }, { x = 800, y = 840 },
+    }), "outside loop misses filled marker")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

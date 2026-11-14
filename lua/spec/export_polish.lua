@@ -49,7 +49,24 @@ test('non BB8 pointers use grayscale conversion', function()
         getPixel=function() return {getColor8=function() return {a=77} end} end}
     assert(Export.packPage(bb,2,1)==string.char(77,77))
 end)
-test('RLE decodes exact bytes at chunk boundaries', function()
+test('BB8 fast path handles zero-stride, padded-stride and inverted fallback parity', function()
+    local pixels=ffi.new('uint8_t[12]', {10,20,30,40, 50,60,70,80, 90,100,110,120})
+    local contig={getType=function() return 1 end,getRotation=function() return 0 end,
+        getInverse=function() return 0 end,getPixelP=function(_,x,y) return pixels+y*4+x end,
+        getPixel=function() error('slow path called on contiguous BB8') end}
+    assert(Export.packPage(contig,4,3)==ffi.string(pixels,12))
+
+    local padded={getType=function() return 1 end,getRotation=function() return 0 end,
+        getInverse=function() return 0 end,getPixelP=function(_,x,y) return pixels+y*4+x end,
+        getPixel=function() error('slow path called on padded BB8') end}
+    assert(Export.packPage(padded,2,3)==string.char(10,20, 50,60, 90,100))
+
+    local inverted={getType=function() return 1 end,getRotation=function() return 0 end,
+        getInverse=function() return 1 end,getPixelP=function() error('pointer path unsafe when inverse') end,
+        getPixel=function(_,x,y) return 255 - pixels[y*4+x] end}
+    assert(Export.packPage(inverted,2,2)==string.char(245,235, 205,195))
+end)
+test('RLE decodes exact bytes at chunk boundaries and mixed transitions', function()
     local function decode(s)
         local out={};local i=1
         while true do local n=s:byte(i);i=i+1
@@ -58,9 +75,12 @@ test('RLE decodes exact bytes at chunk boundaries', function()
         end
         return table.concat(out)
     end
-    for _,n in ipairs({0,1,2,127,128,129,256,1025}) do
+    for _,s in ipairs({'', 'A', 'AA', 'AB', 'ABB', 'BBA', 'ABBA'}) do
+        assert(decode(Export.encodeRLE(s))==s, 'literal/run transition mismatch')
+    end
+    for _,n in ipairs({0,1,2,127,128,129,256,1025,4096}) do
         local bytes={};for i=1,n do bytes[i]=string.char(i%256) end
-        local s=table.concat(bytes)..string.rep('x',n)
+        local s=table.concat(bytes)..string.rep('x',n)..table.concat(bytes)
         assert(decode(Export.encodeRLE(s))==s)
     end
 end)
