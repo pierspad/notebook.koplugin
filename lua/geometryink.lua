@@ -37,51 +37,83 @@ function GeometryInk.draw(bb, stroke, clip, color, color_enabled)
         local rgb = color_enabled and type(stroke.color) == "number"
             and stroke.color >= 0x1000000 and stroke.color <= 0x1FFFFFF
             and bb.paintRectRGB32
-        local function span(y,a,b)
-            a,b=math.max(left,math.ceil(a)),math.min(right,math.floor(b))
-            if b>=a and y>=top and y<=bottom then
-                if rgb then Raster.rect(bb,a,y,b-a+1,1,color,true)
-                else Raster.rect(bb,a,y,b-a+1,1,color) end
-            end
-        end
         if kind == "circle" then
             local cx,cy=(x0+x1)/2,(y0+y1)/2
             local outer=(x1-x0)/2+r
+            local y_start=math.max(top,math.ceil(cy-outer))
+            local y_end=math.min(bottom,math.floor(cy+outer))
             if stroke.filled then
-                for y=math.max(top,math.ceil(cy-outer)),math.min(bottom,math.floor(cy+outer)) do
+                for y=y_start,y_end do
                     local dy=y-cy
                     local dx=math.sqrt(math.max(0,outer*outer-dy*dy))
-                    span(y,cx-dx,cx+dx)
+                    local a,b=math.max(left,math.ceil(cx-dx)),math.min(right,math.floor(cx+dx))
+                    if b>=a then
+                        if rgb then Raster.rect(bb,a,y,b-a+1,1,color,true)
+                        else Raster.rect(bb,a,y,b-a+1,1,color) end
+                    end
                 end
             else
                 local inner=math.max(0,(x1-x0)/2-r)
-                for y=math.max(top,math.ceil(cy-outer)),math.min(bottom,math.floor(cy+outer)) do
+                for y=y_start,y_end do
                     local dy=y-cy
                     local dx=math.sqrt(math.max(0,outer*outer-dy*dy))
                     if math.abs(dy)<inner then
                         local hole=math.sqrt(inner*inner-dy*dy)
-                        span(y,cx-dx,cx-hole); span(y,cx+hole,cx+dx)
-                    else span(y,cx-dx,cx+dx) end
+                        local a1,b1=math.max(left,math.ceil(cx-dx)),math.min(right,math.floor(cx-hole))
+                        if b1>=a1 then
+                            if rgb then Raster.rect(bb,a1,y,b1-a1+1,1,color,true)
+                            else Raster.rect(bb,a1,y,b1-a1+1,1,color) end
+                        end
+                        local a2,b2=math.max(left,math.ceil(cx+hole)),math.min(right,math.floor(cx+dx))
+                        if b2>=a2 then
+                            if rgb then Raster.rect(bb,a2,y,b2-a2+1,1,color,true)
+                            else Raster.rect(bb,a2,y,b2-a2+1,1,color) end
+                        end
+                    else
+                        local a,b=math.max(left,math.ceil(cx-dx)),math.min(right,math.floor(cx+dx))
+                        if b>=a then
+                            if rgb then Raster.rect(bb,a,y,b-a+1,1,color,true)
+                            else Raster.rect(bb,a,y,b-a+1,1,color) end
+                        end
+                    end
                 end
             end
         else
-            local function block(a, b, first, last)
-                a, b = math.max(left, math.ceil(a)), math.min(right, math.floor(b))
-                first, last = math.max(top, first), math.min(bottom, last)
-                if a > b or first > last then return end
-                if rgb then Raster.rect(bb,a, first, b-a+1, last-first+1, color,true)
-                else Raster.rect(bb,a, first, b-a+1, last-first+1, color) end
-            end
             local first, last = math.ceil(y0-r), math.floor(y1+r)
             if stroke.filled then
-                block(x0-r, x1+r, first, last)
+                local a, b = math.max(left, math.ceil(x0-r)), math.min(right, math.floor(x1+r))
+                local f, l = math.max(top, first), math.min(bottom, last)
+                if a <= b and f <= l then
+                    if rgb then Raster.rect(bb,a, f, b-a+1, l-f+1, color,true)
+                    else Raster.rect(bb,a, f, b-a+1, l-f+1, color) end
+                end
             else
                 local top_end = math.min(last, math.floor(y0+r))
                 local bottom_start = math.max(top_end+1, math.ceil(y1-r))
-                block(x0-r, x1+r, first, top_end)
-                block(x0-r, x1+r, bottom_start, last)
-                block(x0-r, x0+r, top_end+1, bottom_start-1)
-                block(x1-r, x1+r, top_end+1, bottom_start-1)
+                local bx0, bx1 = math.max(left, math.ceil(x0-r)), math.min(right, math.floor(x1+r))
+                local bf1, bl1 = math.max(top, first), math.min(bottom, top_end)
+                if bx0 <= bx1 and bf1 <= bl1 then
+                    if rgb then Raster.rect(bb, bx0, bf1, bx1-bx0+1, bl1-bf1+1, color, true)
+                    else Raster.rect(bb, bx0, bf1, bx1-bx0+1, bl1-bf1+1, color) end
+                end
+                local bf2, bl2 = math.max(top, bottom_start), math.min(bottom, last)
+                if bx0 <= bx1 and bf2 <= bl2 then
+                    if rgb then Raster.rect(bb, bx0, bf2, bx1-bx0+1, bl2-bf2+1, color, true)
+                    else Raster.rect(bb, bx0, bf2, bx1-bx0+1, bl2-bf2+1, color) end
+                end
+                local bf3, bl3 = math.max(top, top_end+1), math.min(bottom, bottom_start-1)
+                if bf3 <= bl3 then
+                    local lx1 = math.min(right, math.floor(x0+r))
+                    if bx0 <= lx1 then
+                        if rgb then Raster.rect(bb, bx0, bf3, lx1-bx0+1, bl3-bf3+1, color, true)
+                        else Raster.rect(bb, bx0, bf3, lx1-bx0+1, bl3-bf3+1, color) end
+                    end
+                    local rx0 = math.max(left, math.ceil(x1-r))
+                    if rx0 <= bx1 then
+                        if rgb then Raster.rect(bb, rx0, bf3, bx1-rx0+1, bl3-bf3+1, color, true)
+                        else Raster.rect(bb, rx0, bf3, bx1-rx0+1, bl3-bf3+1, color) end
+                    end
+                end
             end
         end
         return true
